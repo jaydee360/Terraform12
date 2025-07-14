@@ -47,3 +47,12 @@ resource "aws_vpc" "my_vpc" {
   }
 }
 
+output "vpcid" {
+  description = "The ID of the created VPC"
+  value       = aws_vpc.my_vpc.id
+}
+output "vpcarn" {
+  description = "The ARN of the created VPC"
+  value       = aws_vpc.my_vpc.arn
+}
+
