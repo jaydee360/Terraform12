@@ -29,13 +29,28 @@ variable "TagList" {
     Environment = "Development"
     Project     = "Terraform"
   }
-  
 }
 
 variable "vpc_cidr" {
   description = "The CIDR block for the VPC"
   type        = string
   default     = "10.0.0.0/16"
+}
+
+variable "MyTuple" {
+  type = tuple([string, number, string])
+  default = ["cat", 1, "dog"]
+}
+
+variable "MyObject" {
+  type = object({
+    name = string,
+    port = list(number)
+  })
+  default = {
+    name = "example",
+    port = [80, 443]
+  }
 }
 
 resource "aws_vpc" "my_vpc" {
