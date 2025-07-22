@@ -1,0 +1,997 @@
+:     for network in var.networks : [
+:         for subnet_key, subnet in network.subnets : {
+:             subnet_key = subnet_key
+:             cidr_block = subnet.cidr_block
+:         }
+:     ]
+: ]
+[
+  [
+    {
+      "cidr_block" = "10.3.1.0/24"
+      "subnet_key" = "firewall"
+    },
+  ],
+  [
+    {
+      "cidr_block" = "10.1.0.0/24"
+      "subnet_key" = "db1"
+    },
+    {
+      "cidr_block" = "10.1.1.0/24"
+      "subnet_key" = "db2"
+    },
+  ],
+  [
+    {
+      "cidr_block" = "10.2.2.0/24"
+      "subnet_key" = "email_server"
+    },
+    {
+      "cidr_block" = "10.2.1.0/24"
+      "subnet_key" = "webserver"
+    },
+  ],
+]
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+> [for network in var.networks : [for subnet_key, subnet in network.subnets : {
+:     subnet_key = "hello"
+:     cidr_block = subnet.cidr_block
+: }]]
+[
+  [
+    {
+      "cidr_block" = "10.3.1.0/24"
+      "subnet_key" = "hello"
+    },
+  ],
+  [
+    {
+      "cidr_block" = "10.1.0.0/24"
+      "subnet_key" = "hello"
+    },
+    {
+      "cidr_block" = "10.1.1.0/24"
+      "subnet_key" = "hello"
+    },
+  ],
+  [
+    {
+      "cidr_block" = "10.2.2.0/24"
+      "subnet_key" = "hello"
+    },
+    {
+      "cidr_block" = "10.2.1.0/24"
+      "subnet_key" = "hello"
+    },
+  ],
+]
+>
+
+> [for network in var.networks : [for subnet_key, subnet in network.subnets : {
+:     "hello" = subnet_key
+:     cidr_block = subnet.cidr_block
+: }]]
+[
+  [
+    {
+      "cidr_block" = "10.3.1.0/24"
+      "hello" = "firewall"
+    },
+  ],
+  [
+    {
+      "cidr_block" = "10.1.0.0/24"
+      "hello" = "db1"
+    },
+    {
+      "cidr_block" = "10.1.1.0/24"
+      "hello" = "db2"
+    },
+  ],
+  [
+    {
+      "cidr_block" = "10.2.2.0/24"
+      "hello" = "email_server"
+    },
+    {
+      "cidr_block" = "10.2.1.0/24"
+      "hello" = "webserver"
+    },
+  ],
+]
+> [for network in var.networks : [for subnet_key, subnet in network.subnets : {
+:     subnet_name = subnet_key
+:     cidr_block = subnet.cidr_block
+: }]]
+[
+  [
+    {
+      "cidr_block" = "10.3.1.0/24"
+      "subnet_name" = "firewall"
+    },
+  ],
+  [
+    {
+      "cidr_block" = "10.1.0.0/24"
+      "subnet_name" = "db1"
+    },
+    {
+      "cidr_block" = "10.1.1.0/24"
+      "subnet_name" = "db2"
+    },
+  ],
+  [
+    {
+      "cidr_block" = "10.2.2.0/24"
+      "subnet_name" = "email_server"
+    },
+    {
+      "cidr_block" = "10.2.1.0/24"
+      "subnet_name" = "webserver"
+    },
+  ],
+]
+> [for network in var.networks : [for subnet_key, subnet in network.subnets : {
+:     subnet_name = subnet_key
+:     cidr_block = subnet.cidr_block
+:     "${subnet_key}-${cidr_block}" = subnet.cidr_block
+: }]]
+╷
+│ Error: Invalid reference
+│
+│   on <console-input> line 4:
+│   (source code not available)
+│
+│ A reference to a resource type must be followed by at least one attribute access, specifying the resource name.
+╵
+
+
+> [for network in var.networks : [for subnet_key, subnet in network.subnets : {
+:     subnet_name = subnet_key
+:     cidr_block = subnet.cidr_block
+:     "$subnet_name}${cidr_block}" = subnet.cidr_block
+: }]]
+╷
+│ Error: Invalid reference
+│
+│   on <console-input> line 4:
+│   (source code not available)
+│
+│ A reference to a resource type must be followed by at least one attribute access, specifying the resource name.
+╵
+
+
+> [for network in var.networks : [for subnet_key, subnet in network.subnets : {
+:     subnet_name = subnet_key
+:     cidr_block = subnet.cidr_block
+:     "newname" = subnet.cidr_block
+: }]]
+[
+  [
+    {
+      "cidr_block" = "10.3.1.0/24"
+      "newname" = "10.3.1.0/24"
+      "subnet_name" = "firewall"
+    },
+  ],
+  [
+    {
+      "cidr_block" = "10.1.0.0/24"
+      "newname" = "10.1.0.0/24"
+      "subnet_name" = "db1"
+    },
+    {
+      "cidr_block" = "10.1.1.0/24"
+      "newname" = "10.1.1.0/24"
+      "subnet_name" = "db2"
+    },
+  ],
+  [
+    {
+      "cidr_block" = "10.2.2.0/24"
+      "newname" = "10.2.2.0/24"
+      "subnet_name" = "email_server"
+    },
+    {
+      "cidr_block" = "10.2.1.0/24"
+      "newname" = "10.2.1.0/24"
+      "subnet_name" = "webserver"
+    },
+  ],
+]
+>
+
+> [for network in var.networks : [for subnet_key, subnet in network.subnets : {
+:     subnet_name = subnet_key
+:     cidr_block = subnet.cidr_block
+:     network_name = network.network_key
+: }]]
+╷
+│ Error: Unsupported attribute
+│
+│   on <console-input> line 4:
+│   (source code not available)
+│
+│ This object does not have an attribute named "network_key".
+╵
+
+╷
+│ Error: Unsupported attribute
+│
+│   on <console-input> line 4:
+│   (source code not available)
+│
+│ This object does not have an attribute named "network_key".
+╵
+
+╷
+│ Error: Unsupported attribute
+│
+│   on <console-input> line 4:
+│   (source code not available)
+│
+│ This object does not have an attribute named "network_key".
+╵
+
+╷
+│ Error: Unsupported attribute
+│
+│   on <console-input> line 4:
+│   (source code not available)
+│
+│ This object does not have an attribute named "network_key".
+╵
+
+╷
+│ Error: Unsupported attribute
+│
+│   on <console-input> line 4:
+│   (source code not available)
+│
+│ This object does not have an attribute named "network_key".
+╵
+
+
+> clear
+╷
+│ Error: Invalid reference
+│
+│   on <console-input> line 1:
+│   (source code not available)
+│
+│ A reference to a resource type must be followed by at least one attribute access, specifying the resource name.
+╵
+
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+> [for network in var.networks : [for subnet_key, subnet in network.subnets : {
+:     subnet_name = subnet_key
+:     cidr_block = subnet.cidr_block
+:     "$subnet_key" = subnet.cidr_block
+: }]]
+[
+  [
+    {
+      "$subnet_key" = "10.3.1.0/24"
+      "cidr_block" = "10.3.1.0/24"
+      "subnet_name" = "firewall"
+    },
+  ],
+  [
+    {
+      "$subnet_key" = "10.1.0.0/24"
+      "cidr_block" = "10.1.0.0/24"
+      "subnet_name" = "db1"
+    },
+    {
+      "$subnet_key" = "10.1.1.0/24"
+      "cidr_block" = "10.1.1.0/24"
+      "subnet_name" = "db2"
+    },
+  ],
+  [
+    {
+      "$subnet_key" = "10.2.2.0/24"
+      "cidr_block" = "10.2.2.0/24"
+      "subnet_name" = "email_server"
+    },
+    {
+      "$subnet_key" = "10.2.1.0/24"
+      "cidr_block" = "10.2.1.0/24"
+      "subnet_name" = "webserver"
+    },
+  ],
+]
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+> [for network in var.networks : [for subnet_key, subnet in network.subnets : {
+:     subnet_name = subnet_key
+:     cidr_block = subnet.cidr_block
+:     "${subnet_key}" = subnet.cidr_block
+: }]]
+[
+  [
+    {
+      "cidr_block" = "10.3.1.0/24"
+      "firewall" = "10.3.1.0/24"
+      "subnet_name" = "firewall"
+    },
+  ],
+  [
+    {
+      "cidr_block" = "10.1.0.0/24"
+      "db1" = "10.1.0.0/24"
+      "subnet_name" = "db1"
+    },
+    {
+      "cidr_block" = "10.1.1.0/24"
+      "db2" = "10.1.1.0/24"
+      "subnet_name" = "db2"
+    },
+  ],
+  [
+    {
+      "cidr_block" = "10.2.2.0/24"
+      "email_server" = "10.2.2.0/24"
+      "subnet_name" = "email_server"
+    },
+    {
+      "cidr_block" = "10.2.1.0/24"
+      "subnet_name" = "webserver"
+      "webserver" = "10.2.1.0/24"
+    },
+  ],
+]
+> e
+╷
+│ Error: Invalid reference
+│
+│   on <console-input> line 1:
+│   (source code not available)
+│
+│ A reference to a resource type must be followed by at least one attribute access, specifying the resource name.
+╵
+
+
+> [for network in var.networks : [for subnet_key, subnet in network.subnets : {
+:     subnet_name = subnet_key
+:     cidr_block = subnet.cidr_block
+:     "${subnet_key}" = subnet.cidr_block
+: }]]
+[
+  [
+    {
+      "cidr_block" = "10.3.1.0/24"
+      "firewall" = "10.3.1.0/24"
+      "subnet_name" = "firewall"
+    },
+  ],
+  [
+    {
+      "cidr_block" = "10.1.0.0/24"
+      "db1" = "10.1.0.0/24"
+      "subnet_name" = "db1"
+    },
+    {
+      "cidr_block" = "10.1.1.0/24"
+      "db2" = "10.1.1.0/24"
+      "subnet_name" = "db2"
+    },
+  ],
+  [
+    {
+      "cidr_block" = "10.2.2.0/24"
+      "email_server" = "10.2.2.0/24"
+      "subnet_name" = "email_server"
+    },
+    {
+      "cidr_block" = "10.2.1.0/24"
+      "subnet_name" = "webserver"
+      "webserver" = "10.2.1.0/24"
+    },
+  ],
+]
+>
+
+> [for network in var.networks : [for subnet_key, subnet in network.subnets : {
+:     subnet_name = subnet_key
+:     cidr_block = subnet.cidr_block
+:     "${subnet_key}" = subnet.cidr_block
+: }]]
+[
+  [
+    {
+      "cidr_block" = "10.3.1.0/24"
+      "firewall" = "10.3.1.0/24"
+      "subnet_name" = "firewall"
+    },
+  ],
+  [
+    {
+      "cidr_block" = "10.1.0.0/24"
+      "db1" = "10.1.0.0/24"
+      "subnet_name" = "db1"
+    },
+    {
+      "cidr_block" = "10.1.1.0/24"
+      "db2" = "10.1.1.0/24"
+      "subnet_name" = "db2"
+    },
+  ],
+  [
+    {
+      "cidr_block" = "10.2.2.0/24"
+      "email_server" = "10.2.2.0/24"
+      "subnet_name" = "email_server"
+    },
+    {
+      "cidr_block" = "10.2.1.0/24"
+      "subnet_name" = "webserver"
+      "webserver" = "10.2.1.0/24"
+    },
+  ],
+]
+>
+
+>
+
+> [for network in var.networks : [for subnet_key, subnet in network.subnets : {
+:     cidr_block = subnet.cidr_block
+:     "${subnet_key}-subnet" = subnet.cidr_block
+: }]]
+[
+  [
+    {
+      "cidr_block" = "10.3.1.0/24"
+      "firewall-subnet" = "10.3.1.0/24"
+    },
+  ],
+  [
+    {
+      "cidr_block" = "10.1.0.0/24"
+      "db1-subnet" = "10.1.0.0/24"
+    },
+    {
+      "cidr_block" = "10.1.1.0/24"
+      "db2-subnet" = "10.1.1.0/24"
+    },
+  ],
+  [
+    {
+      "cidr_block" = "10.2.2.0/24"
+      "email_server-subnet" = "10.2.2.0/24"
+    },
+    {
+      "cidr_block" = "10.2.1.0/24"
+      "webserver-subnet" = "10.2.1.0/24"
+    },
+  ],
+]
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+>
+
+> [for network in var.networks : [for subnet_key, subnet in network.subnets : {
+:     "${subnet_key}-subnet" = subnet.cidr_block
+: }]]
+[
+  [
+    {
+      "firewall-subnet" = "10.3.1.0/24"
+    },
+  ],
+  [
+    {
+      "db1-subnet" = "10.1.0.0/24"
+    },
+    {
+      "db2-subnet" = "10.1.1.0/24"
+    },
+  ],
+  [
+    {
+      "email_server-subnet" = "10.2.2.0/24"
+    },
+    {
+      "webserver-subnet" = "10.2.1.0/24"
+    },
+  ],
+]
+> flatten([for network in var.networks : [for subnet_key, subnet in network.subnets : {
+:     "${subnet_key}-subnet" = subnet.cidr_block
+: }]]
+: )
+[
+  {
+    "firewall-subnet" = "10.3.1.0/24"
+  },
+  {
+    "db1-subnet" = "10.1.0.0/24"
+  },
+  {
+    "db2-subnet" = "10.1.1.0/24"
+  },
+  {
+    "email_server-subnet" = "10.2.2.0/24"
+  },
+  {
+    "webserver-subnet" = "10.2.1.0/24"
+  },
+]
+> flatten(flatten([for network in var.networks : [for subnet_key, subnet in network.subnets : {
+:     "${subnet_key}-subnet" = subnet.cidr_block
+: }]]
+: ))
+[
+  {
+    "firewall-subnet" = "10.3.1.0/24"
+  },
+  {
+    "db1-subnet" = "10.1.0.0/24"
+  },
+  {
+    "db2-subnet" = "10.1.1.0/24"
+  },
+  {
+    "email_server-subnet" = "10.2.2.0/24"
+  },
+  {
+    "webserver-subnet" = "10.2.1.0/24"
+  },
+]
+> ^C
+PS C:\Users\Jason Dines\dev\git\Terraform012\00_JDTEMP> terraform console -var-file="resourcegroup.tfvars" -var-file="subscriptions.tfvars"
+Error opening log file: open .\logs\terraform_TRACE.log: The system cannot find the path specified.
+2025-07-18T17:26:24.908+0100 [INFO]  Terraform version: 1.12.2
+2025-07-18T17:26:24.909+0100 [INFO]  Go runtime version: go1.24.2
+2025-07-18T17:26:24.909+0100 [INFO]  CLI args: []string{"C:\\ProgramData\\chocolatey\\lib\\terraform\\tools\\terraform.exe", "console", "-var-file=resourcegroup.tfvars", "-var-file=subscriptions.tfvars"}
+2025-07-18T17:26:24.912+0100 [INFO]  CLI command args: []string{"console", "-var-file=resourcegroup.tfvars", "-var-file=subscriptions.tfvars"}
+> local.test
+[
+  {
+    "firewall-subnet" = "10.3.1.0/24"
+  },
+  {
+    "db1-subnet" = "10.1.0.0/24"
+  },
+  {
+    "db2-subnet" = "10.1.1.0/24"
+  },
+  {
+    "email_server-subnet" = "10.2.2.0/24"
+  },
+  {
+    "webserver-subnet" = "10.2.1.0/24"
+  },
+]
+> [for network in var.networks : [for subnet_key, subnet in network.subnets : {
+:     "${subnet_key}-subnet" = subnet.cidr_block
+: }]]
+[
+  [
+    {
+      "firewall-subnet" = "10.3.1.0/24"
+    },
+  ],
+  [
+    {
+      "db1-subnet" = "10.1.0.0/24"
+    },
+    {
+      "db2-subnet" = "10.1.1.0/24"
+    },
+  ],
+  [
+    {
+      "email_server-subnet" = "10.2.2.0/24"
+    },
+    {
+      "webserver-subnet" = "10.2.1.0/24"
+    },
+  ],
+]
+> flatten([
+:     for network_key, network in var.networks : [
+:       for subnet_key, subnet in network.subnets : {
+:         network_key = network_key
+:         subnet_key  = subnet_key
+:         cidr_block  = subnet.cidr_block
+:       }
+:     ]
+:   ])
+[
+  {
+    "cidr_block" = "10.3.1.0/24"
+    "network_key" = "dmz"
+    "subnet_key" = "firewall"
+  },
+  {
+    "cidr_block" = "10.1.0.0/24"
+    "network_key" = "private"
+    "subnet_key" = "db1"
+  },
+  {
+    "cidr_block" = "10.1.1.0/24"
+    "network_key" = "private"
+    "subnet_key" = "db2"
+  },
+  {
+    "cidr_block" = "10.2.2.0/24"
+    "network_key" = "public"
+    "subnet_key" = "email_server"
+  },
+  {
+    "cidr_block" = "10.2.1.0/24"
+    "network_key" = "public"
+    "subnet_key" = "webserver"
+  },
+]
+> flatten([
+:     for network in var.networks : [for subnet_key, subnet in network.subnets : {
+:         "${subnet_key}-subnet" = subnet.cidr_block
+:     }]
+: ])
+[
+  {
+    "firewall-subnet" = "10.3.1.0/24"
+  },
+  {
+    "db1-subnet" = "10.1.0.0/24"
+  },
+  {
+    "db2-subnet" = "10.1.1.0/24"
+  },
+  {
+    "email_server-subnet" = "10.2.2.0/24"
+  },
+  {
+    "webserver-subnet" = "10.2.1.0/24"
+  },
+]
+> flatten([
+:     for network in var.networks : [for subnet_key, subnet in network.subnets : [
+:         "${subnet_key}-subnet" = subnet.cidr_block
+:     ]
+: ]])
+╷
+│ Error: Missing item separator
+│
+│   on <console-input> line 3:
+│   (source code not available)
+│
+│ Expected a comma to mark the beginning of the next item.
+╵
+
+
+> flatten([
+:     for network in var.networks : [for subnet_key, subnet in network.subnets : [
+:         subnet.cidr_block
+:     ]
+: ]])
+[
+  "10.3.1.0/24",
+  "10.1.0.0/24",
+  "10.1.1.0/24",
+  "10.2.2.0/24",
+  "10.2.1.0/24",
+]
+> for ki, vi in var.resource_groups : vi.provider_alias
+╷
+│ Error: Extra characters after expression
+│
+│   on <console-input> line 1:
+│   (source code not available)
+│
+│ An expression was successfully parsed, but extra characters were found after it.
+╵
+
+
+> [for ki, vi in var.resource_groups : vi.provider_alias]
+[
+  "ch-avs-dr",
+  "ch-avs-prd",
+  "ch-avs-dr",
+]
+> {
+:     for ko, vo in distinct([for ki, vi in var.resource_groups : vi.provider_alias]) : vo => {
+:       for kii, vii in var.resource_groups : kii => vii if vo == vii.provider_alias
+:     }
+:   }
+{
+  "ch-avs-dr" = {
+    "rg-esan-avs-dr-uks-01" = {
+      "provider_alias" = "ch-avs-dr"
+      "region" = "uksouth"
+      "tags" = tomap({
+        "environment" = "dr"
+        "organization" = "ch"
+        "service" = "avs"
+      })
+    }
+    "rg-svc-avs-dr-uks-01" = {
+      "provider_alias" = "ch-avs-dr"
+      "region" = "uksouth"
+      "tags" = tomap({
+        "environment" = "dr"
+        "organization" = "ch"
+        "service" = "avs"
+      })
+    }
+  }
+  "ch-avs-prd" = {
+    "rg-esan-avs-prd-uks-01" = {
+      "provider_alias" = "ch-avs-prd"
+      "region" = "uksouth"
+      "tags" = tomap({
+        "environment" = "prd"
+        "organization" = "ch"
+        "service" = "avs"
+      })
+    }
+  }
+}
+> [for ki, vi in var.resource_groups : ki]
+[
+  "rg-esan-avs-dr-uks-01",
+  "rg-esan-avs-prd-uks-01",
+  "rg-svc-avs-dr-uks-01",
+]
+> [for ki, vi in var.resource_groups : vi]
+[
+  {
+    "provider_alias" = "ch-avs-dr"
+    "region" = "uksouth"
+    "tags" = tomap({
+      "environment" = "dr"
+      "organization" = "ch"
+      "service" = "avs"
+    })
+  },
+  {
+    "provider_alias" = "ch-avs-prd"
+    "region" = "uksouth"
+    "tags" = tomap({
+      "environment" = "prd"
+      "organization" = "ch"
+      "service" = "avs"
+    })
+  },
+  {
+    "provider_alias" = "ch-avs-dr"
+    "region" = "uksouth"
+    "tags" = tomap({
+      "environment" = "dr"
+      "organization" = "ch"
+      "service" = "avs"
+    })
+  },
+]
+> [for ki, vi in var.resource_groups : vi.region]
+[
+  "uksouth",
+  "uksouth",
+  "uksouth",
+]
+> [for ki, vi in var.resource_groups : tolist([vi.tags])]
+[
+  tolist([
+    tomap({
+      "environment" = "dr"
+      "organization" = "ch"
+      "service" = "avs"
+    }),
+  ]),
+  tolist([
+    tomap({
+      "environment" = "prd"
+      "organization" = "ch"
+      "service" = "avs"
+    }),
+  ]),
+  tolist([
+    tomap({
+      "environment" = "dr"
+      "organization" = "ch"
+      "service" = "avs"
+    }),
+  ]),
+]
+> [for ki, vi in var.resource_groups : vi.tags]
+[
+  tomap({
+    "environment" = "dr"
+    "organization" = "ch"
+    "service" = "avs"
+  }),
+  tomap({
+    "environment" = "prd"
+    "organization" = "ch"
+    "service" = "avs"
+  }),
+  tomap({
+    "environment" = "dr"
+    "organization" = "ch"
+    "service" = "avs"
+  }),
+]
+> [for vo in distinct([for ki, vi in var.resource_groups : vi.provider_alias]) : vo]
+[
+  "ch-avs-dr",
+  "ch-avs-prd",
+]
+> {for vo in distinct([for ki, vi in var.resource_groups : vi.provider_alias]) : vo}
+╷
+│ Error: Invalid 'for' expression
+│
+│   on <console-input> line 1:
+│   (source code not available)
+│
+│ Key expression is required when building an object.
+╵
+
+
+> {for vo in distinct([for ki, vi in var.resource_groups : vi.provider_alias]) : vo => vo}
+╷
+│ Error: Invalid character
+│
+│   on <console-input> line 1:
+│   (source code not available)
+│
+│ This character is not used within the language.
+╵
+
+╷
+│ Error: Invalid expression
+│
+│   on <console-input> line 1:
+│   (source code not available)
+│
+│ Expected the start of an expression, but found an invalid expression token.
+╵
+
+
+> {for vo in distinct([for ki, vi in var.resource_groups : vi.provider_alias]) : vo}
+╷
+│ Error: Invalid 'for' expression
+│ 
+│   on <console-input> line 1:
+│   (source code not available)
+│
+│ Key expression is required when building an object.
+╵
+
+
+>
+PS C:\Users\Jason Dines\dev\git\Terraform012\00_JDTEMP> {for vo in distinct([for ki, vi in var.resource_groups : vi.provider_alias]) : v^C
+PS C:\Users\Jason Dines\dev\git\Terraform012\00_JDTEMP>

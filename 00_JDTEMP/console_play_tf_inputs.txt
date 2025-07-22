@@ -1,0 +1,44 @@
+terraform console -var-file="resourcegroup.tfvars" -var-file="subscriptions.tfvars"
+
+flatten([
+    for network_key, network in var.networks : [
+      for subnet_key, subnet in network.subnets : {
+        network_key = network_key
+        subnet_key  = subnet_key
+        cidr_block  = subnet.cidr_block
+      }
+    ]
+  ])
+
+
+flatten([
+    for network in var.networks : [
+        for subnet_key, subnet in network.subnets : {
+            subnet_key = subnet_key
+            cidr_block = subnet.cidr_block
+        }
+    ]
+])
+
+
+[for network in var.networks : [for subnet_key, subnet in network.subnets : {
+    subnet_name = subnet_key
+    cidr_block = subnet.cidr_block
+    "${subnet_key}" = subnet.cidr_block
+}]]
+
+[for network in var.networks : [for subnet_key, subnet in network.subnets : {
+    "${subnet_key}-subnet" = subnet.cidr_block
+}]]
+
+locals { test = flatten([
+    for network in var.networks : [for subnet_key, subnet in network.subnets : {
+        "${subnet_key}-subnet" = subnet.cidr_block
+    }]
+])}
+
+flatten([
+    for network in var.networks : [for subnet_key, subnet in network.subnets : [
+        subnet.cidr_block
+    ]
+]])

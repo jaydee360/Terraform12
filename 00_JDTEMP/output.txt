@@ -1,0 +1,164 @@
+
+{
+  "ch-avs-dr" = {
+    "rg-esan-avs-dr-uks-01" = {
+      "provider_alias" = "ch-avs-dr"
+      "region" = "uksouth"
+      "tags" = tomap({})
+    }
+    "rg-svc-avs-dr-uks-01" = {
+      "provider_alias" = "ch-avs-dr"
+      "region" = "uksouth"
+      "tags" = tomap({})
+    }
+  }
+  "ch-avs-prd" = {
+    "rg-esan-avs-prd-uks-01" = {
+      "provider_alias" = "ch-avs-prd"
+      "region" = "uksouth"
+      "tags" = tomap({})
+    }
+    "rg-svc-avs-prd-uks-01" = {
+      "provider_alias" = "ch-avs-prd"
+      "region" = "uksouth"
+      "tags" = tomap({})
+    }
+  }
+  "ch-conn-prd" = {
+    "rg-dns-conn-prd-uks-01" = {
+      "provider_alias" = "ch-conn-prd"
+      "region" = "uksouth"
+      "tags" = tomap({})
+    }
+    "rg-er-conn-prd-uks-01" = {
+      "provider_alias" = "ch-conn-prd"
+      "region" = "uksouth"
+      "tags" = tomap({})
+    }
+    "rg-palo-conn-prd-uks-01" = {
+      "provider_alias" = "ch-conn-prd"
+      "region" = "uksouth"
+      "tags" = tomap({})
+    }
+    "rg-vnet-conn-prd-uks-01" = {
+      "provider_alias" = "ch-conn-prd"
+      "region" = "uksouth"
+      "tags" = tomap({})
+    }
+    "rg-vwan-conn-prd-uks-01" = {
+      "provider_alias" = "ch-conn-prd"
+      "region" = "uksouth"
+      "tags" = tomap({})
+    }
+  }
+  "ch-id-prd" = {
+    "rg-ad-id-prd-uks-01" = {
+      "provider_alias" = "ch-id-prd"
+      "region" = "uksouth"
+      "tags" = tomap({})
+    }
+    "rg-des-id-prd-uks-01" = {
+      "provider_alias" = "ch-id-prd"
+      "region" = "uksouth"
+      "tags" = tomap({})
+    }
+    "rg-ect-id-prd-uks-01" = {
+      "provider_alias" = "ch-id-prd"
+      "region" = "uksouth"
+      "tags" = tomap({})
+    }
+    "rg-kv-id-prd-uks-01" = {
+      "provider_alias" = "ch-id-prd"
+      "region" = "uksouth"
+      "tags" = tomap({})
+    }
+    "rg-vnet-id-prd-uks-01" = {
+      "provider_alias" = "ch-id-prd"
+      "region" = "uksouth"
+      "tags" = tomap({})
+    }
+  }
+  "ch-mgmt-nonprd" = {
+    "rg-bas-mgmt-nonprd-uks-01" = {
+      "provider_alias" = "ch-mgmt-nonprd"
+      "region" = "uksouth"
+      "tags" = tomap({})
+    }
+    "rg-vnet-mgmt-nonprd-uks-01" = {
+      "provider_alias" = "ch-mgmt-nonprd"
+      "region" = "uksouth"
+      "tags" = tomap({})
+    }
+  }
+  "ch-mgmt-prd" = {
+    "rg-ado-mgmt-prd-uks-01" = {
+      "provider_alias" = "ch-mgmt-prd"
+      "region" = "uksouth"
+      "tags" = tomap({})
+    }
+    "rg-avs-mgmt-prd-uks-01" = {
+      "provider_alias" = "ch-mgmt-prd"
+      "region" = "uksouth"
+      "tags" = tomap({})
+    }
+    "rg-bas-mgmt-prd-uks-01" = {
+      "provider_alias" = "ch-mgmt-prd"
+      "region" = "uksouth"
+      "tags" = tomap({})
+    }
+    "rg-des-mgmt-prd-uks-01" = {
+      "provider_alias" = "ch-mgmt-prd"
+      "region" = "uksouth"
+      "tags" = tomap({})
+    }
+    "rg-kv-mgmt-prd-uks-01" = {
+      "provider_alias" = "ch-mgmt-prd"
+      "region" = "uksouth"
+      "tags" = tomap({})
+    }
+    "rg-nflow-mgmt-prd-uks-01" = {
+      "provider_alias" = "ch-mgmt-prd"
+      "region" = "uksouth"
+      "tags" = tomap({})
+    }
+    "rg-vnet-mgmt-prd-uks-01" = {
+      "provider_alias" = "ch-mgmt-prd"
+      "region" = "uksouth"
+      "tags" = tomap({})
+    }
+  }
+  "ch-sec-nonprd" = {
+    "rg-vnet-sec-nonprd-uks-01" = {
+      "provider_alias" = "ch-sec-nonprd"
+      "region" = "uksouth"
+      "tags" = tomap({})
+    }
+  }
+  "ch-sec-prd" = {
+    "rg-kv-avs-sec-dr-uks-01" = {
+      "provider_alias" = "ch-sec-prd"
+      "region" = "uksouth"
+      "tags" = tomap({})
+    }
+    "rg-kv-avs-sec-prd-uks-01" = {
+      "provider_alias" = "ch-sec-prd"
+      "region" = "uksouth"
+      "tags" = tomap({})
+    }
+    "rg-kv-os-sec-prd-uks-01" = {
+      "provider_alias" = "ch-sec-prd"
+      "region" = "uksouth"
+      "tags" = tomap({})
+    }
+    "rg-kv-vpn-sec-prd-uks-01" = {
+      "provider_alias" = "ch-sec-prd"
+      "region" = "uksouth"
+      "tags" = tomap({})
+    }
+    "rg-vnet-sec-prd-uks-01" = {
+      "provider_alias" = "ch-sec-prd"
+      "region" = "uksouth"
+      "tags" = tomap({})
+    }
+  }
+}
