@@ -9,7 +9,7 @@ locals {
   map1_data = local.all_json_data.Map1
 }
 
-# Output the data fom List1 in the config_data variable, which is defined in the config_data.tfvars.json file
+# Output the data fom List1 in the config_data variable, which is defined in the terraform.tfvars.json file
 output "JDTEST" {
   value = var.config_data.List1
 }
