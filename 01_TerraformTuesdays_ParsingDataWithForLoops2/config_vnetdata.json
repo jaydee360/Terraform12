@@ -1,0 +1,47 @@
+{
+    "VirtualNetworks": {
+        "k8s-vnet": {
+            "Name": "VNET-K8S-EUS-01",
+            "Region": "eastus",
+            "AddressSpace": "10.12.0.0/16",
+            "Subnets": [
+                {
+                    "Name": "master",
+                    "Priority": 2
+                },
+                {
+                    "Name": "worker",
+                    "Priority": 3
+                },
+                {
+                    "Name": "bastion",
+                    "Priority": 1
+                }
+            ]
+        },
+        "wk8s-vnet": {
+            "Name": "VNET-WK8S-EUS-01",
+            "Region": "eastus",
+            "AddressSpace": "10.13.0.0/16",
+            "Subnets": [
+                {
+                    "Name": "master",
+                    "Priority": 2
+                },
+                {
+                    "Name": "worker",
+                    "Priority": 3
+                },
+                {
+                    "Name": "bastion",
+                    "Priority": 1
+                }
+            ]
+        },
+        "hub-vnet": {
+            "Name": "VNET-HUB-EUS-01",
+            "Region": "eastus",
+            "AddressSpace": "10.10.0.0/16"
+        }
+    }
+}
