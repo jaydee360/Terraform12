@@ -20,14 +20,14 @@ variable "ec2instances" {
     user_data_script = optional(string,null)
   }))
   default = {
-    "Web" = {
+    "JD-LAB-WEB-US-E-1" = {
       ami = "ami-0150ccaf51ab55a51"
       instance_type = "t2.micro"
       key_name = "A4L"
       assign_eip = true
       user_data_script = "server-script.sh"
     },
-    "DB" = {
+    "JD-LAB-DB-US-E-1" = {
       ami = "ami-0150ccaf51ab55a51"
       instance_type = "t2.micro"
       key_name = "A4L"
