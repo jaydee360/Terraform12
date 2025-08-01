@@ -25,6 +25,7 @@ variable "ec2_instances" {
     instance_type = string,
     key_name = string
     assign_eip = optional(bool,false)
+    assign_sg = optional(bool,false)
     user_data_script = optional(string,null)
   }))
   default = {
@@ -39,6 +40,7 @@ variable "ec2_instances" {
       ami = "ami-0150ccaf51ab55a51"
       instance_type = "t2.micro"
       key_name = "A4L"
+      assign_sg = true
     }
   }
 }
@@ -69,14 +71,14 @@ type = map(object({
       from_port = number
       to_port = number
       protocol = string
-      cidr_blocks = list(string)
+      cidr_block = string
     }))
     egress = list(object({
       description = string
       from_port = optional(number)
       to_port = optional(number)
       protocol = string
-      cidr_blocks = list(string)
+      cidr_block = string
     }))
   }))
   default = {
@@ -87,21 +89,21 @@ type = map(object({
           from_port = 80
           to_port = 80
           protocol = "tcp"
-          cidr_blocks = [ "0.0.0.0/0" ]
+          cidr_block =  "0.0.0.0/0" 
         },
         {
           description = "443-IN"
           from_port = 443
           to_port = 443
           protocol = "tcp"
-          cidr_blocks = [ "0.0.0.0/0" ]
+          cidr_block =  "0.0.0.0/0" 
         }
       ]
       egress = [
         {
           description = "ANY-OUT"
           protocol = "-1"
-          cidr_blocks = [ "0.0.0.0/0" ]
+          cidr_block =  "0.0.0.0/0" 
         }
       ]
     },
@@ -112,21 +114,21 @@ type = map(object({
           from_port = 1433
           to_port = 1433
           protocol = "tcp"
-          cidr_blocks = [ "10.0.0.0/16" ]
+          cidr_block =  "10.0.0.0/16" 
         },
         {
           description = "3389-IN"
           from_port = 3389
           to_port = 3389
           protocol = "tcp"
-          cidr_blocks = [ "10.0.0.0/16" ]
+          cidr_block =  "10.0.0.0/16" 
         }
       ]
       egress = [
         {
           description = "ANY-OUT"
           protocol = "-1"
-          cidr_blocks = [ "0.0.0.0/0" ]
+          cidr_block =  "0.0.0.0/0" 
         }
       ]
     }
