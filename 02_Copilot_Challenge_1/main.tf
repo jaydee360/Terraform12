@@ -3,6 +3,7 @@ resource "aws_instance" "main" {
 
   ami                     = each.value.ami
   instance_type           = each.value.instance_type
+  key_name                = each.value.key_name
   user_data               = each.value.user_data_script != null ? file("${path.module}/${each.value.user_data_script}") : null
   vpc_security_group_ids  = each.value.assign_sg == true ? try([aws_security_group.main[each.key].id],[]) : null
   tags                    = {

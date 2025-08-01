@@ -81,7 +81,7 @@ type = map(object({
       cidr_block = string
     }))
   }))
-  default = {
+/*   default = {
     "JD-LAB-WEB-US-E-1" = {
       ingress = [
         {
@@ -132,7 +132,7 @@ type = map(object({
         }
       ]
     }
-  }
+  } */
 }
 /* 
 {for sg_key, sg_rule_type in var.ec2_security_group_rules : sg_key => [for sg_rule_type_key, sg_rule in sg_rule_type : sg_rule if sg_rule_type_key == "ingress"]}
