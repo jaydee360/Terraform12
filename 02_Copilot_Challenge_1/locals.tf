@@ -10,9 +10,25 @@ locals {
  */
 
 locals {
-  ingress_rules = {for sg_key, sg_rule_type in var.ec2_security_group_rules : sg_key => flatten([for sg_rule_type_key, sg_rule in sg_rule_type : sg_rule if sg_rule_type_key == "ingress"])}
+  ingress_rules = {
+    for rule in flatten(
+      [for main_key, main_object in var.ec2_security_group_rules : 
+        [for rule_index, rules in main_object.ingress : 
+          merge(rules,{rule_id="${main_key}-INGRESS-R${rule_index}",main_key=main_key})
+        ]
+      ]
+    ) : rule.rule_id => rule
+  }
 }
 
 locals {
-  egress_rules = {for sg_key, sg_rule_type in var.ec2_security_group_rules : sg_key => flatten([for sg_rule_type_key, sg_rule in sg_rule_type : sg_rule if sg_rule_type_key == "egress"])}
+  egress_rules = {
+    for rule in flatten(
+      [for main_key, main_object in var.ec2_security_group_rules : 
+        [for rule_index, rules in main_object.egress : 
+          merge(rules,{rule_id="${main_key}-EGRESS-R${rule_index}",main_key=main_key})
+        ]
+      ]
+    ) : rule.rule_id => rule
+  }
 }
