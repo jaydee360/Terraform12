@@ -34,13 +34,13 @@ variable "ec2_instances" {
       instance_type = "t2.micro"
       key_name = "A4L"
       assign_eip = true
+      assign_sg = true
       user_data_script = "server-script.sh"
     },
     "JD-LAB-DB-US-E-1" = {
       ami = "ami-0150ccaf51ab55a51"
       instance_type = "t2.micro"
       key_name = "A4L"
-      assign_sg = true
     }
   }
 }
