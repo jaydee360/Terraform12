@@ -146,7 +146,7 @@ type = map(object({
     {"cidr_blocks":["0.0.0.0/0"],"description":"80-IN","from_port":80,"protocol":"tcp","to_port":80},
     {"cidr_blocks":["0.0.0.0/0"],"description":"443-IN","from_port":443,"protocol":"tcp","to_port":443}
   ]
-} */
+} 
 
 /*
 # step 1 - list comprehension to get ingress & egress rules separately from the data
@@ -163,3 +163,13 @@ flatten([for main_key, main_object in var.ec2_security_group_rules : [for rule_i
 {for rule in flatten([for main_key, main_object in var.ec2_security_group_rules : [for rule_index, rules in main_object.egress : merge(rules,{rule_id="${main_key}-EGRESS-R${rule_index}",main_key=main_key})]]) : rule.rule_id => rule}
 
 */
+
+
+/* variable "JDTEST" {
+  type = map(object({
+    ingress = map(object({
+      src_port
+      protocol 
+    })) 
+  }))
+} */

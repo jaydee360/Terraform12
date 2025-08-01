@@ -2,12 +2,14 @@
 locals {
   ec2_data = jsondecode(file("ec2_data.json"))
 }
+*/
 
 locals {
-  eip_enabled = {for k, v in var.ec2instances : k => v if v.assign_eip == true}
+  eip_enabled_instances = {
+    for instance_key, instance_data in var.ec2_instances : 
+      instance_key => instance_data if instance_data.assign_eip == true
+  }
 }
-
- */
 
 locals {
   ingress_rules = {
