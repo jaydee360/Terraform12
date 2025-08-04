@@ -173,3 +173,52 @@ flatten([for main_key, main_object in var.ec2_security_group_rules : [for rule_i
     })) 
   }))
 } */
+
+variable "vpc_config" {
+  type = map(object({
+    vpc_cidr = string
+    enable_dns_support = optional(bool,true)
+    enable_dns_hostnames = optional(bool,false)
+    tags = optional(map(string))
+    subnets = list(object({
+      subnet_cidr = string
+      az = string
+      is_public = optional(bool,false)
+      tags = optional(map(string))
+    }))
+  }))
+  default = {
+    "VPC-LAB-DEV-01" = {
+      vpc_cidr = "10.0.0.0/16"
+      tags = {
+        "Name" = "VPC-LAB-DEV-01"
+      }
+      subnets = [
+        {
+          az = "us-east-1a"
+          subnet_cidr = "10.0.0.0/24"
+          tags = {
+            "Name" = "SUBNET-LAB-DEV-00"
+          }
+          is_public = false
+        },
+        {
+          az = "us-east-1b"
+          subnet_cidr = "10.0.1.0/24"
+          tags = {
+            "Name" = "SUBNET-LAB-DEV-01"
+          }
+          is_public = false
+        },
+        {
+          az = "us-east-1c"
+          subnet_cidr = "10.0.2.0/24"
+          tags = {
+            "Name" = "SUBNET-LAB-DEV-02"
+          }
+          is_public = false
+        }
+      ]
+    }
+  }
+}
