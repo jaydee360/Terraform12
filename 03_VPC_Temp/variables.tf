@@ -24,8 +24,12 @@ variable "vpc_config" {
     vpc_cidr = string
     enable_dns_support = optional(bool,true)
     enable_dns_hostnames = optional(bool,false)
-    
     tags = optional(map(string))
+    igw = optional(object({
+      create = bool
+      attach = bool
+      tags = map(string)
+    }))
     subnets = list(object({
       subnet_cidr = string
       az = string
@@ -39,6 +43,12 @@ variable "vpc_config" {
       tags = {
         "Name" = "VPC-LAB-DEV-01"
       }
+      igw = {
+        create = true
+        attach = true
+        tags = {
+        }
+      }
       subnets = [
         {
           az = "us-east-1a"
@@ -46,7 +56,7 @@ variable "vpc_config" {
           tags = {
             "Name" = "SUBNET-LAB-DEV-00"
           }
-          is_public = false
+          is_public = true
         },
         {
           az = "us-east-1b"
@@ -85,14 +95,6 @@ variable "vpc_config" {
           subnet_cidr = "10.1.1.0/24"
           tags = {
             "Name" = "SUBNET-LAB-DEV-11"
-          }
-          is_public = false
-        },
-        {
-          az = "us-east-1c"
-          subnet_cidr = "10.1.2.0/24"
-          tags = {
-            "Name" = "SUBNET-LAB-DEV-12"
           }
           is_public = false
         }
@@ -147,3 +149,23 @@ flatten([for vpc_key, vpc_obj in var.vpc_config : [for subnet_idx, subnets in vp
   "${flat_subnet.sid}" => flat_subnet
 }
  */
+/* 
+ [
+    for vpc_name, vpc in var.vpc_config : {
+      vpc_name = vpc_name
+      create   = try(vpc.igw.create, false)
+      attach   = try(vpc.igw.attach, false)
+      tags     = try(vpc.igw.tags, {})
+    }
+    if try(vpc.igw.create, false) || try(vpc.igw.attach, false)
+  ]
+
+  [for vpc_name, vpc in var.vpc_config : vpc.igw ]
+  [for vpc_name, vpc in var.vpc_config : [for k, v in vpc.igw : v if v !=null] ]
+
+[for vpc_name, vpc in var.vpc_config : [for k, v in vpc.igw : v] if vpc.igw !=null ]
+
+[for vpc_name, vpc in var.vpc_config : vpc.igw if vpc.igw !=null ]
+
+[for vpc_key, vpc in var.vpc_config : merge(vpc.igw,{"vpc_key"="${vpc_key}"}) if vpc.igw !=null ]
+ */                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
