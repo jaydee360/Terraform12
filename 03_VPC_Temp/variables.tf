@@ -38,10 +38,10 @@ variable "vpc_config" {
     }))
   }))
   default = {
-    "VPC-LAB-DEV-01" = {
+    "VPC-LAB-DEV-00" = {
       vpc_cidr = "10.0.0.0/16"
       tags = {
-        "Name" = "VPC-LAB-DEV-01"
+        "Name" = "VPC-LAB-DEV-00"
       }
       igw = {
         create = true
@@ -76,10 +76,10 @@ variable "vpc_config" {
         }
       ]
     }
-    "VPC-LAB-DEV-02" = {
+    "VPC-LAB-DEV-01" = {
       vpc_cidr = "10.1.0.0/16"
       tags = {
-        "Name" = "VPC-LAB-DEV-02"
+        "Name" = "VPC-LAB-DEV-10"
       }
       subnets = [
         {
