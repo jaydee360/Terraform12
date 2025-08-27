@@ -7,19 +7,19 @@ variable "aws_region" {
 variable "aws_profile" {
   description = "The AWS profile to use for authentication"
   type        = string
-  default     = "terraform"  
+  default     = "terraform"
 }
 
 variable "default_tags" {
   type = map(string)
   default = {
     "Environment" = "dev"
-    "Owner" = "Jason"
-    "Source" = "default_tags"
-  } 
+    "Owner"       = "Jason"
+    "Source"      = "default_tags"
+  }
 }
 
-variable "vpc_config" {
+/* variable "vpc_config_old" {
   type = map(object({
     vpc_cidr = string
     enable_dns_support = optional(bool,true)
@@ -101,7 +101,7 @@ variable "vpc_config" {
       ]
     }
   }
-}
+} */
 
 /* 
 # First start

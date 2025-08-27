@@ -1,3 +1,5 @@
+
+/* 
 /* resource "aws_subnet" "jdtest_subnet_1b" {
   vpc_id = aws_vpc.jdtest_vpc.id
   cidr_block = "10.0.1.0/24"
@@ -6,7 +8,7 @@
     "Name"="jdtest_subnet-1b"
     "Env" = "lab"
   }
-}  */
+}  
 
  resource "aws_vpc" "jdtest_vpc" {
   cidr_block = "10.0.0.0/16"
@@ -57,3 +59,4 @@ resource "aws_route_table_association" "jdtest_rt_ass" {
   subnet_id = aws_subnet.jdtest_subnet_1a.id
 }
 
+ */
