@@ -214,3 +214,78 @@ Build a map like:
 }
 ```
 Use nested lookup() with fallback logic.
+
+# Exercise 8 (Twist): Reverse Mapping with Metadata Filtering
+You’re given a map of subnet-to-route-target associations:
+
+```
+local.subnet_to_rt = {
+  "subnet-a" = "rt-1"
+  "subnet-b" = "rt-2"
+  "subnet-c" = "rt-1"
+  "subnet-d" = "rt-3"
+}
+```
+And a metadata map for each subnet:
+```
+local.subnet_meta = {
+  "subnet-a" = { env = "prod" }
+  "subnet-b" = { env = "dev" }
+  "subnet-c" = { env = "prod" }
+  "subnet-d" = { env = "dev" }
+}
+```
+### Goal: 
+Produce a map of route targets to lists of subnets that use them — but only include subnets where env == "prod".
+Expected shape:
+```
+{
+  "rt-1" = ["subnet-a", "subnet-c"]
+}
+```
+
+# Exercise 9: Conditional Flattening
+You’re given a list of route objects:
+
+```
+var.routes_9 = [
+  { cidr = "10.0.1.0/24", target_type = "igw", target_key = "igw-a" },
+  { cidr = "10.0.2.0/24", target_type = "tgw", target_key = "tgw-a" },
+  { cidr = "10.0.3.0/24", target_type = "none", target_key = "" }
+]
+```
+### Goal: 
+Produce a flat list of strings like "10.0.1.0/24 -> igw-a", but exclude any route where target_type == "none".
+
+# Exercise 10: Semantic Keying with Fallback
+You’re given a nested map of route targets:
+
+```
+local.route_targets_10 = {
+  "igw" = { "vpc-a" = "igw-123" }
+  "tgw" = { "vpc-a" = "tgw-456", "vpc-b" = "tgw-789" }
+}
+```
+And a list of route objects:
+
+```
+var.routes_10 = [
+  { cidr = "10.0.1.0/24", target_type = "tgw", target_key = "vpc-a" },
+  { cidr = "10.0.2.0/24", target_type = "igw", target_key = "vpc-b" }
+]
+```
+### Goal: 
+Produce a map of "cidr-target_type" to resolved target ID, falling back to "default" if either key is missing.
+
+# Exercise 11: Multi-Stage Filtering
+You’re given a map of subnet metadata:
+
+```
+local.subnet_meta = {
+  "subnet-a" = { env = "prod", az = "a" }
+  "subnet-b" = { env = "dev", az = "b" }
+  "subnet-c" = { env = "prod", az = "b" }
+}
+```
+### Goal: 
+Produce a list of subnet IDs that are in "prod" and in AZ "b".

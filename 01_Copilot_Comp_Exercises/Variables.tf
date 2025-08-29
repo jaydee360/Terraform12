@@ -107,7 +107,7 @@ variable "subnets_a" {
 # The solutions below how the fallback behavour in LOOKUP and CONTAINS works as expected where the keys are absent from the input
 # Notice also how attempting to evaluate NULL values will fail, if the route_table_key no longer exists (failure_3aa)
 locals {
-    failure_3aa = {for sub_key, sub_data in var.subnets_a : sub_key => sub_data.route_table_key != null ? sub_data.route_table_key : (sub_data.is_public ? "public_rt" : "private_rt")}
+    # failure_3aa = {for sub_key, sub_data in var.subnets_a : sub_key => sub_data.route_table_key != null ? sub_data.route_table_key : (sub_data.is_public ? "public_rt" : "private_rt")}
     solution_3aa = {for sub_key, sub_data in var.subnets_a : sub_key => lookup(sub_data, "route_table_key", (sub_data.is_public ? "public_rt" : "private_rt"))}
     solution_3bb = {for sub_key, sub_data in var.subnets_a : sub_key => contains(keys(sub_data), "route_table_key") ? sub_data.route_table_key : (sub_data.is_public ? "public_rt" : "private_rt")}
 }
@@ -279,7 +279,7 @@ variable "routes_7" {
 
 # STEP TWO
 # The callenge 'hint' said "Use nested lookup() with fallback logic"
-# create a PoC for the route target lookup using nested lookups
+# create a PoC for the route target lookup using literals in nested lookups
 # To use this approach worked well for valid lookups
 # > lookup(lookup(local.route_targets_7,"igw"),"vpc-a")
 
@@ -294,7 +294,7 @@ variable "routes_7" {
 # considering that both lookups (inner and outer) form a single compound lookup, my instinct was to use the try() function to contain failure, and provide fallback
 # Also for some reason (which i dont fully understand), i abandoned nested lookups and switched to the [index] method for direct lookup of values
 
-# First, i created a PoC for the route target lookups using both valid and invalid lookup data
+# First, i created a PoC for the route target lookups using both valid and invalid lookup data, to test fallback
 
 # valid lookup
 # > try(local.route_targets_7["igw"]["vpc-a"],"default-tgw")
@@ -308,10 +308,10 @@ variable "routes_7" {
 # -----------
 # > {for ROUTE in var.routes_7 : "${ROUTE.cidr}-${ROUTE.target_type}" => try(local.route_targets_7[ROUTE.target_type][ROUTE.target_key],"default-tgw")}
 
-# Further to SOLUTION 7a, i now realise that the nested lookup approach becomes feasable if the lookups are encapsulated in a try() function to handle any failure
-# this would allow me to provide a fallback value for any failure
+# Further to SOLUTION 7a, i now realise that the original nested lookup approach is actually feasable if the lookups are encapsulated in a try() function to handle any failure
+# this would allow me to provide a fallback value in case of failure in any part of the nested lookup
 
-# I created the same PoC to test using nested lookups 
+# I created the same PoC to test using nested lookups with try()
 
 # vaild lookup
 # > try(lookup(lookup(local.route_targets_7,"igw"),"vpc-a"),"default-tgw")
@@ -325,3 +325,174 @@ variable "routes_7" {
 # -----------
 # > {for ROUTE in var.routes_7 : "${ROUTE.cidr}-${ROUTE.target_type}" => try(lookup(lookup(local.route_targets_7, ROUTE.target_type), ROUTE.target_key),"default-tgw")}
 
+# Exercise 8: Reverse Mapping (TWIST)
+# ----------------------------=======
+
+locals {
+    subnet_to_rt_8 = {
+        "subnet-a" = "rt-1"
+        "subnet-b" = "rt-2"
+        "subnet-c" = "rt-1"
+        "subnet-d" = "rt-3"
+    }
+    subnet_meta_8 = {
+        "subnet-a" = { env = "prod" }
+        "subnet-b" = { env = "dev" }
+        "subnet-c" = { env = "prod" }
+        "subnet-d" = { env = "dev" }
+    }
+} 
+
+# STEP 1
+# ------
+# start from the same type of reverse map from Exercise 6
+# > {for UNIQUE_RT in distinct(values(local.subnet_to_rt_8)) : UNIQUE_RT => [for SNET, RT in local.subnet_to_rt_8 : SNET if RT == UNIQUE_RT ]}
+
+# STEP 2
+# ------
+# use literals to check we can index the values from 'local.subnet_meta_8'. 
+# demonstrate a simple lookup any given subnet & environment value
+# > local.subnet_meta_8["subnet-a"]
+# > {
+# >  "env" = "prod"
+# > }
+# > local.subnet_meta_8["subnet-a"]["env"] 
+# > "prod"
+
+# Solution 8a
+# ------------
+# using the reverse map from step 1, incorporate an additional filter to the subnet values collected in the list. 
+# in addition to the UNIQUE_RT, do a metadata lookup and filter for "env" = "prod"
+# > {for UNIQUE_RT in distinct(values(local.subnet_to_rt_8)) : UNIQUE_RT => [for SNET, RT in local.subnet_to_rt_8 : SNET if (RT == UNIQUE_RT && local.subnet_meta_8[SNET]["env"] == "prod")]}
+# this basically works nicely, but it also returns empty maps
+
+# Solution 8b
+# -----------
+# define an approach to remove the empty maps
+# use pseudo code to simplify the original expression
+# > {for UNIQUE_RT in deduped_values : UNIQUE_RT => [value_list_logic]}
+# pseudo code to add length() function. Check the result of the inner value_list_logic is greater than zero. If true, execute the inner value_list_logic, else return NULL
+# > {for UNIQUE_RT in deduped_values : UNIQUE_RT => length([value_list_logic]) > 0 ? [value_list_logic] : null}
+# create the actual code for execution
+# > {for UNIQUE_RT in distinct(values(local.subnet_to_rt_8)) : UNIQUE_RT => length([for SNET, RT in local.subnet_to_rt_8 : SNET if (RT == UNIQUE_RT && local.subnet_meta_8[SNET]["env"] == "prod")]) > 0 ? [for SNET, RT in local.subnet_to_rt_8 : SNET if (RT == UNIQUE_RT && local.subnet_meta_8[SNET]["env"] == "prod")] : null}
+# this works to ensure that empty maps are not returned. It no longer returns empty objects but it still returns keys as null tuples:
+# > {
+# >   "rt-1" = [
+# >     "subnet-a",
+# >     "subnet-c",
+# >   ]
+# >   "rt-2" = null /* tuple */
+# >   "rt-3" = null /* tuple */
+# > }
+
+# Solution 8c
+# -----------
+# if the goal is remove empty any empty keys and values altogether a different approach is required
+# use pseudo code to simplify the original expression
+# > {for UNIQUE_RT in deduped_values : UNIQUE_RT => [value_list_logic]}
+# wrap the original expression in a new expression to rebuild the map based if the length of each value is greater than zero 
+# > {for key, value in {for UNIQUE_RT in deduped_values) : UNIQUE_RT => [value_list_logic]} : key => value if length(value) > 0}
+# create the actual code for execution
+# > {for NEW-KEY, NEW-VALUE in {for UNIQUE_RT in distinct(values(local.subnet_to_rt_8)) : UNIQUE_RT => [for SNET, RT in local.subnet_to_rt_8 : SNET if (RT == UNIQUE_RT && local.subnet_meta_8[SNET]["env"] == "prod")]} : NEW-KEY => NEW-VALUE if length(NEW-VALUE) > 0}
+# > {
+# >   "rt-1" = [
+# >     "subnet-a",
+# >     "subnet-c",
+# >   ]
+# > }
+# END: this is the final solution
+
+
+# Exercise 9: Conditional Flattening
+# ----------------------------------
+variable "routes_9a" {
+    type = list(object({
+      cidr = string
+      target_type = string
+      target_key = string
+    }))
+    default = [
+        { cidr = "10.0.1.0/24", target_type = "igw", target_key = "igw-a" },
+        { cidr = "10.0.2.0/24", target_type = "tgw", target_key = "tgw-a" },
+        { cidr = "10.0.3.0/24", target_type = "none", target_key = "" }
+    ]
+}
+
+variable "routes_9b" {
+    type = list(object({
+      cidr = string
+      target_type = optional(string)
+      target_key = optional(string)
+    }))
+    default = [
+        { cidr = "10.0.1.0/24", target_type = "igw", target_key = "igw-a" },
+        { cidr = "10.0.2.0/24", target_type = "tgw", target_key = "tgw-a" },
+        { cidr = "10.0.3.0/24"}
+    ]
+} 
+# sketch out solution using var.routes_9a
+# [for ROUTE_OBJ in var.routes_9a : ROUTE_OBJ if ROUTE_OBJ.target_type != "none"]
+# [for ROUTE_OBJ in var.routes_9a : "${ROUTE_OBJ.cidr} -> ${ROUTE_OBJ.target_key}"]
+# [for ROUTE_OBJ in var.routes_9a : "${ROUTE_OBJ.cidr} -> ${ROUTE_OBJ.target_key}" if ROUTE_OBJ.target_type != "none"]
+# 
+# sketch out solution using var.routes_9a 
+# [for ROUTE_OBJ in var.routes_9b : ROUTE_OBJ if ROUTE_OBJ.target_type != null]
+# [for ROUTE_OBJ in var.routes_9b : "${ROUTE_OBJ.cidr} -> ${ROUTE_OBJ.target_key}" if ROUTE_OBJ.target_type != null]
+
+
+# Exercise 10: Semantic Keying with Fallback
+# ------------------------------------------
+
+locals {
+    route_targets_10 = {
+        "igw" = { "vpc-a" = "igw-123" }
+        "tgw" = { "vpc-a" = "tgw-456", "vpc-b" = "tgw-789" }
+    }
+}
+
+locals {
+    routes_10 = [
+        { cidr = "10.0.1.0/24", target_type = "tgw", target_key = "vpc-a" },
+        { cidr = "10.0.2.0/24", target_type = "igw", target_key = "vpc-b" }
+    ]
+}
+
+# steps 
+# try(local.route_targets_10["tgw"]["vpc-a"],"default") # lookup up
+# try(local.route_targets_10["igw"]["vpc-b"],"default") # lookup ng > fallback
+# try(local.route_targets_10[ROUTEMAP.target_type][ROUTEMAP.target_key],"default")
+#  
+# {for ROUTEMAP in local.routes_10 : "${ROUTEMAP.cidr}" => "test"}
+# {for ROUTEMAP in local.routes_10 : "${ROUTEMAP.cidr}-${try(local.route_targets_10[ROUTEMAP.target_type][ROUTEMAP.target_key],"default")}" => "test"}
+# {for ROUTEMAP in local.routes_10 : "${ROUTEMAP.cidr}-${try(local.route_targets_10[ROUTEMAP.target_type][ROUTEMAP.target_key],"default")}" => try(local.route_targets_10[ROUTEMAP.target_type][ROUTEMAP.target_key],"default")}
+
+# Exercise 11: Multi-Stage Filtering
+# ----------------------------------
+
+locals {
+    subnet_meta = {
+        "subnet-a" = { env = "prod", az = "a" }
+        "subnet-b" = { env = "dev", az = "b" }
+        "subnet-c" = { env = "prod", az = "b" }
+    }
+}
+
+/* 
+Goal:
+Produce a list of subnet IDs that are in "prod" and in AZ "b".
+*/
+
+# first outline the simple list comprehension to get all the subnets:
+# > [for k, o in local.subnet_meta : k]
+
+# next, test the [index] method of lookup on a subnet objects keys/values, using literals 
+# by env first:
+# > (local.subnet_meta["subnet-c"]["env"]=="prod")
+# then by az:
+# > (local.subnet_meta["subnet-c"]["az"]=="b")
+
+# combine them to check validity:
+# > ((local.subnet_meta["subnet-c"]["env"]=="prod") && (local.subnet_meta["subnet-c"]["az"]=="b"))
+
+# use the same compound lookup method as a filter in the original list comprehension, using iteration varaible 'k' for the subnet:
+# > [for k, o in local.subnet_meta : k if ((local.subnet_meta[k]["env"]=="prod") && (local.subnet_meta[k]["az"]=="b"))]
