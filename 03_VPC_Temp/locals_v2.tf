@@ -5,7 +5,12 @@ locals {
   subnet_map = merge(
     [for vpc_key, vpc_obj in var.vpc_config :
       { for subnet_key, subnet_obj in vpc_obj.subnets :
-        "${vpc_key}-${subnet_key}" => merge(subnet_obj, { vpc_key = "${vpc_key}", subnet_key = "${subnet_key}" })
+        "${vpc_key}__${subnet_key}" => 
+          merge(subnet_obj, { 
+            vpc_key = "${vpc_key}", 
+            subnet_key = "${subnet_key}",
+            az = var.az_lookup[var.aws_region][subnet_obj.az]
+          })
       }
   ]...)
 }

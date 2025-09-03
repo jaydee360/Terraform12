@@ -1,4 +1,3 @@
-
 variable "vpc_config" {
   type = map(object({
     vpc_cidr             = string
@@ -14,6 +13,8 @@ variable "vpc_config" {
       subnet_cidr = string
       az          = string
       is_public   = optional(bool, false)
+      has_route_table = optional(bool, false)
+      has_nat_gw  = optional(bool, false)
       tags        = optional(map(string))
     }))
   }))
@@ -30,25 +31,28 @@ variable "vpc_config" {
       }
       subnets = {
         "snet-lab-dev-000-a" = {
-          az          = "us-east-1a"
+          az          = "a"
           subnet_cidr = "10.0.0.0/24"
           tags = {
           }
-          is_public = true
+          has_route_table = true
+          has_nat_gw = true
         }
         "snet-lab-dev-000-b" = {
-          az          = "us-east-1b"
+          az          = "b"
           subnet_cidr = "10.0.1.0/24"
           tags = {
           }
-          is_public = false
+          has_route_table = true
+          has_nat_gw = false
         }
         "snet-lab-dev-000-c" = {
-          az          = "us-east-1c"
+          az          = "c"
           subnet_cidr = "10.0.2.0/24"
           tags = {
           }
-          is_public = false
+          has_route_table = true
+          has_nat_gw = false
         }
       }
     }
@@ -64,22 +68,52 @@ variable "vpc_config" {
       }
       subnets = {
         "snet-lab-dev-100-a" = {
-          az          = "us-east-1a"
+          az          = "a"
           subnet_cidr = "10.1.0.0/24"
           tags = {
           }
-          is_public = false
+          has_route_table = true
+          has_nat_gw = false
         }
         "snet-lab-dev-100-b" = {
-          az          = "us-east-1b"
+          az          = "b"
           subnet_cidr = "10.1.1.0/24"
           tags = {
           }
-          is_public = false
+          has_route_table = true
+          has_nat_gw = false
         }
       }
     }
   }
 }
+
+variable "route_table_config" {
+  type = map(object({
+    inject_igw    = optional(bool, false)
+    inject_nat    = optional(bool, false)
+    custom_routes = optional(list(object({
+      cidr_block    = string
+      target_type   = string
+      target_key    = string
+    })))
+    tags          = optional(map(string),{})
+  }))
+  default = {
+    "vpc-lab-dev-000__snet-lab-dev-000-a" = {
+      inject_igw = true
+    }
+    "vpc-lab-dev-000__snet-lab-dev-000-c" = {
+      inject_nat = true
+    }
+  }
+  validation {
+    condition = alltrue([for v in var.route_table_config : 
+      !(v.inject_igw && v.inject_nat)
+    ])
+    error_message = "A route table cannot inject both IGW and NAT. Check: route_table_config."
+  }
+}
+
 
 

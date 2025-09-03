@@ -19,6 +19,17 @@ variable "default_tags" {
   }
 }
 
+variable "az_lookup" {
+  type = map(map(string))
+  default = {
+    "us-east-1" = {
+      "a" = "us-east-1a"
+      "b" = "us-east-1b"
+      "c" = "us-east-1c"
+    }
+  }
+}
+
 /* variable "vpc_config_old" {
   type = map(object({
     vpc_cidr = string
