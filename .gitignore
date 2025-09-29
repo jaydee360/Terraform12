@@ -15,7 +15,7 @@ crash.*.log
 # to change depending on the environment. (default terraform.tfvars, are not excluded)
 *.tfvars
 *.tfvars.json
-!terraform.tfvars
+!terraform*.tfvars
 !terraform.tfvars.json
 
 # Ignore override files as they are usually used to override resources locally and so
