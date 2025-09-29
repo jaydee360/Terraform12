@@ -1,10 +1,41 @@
-# progressive itteration and transformation to build a map for igw creation
+# SUBNETS
+# -------
+# Flattens all subnets across all VPCs into a single map keyed by "vpc_key__subnet_key".
+# Each subnet object is enriched with its parent VPC key, its own key, and a resolved AZ name.
 
-# create a list of IGW object from the master vpc data (vpc_config)
-# ----------------------------------------------------------
-# itterate through each vpc_key & vpc_object
-# using the the vpc_object's IGW object, (if it exists), create a new list
-# to create each list item, merge the original IGW object with parent vpc_key for enrichment (used to build the other maps below)
+# Pseudocode Summary:
+# For each VPC in vpc_config:
+#   For each subnet in that VPC:
+#     - Build a unique key: vpc_key__subnet_key
+#     - Merge the original subnet object with:
+#         - vpc_key (parent reference)
+#         - subnet_key (local identifier)
+#         - az (resolved full AZ name via az_lookup)
+# Result: A flat map of enriched subnet objects keyed by vpc__subnet
+locals {
+  subnet_map = merge(
+    [for vpc_key, vpc_obj in var.vpc_config :
+      { for subnet_key, subnet_obj in vpc_obj.subnets :
+        "${vpc_key}__${subnet_key}" => 
+          merge(subnet_obj, { 
+            vpc_key = "${vpc_key}", 
+            subnet_key = "${subnet_key}",
+            az = var.az_lookup[var.aws_region][subnet_obj.az]
+          })
+      }
+  ]...)
+}
+
+# IGWs
+# ----
+# multi-step itteration and transformation
+# Extracts and enriches IGW definitions from vpc_config, tagging each with its parent VPC key.
+# Builds filtered maps to drive conditional IGW creation and attachment logic.
+# Enables modular IGW provisioning based on per-VPC flags, maintaining semantic clarity and operational intent.
+
+# Step 1: Build a flat list of IGW objects from vpc_config
+#   - Include only VPCs that define an IGW
+#   - Enrich each IGW object with its parent vpc_key
 locals {
   igw_list = [
     for vpc_key, vpc_obj in var.vpc_config :
@@ -12,11 +43,9 @@ locals {
   ]
 }
 
-# create a map of igw's, to drive  igw resource creation
-# ------------------------------------------------------
-# using the igw_list above:
-# for each igw object, construct a map, keyed with the enriched vpc_key,
-# IF CREATE FLAG IS SET
+# Step 2: Build a map of IGWs to create
+#   - From igw_list, include only IGWs where create == true
+#   - Keyed by vpc_key
 locals {
   igw_create_map = {
     for igw_key, igw_obj in local.igw_list :
@@ -24,18 +53,9 @@ locals {
   }
 }
 
-locals {
-  test_igw_create_map = {
-    for vpc_key, vpc_obj in var.vpc_config :
-    vpc_key => vpc_obj.igw if vpc_obj.igw != null
-  }
-}
-
-# create a map of igw's, to drive igw attachment creation
-# -------------------------------------------------------
-# using the igw_list above:
-# for each igw object, construct a map, keyed with the enriched vpc_key
-# IF CREATE AND ATTACH FLAGS ARE BOTH SET
+# Step 3: Build a map of IGWs to attach
+#   - From igw_list, include only IGWs where create == true and attach == true
+#   - Keyed by vpc_key
 locals {
   igw_attach_map = {
     for igw_key, igw_obj in local.igw_list :
@@ -43,25 +63,12 @@ locals {
   }
 }
 
-# create a map of public route tables, to drive public route table creation
-# -------------------------------------------------------------------------
-# using the igw_list above:
-# for each igw object, construct a map, keyed with the enriched vpc_key
-# IF CREATE AND ATTACH FLAGS ARE BOTH SET
-locals {
-  public_rt_map = {
-    for igw_key, igw_obj in local.igw_list :
-    "${igw_obj.vpc_key}" => igw_obj if igw_obj.attach && igw_obj.create
-  }
-}
-
-locals {
-  public_subnet_map = {
-    for subnet_key, subnet in local.subnet_map :
-    subnet_key => subnet if subnet.is_public
-  }
-}
-
+# NAT GWs & Elastic IPs
+# ---------------------
+# Filters the local.subnet_map above to include only subnets flagged for NAT Gateway provisioning.
+# - Include only subnets where has_nat_gw == true
+# - Preserve original subnet_key as the map key
+# Result: A filtered map of NAT-enabled subnets
 locals {
   nat_gw_map = {
     for subnet_key, subnet in local.subnet_map :
@@ -69,31 +76,14 @@ locals {
   }
 }
 
-/* locals {
-  private_subnets_with_rt = {
-    for vpc_key, vpc in var.vpc_config :
-    vpc_key => {
-      for subnet_key, subnet in vpc.subnets :
-      subnet_key => subnet
-      if !subnet.is_public && subnet.has_route_table
-    }
-  }
-} */
-
-locals {
-  private_subnets_with_rt = {
-    for subnet_key, subnet in local.subnet_map :
-      subnet_key => subnet if subnet.has_route_table && !subnet.is_public
-  }
-}
-
-locals {
-  public_subnets_with_rt = {
-    for subnet_key, subnet in local.subnet_map :
-      subnet_key => subnet if subnet.has_route_table && subnet.is_public
-  }
-}
-
+# ROUTE TABLES
+# ------------
+# For each route table entry in route_table_config:
+# - Merge the original route table object with additional enrichment (attributes lookued up from local.subnet_map):
+#   - vpc_key 
+#   - subnet_key
+#   - az
+# Result: A map of enriched route table objects keyed by the "vpc_key__subnet_key" (the same compound as the subnet key)
 locals {
   route_table_map = {
     for route_table_key, route_table_object in var.route_table_config : 
@@ -108,17 +98,17 @@ locals {
   } 
 }
 
-/* locals {
-  igw_route_plan = {
-    for route_table_key, route_table_object in local.route_table_map : 
-    "${route_table_key}__IGW" => {
-      "rt_key"  = route_table_key
-      "az"  = route_table_object.az
-      "igw" = [for k, v in local.igw_attach_map : k if v.vpc_key == route_table_object.vpc_key][0]
-    } if route_table_object.inject_igw
-  }
-} */
-
+# IGW ROUTES
+# ----------
+# Builds a map of IGW routes for route tables flagged with inject_igw.
+# For each route table in route_table_map:
+# - If inject_igw is true:
+#   - Create a route plan entry keyed by "route_table_key__0/0"
+#   - Include:
+#     - rt_key: the route table key
+#     - target_key: the VPC key (also the index of the IGW instance)
+#     - destination_prefix: "0.0.0.0/0" (default route)
+# Result: A map of IGW route injection plans
 locals {
   igw_route_plan = {
     for route_table_key, route_table_object in local.route_table_map : 
@@ -130,74 +120,96 @@ locals {
   }
 }
 
-locals {
-  matching_nat_gw_keys = {
-    for route_table_key, route_table_object in local.route_table_map :
-    route_table_key => [
-      for nat_gw_key, nat_gw_obj in local.nat_gw_map :
-      nat_gw_key if nat_gw_obj.vpc_key == route_table_object.vpc_key
-    ]
-  }
+# NAT-GW ROUTES
+# -------------
+# Proximity-aware NAT routing using PRIMARY and SECONDARY lookups to find the closest NAT Gateway fkr each route_table_object
+# Primary lookup:   NAT-GW by VPC & AZ, 
+# Secondary lookup: NAT-GW by VPC only (fallback)
 
+# PRIMARY LOOKUP MAP
+# Groups NAT Gateway instances by their containing VPC and AZ
+# NAT-GW instances are keyed the same as the subnets where they reside.
+
+# Step 1: Extract all unique VPC keys from nat_gw_map
+# Step 2: For each VPC key:
+# - Step 2a: Extract all unique AZs where NAT Gateways exist for that VPC
+# - Step 2b: For each AZ in that VPC:
+#   - Step 2b.i: Collect all NAT Gateway instance keys where the NAT Gateway belongs to that VPC and AZ
+#   - Step 2b.ii: Store the list of NAT Gateway keys under that AZ
+# - Step 2c: Store the AZ-to-NAT-GW map under the current VPC key
+# Step 3: Result is a nested map: 
+# - nat_gw_by_vpc_az[vpc_key][az] = list of NAT Gateway instance keys
+
+locals {
+  nat_gw_by_vpc_az = {
+    for vpc_grp_key in distinct([
+      for nat_gw_key, nat_gw_obj in local.nat_gw_map : nat_gw_obj.vpc_key
+    ]) : vpc_grp_key => {
+      for az_grp_key in distinct([
+        for nat_gw_key, nat_gw_obj in local.nat_gw_map : nat_gw_obj.az
+        if nat_gw_obj.vpc_key == vpc_grp_key
+      ]) : az_grp_key => [
+        for nat_gw_key, nat_gw_obj in local.nat_gw_map : nat_gw_key
+        if nat_gw_obj.vpc_key == vpc_grp_key && nat_gw_obj.az == az_grp_key
+      ]
+    }
+  }
+}
+
+# SECONDARY LOOKUP MAP
+# Group NAT Gateway instances by their parent VPC only
+# NAT-GW instances are keyed the same as the subnets where they reside.
+
+# Step 1: Extract all VPC keys from nat_gw_map and deduplicate
+# Step 2: For each unique VPC key:
+# - Collect all NAT Gateway instances with a matching VPC key
+# Result: A map of VPC keys to lists of NAT Gateway instance keys
+locals {
+  nat_gw_by_vpc = {
+    for vpc_grp_key in distinct([for nat_gw_key, nat_gw_obj in local.nat_gw_map : nat_gw_obj.vpc_key]) :
+    vpc_grp_key => [for nat_gw_key, nat_gw_obj in local.nat_gw_map : nat_gw_key if nat_gw_obj.vpc_key == vpc_grp_key]
+  }
+}
+
+# NAT Gateway route plan (AZ-aware with fallback)
+# For each route table flagged with inject_nat:
+# - Build a route entry for 0.0.0.0/0
+# - Attempt to find a NAT Gateway in the same VPC and AZ
+# - If none exists, fall back to any NAT Gateway in the same VPC
+# - If neither exists, assign an empty list (defensive default)
+# - Extract the first NAT Gateway key from the resolved list
+
+locals {
   nat_gw_route_plan = {
     for route_table_key, route_table_object in local.route_table_map : 
     "${route_table_key}__0/0" => {
       "rt_key"  = route_table_key
-      "target_key" = local.nat_gw_by_vpc[route_table_object.vpc_key][0]
+      "target_key" = try(local.nat_gw_by_vpc_az[route_table_object.vpc_key][route_table_object.az][0], local.nat_gw_by_vpc[route_table_object.vpc_key][0], [])
       "destination_prefix" = "0.0.0.0/0"
     } if route_table_object.inject_nat 
   }
 }
 
-locals {
-  nat_gw_by_vpc_az = {
-    for vpc_grp_key in distinct ([for k1, o1 in local.nat_gw_map : o1.vpc_key]) : 
-      vpc_grp_key => {for az_grp_key in distinct([for k2, o2 in local.nat_gw_map : o2.az if o2.vpc_key == vpc_grp_key]) : 
-        az_grp_key => [for k3, o3 in local.nat_gw_map : k3 if o3.vpc_key == vpc_grp_key && o3.az == az_grp_key] 
-      } 
-  }
 
-  nat_gw_by_vpc = {
-    for vpc_grp_key in distinct ([for k1, o1 in local.nat_gw_map : o1.vpc_key]) : 
-      vpc_grp_key => [for k2, o2 in local.nat_gw_map : k2 if o2.vpc_key == vpc_grp_key]
-  }
-}
+# ROUTE TABLE ASSOCIATIONS
+# ------------------------
+# List of subnets eligible for route table association
+# - Subnets flagged with has_route_table == true
+# - Subnet key exists in route_table_map
+
+# Step 1: Extract the route table keys from route_table_map
+# Step 2: Iterate over each subnet in subnet_map
+# Step 3: For each subnet:
+# - Check if it has an associated route table (has_route_table == true)
+# - Check if its key exists in the extracted route table keys from Step 1
+# - If both conditions are met, include the subnet key in the output list
+# Step 4: Result is a list of subnet keys eligible for route table association
 
 locals {
   valid_route_table_keys = keys(local.route_table_map)
 
-  subnet_route_table_associations = [
+  subnet_route_table_associations = toset([
     for subnet_key, subnet in local.subnet_map : 
     subnet_key if subnet.has_route_table && contains(local.valid_route_table_keys, subnet_key)
-  ]
+  ])
 }
-
-/* #VPC GRP
-[for nat_gw_key, nat_gw_obj in local.nat_gw_map : nat_gw_obj.vpc_key]
-distinct ([for nat_gw_key, nat_gw_obj in local.nat_gw_map : nat_gw_obj.vpc_key])
-{for vpc_grp_key in distinct ([for nat_gw_key_1, nat_gw_obj_1 in local.nat_gw_map : nat_gw_obj_1.vpc_key]) : vpc_grp_key => "AZ_LIST_HERE!"}
-
-{for vpc_grp_key in distinct ([for k1, o1 in local.nat_gw_map : o1.vpc_key]) : vpc_grp_key => [for k2, o2 in local.nat_gw_map : k2 if o2.vpc_key == vpc_grp_key]}
-/*
-{for vpc_grp_key in distinct ([for nat_gw_key_1, nat_gw_obj_1 in local.nat_gw_map : nat_gw_obj_1.vpc_key]) : vpc_grp_key => "AZ_LIST_HERE!"}
-#AZ GRP
-[for nat_gw_key, nat_gw_obj in local.nat_gw_map : nat_gw_obj.az]
-distinct([for nat_gw_key, nat_gw_obj in local.nat_gw_map : nat_gw_obj.az])
-{for az_grp_key in distinct([for nat_gw_key_2, nat_gw_obj_2 in local.nat_gw_map : nat_gw_obj_2.az]) : az_grp_key => "NAT_GW_LIST HERE"}
-
-{for vpc_grp_key in distinct ([for k1, o1 in local.nat_gw_map : o1.vpc_key]) : 
-  vpc_grp_key => {for az_grp_key in distinct([for k2, o2 in local.nat_gw_map : o2.az if o2.vpc_key == vpc_grp_key]) : 
-    az_grp_key => [for k3, o3 in local.nat_gw_map : k3 if o3.vpc_key == vpc_grp_key && o3.az == az_grp_key] } }
-
-{for vpc_grp_key in distinct ([for nat_gw_key, nat_gw_obj in local.nat_gw_map : nat_gw_obj.vpc_key]) : vpc_grp_key => {for az_grp_key in distinct([for nat_gw_key, nat_gw_obj in local.nat_gw_map : nat_gw_obj.az]) : az_grp_key => "test"}}
-
-{for az_grp_key in distinct([for nat_gw_key, nat_gw_obj in local.nat_gw_map : nat_gw_obj.az]) : az_grp_key => "test"}
-
-{for nat_gw_key, nat_gw_obj in local.nat_gw_map : nat_gw_obj.az => nat_gw_key if nat_gw_obj.vpc_key == "vpc-lab-dev-100" }
-
-{for vpc_grp_key in distinct ([for nat_gw_key, nat_gw_obj in local.nat_gw_map : nat_gw_obj.vpc_key]) : vpc_grp_key => {for nat_gw_key, nat_gw_obj in local.nat_gw_map : nat_gw_obj.az => nat_gw_key if nat_gw_obj.vpc_key == vpc_grp_key }}
-
-[for k3, o3 in local.nat_gw_map : k3 if o3.vpc_key == "vpc-lab-dev-000" && o3.az == "us-east-1a"]
-[for k, o in local.nat_gw_map : k if o.vpc_key == "vpc-lab-dev-100" && o.az == "us-east-1a"]
-
- */
