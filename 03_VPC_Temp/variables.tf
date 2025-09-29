@@ -26,6 +26,7 @@ variable "az_lookup" {
       "a" = "us-east-1a"
       "b" = "us-east-1b"
       "c" = "us-east-1c"
+      "d" = "us-east-1d"
     }
   }
 }

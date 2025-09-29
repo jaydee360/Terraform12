@@ -72,13 +72,14 @@ locals {
 locals {
   nat_gw_map = {
     for subnet_key, subnet in local.subnet_map :
-    subnet_key => subnet if subnet.has_nat_gw
+    subnet_key => subnet if subnet.has_nat_gw && can(local.igw_attach_map[subnet.vpc_key])
   }
 }
 
 # ROUTE TABLES
 # ------------
 # For each route table entry in route_table_config:
+# check if we can access the route_table_key in the subnet_map
 # - Merge the original route table object with additional enrichment (attributes lookued up from local.subnet_map):
 #   - vpc_key 
 #   - subnet_key
@@ -94,7 +95,7 @@ locals {
       "subnet_key" = local.subnet_map[route_table_key].subnet_key
       "az"         = local.subnet_map[route_table_key].az
       }
-    )
+    ) if can(local.subnet_map[route_table_key])
   } 
 }
 
@@ -116,7 +117,7 @@ locals {
       "rt_key"  = route_table_key
       "target_key" = route_table_object.vpc_key
       "destination_prefix" = "0.0.0.0/0"
-    } if route_table_object.inject_igw
+    } if route_table_object.inject_igw && can(local.igw_attach_map[route_table_object.vpc_key])
   }
 }
 
@@ -172,7 +173,7 @@ locals {
 }
 
 # NAT Gateway route plan (AZ-aware with fallback)
-# For each route table flagged with inject_nat:
+# For each route table flagged with inject_nat && where 1 NAT GW exits:
 # - Build a route entry for 0.0.0.0/0
 # - Attempt to find a NAT Gateway in the same VPC and AZ
 # - If none exists, fall back to any NAT Gateway in the same VPC
@@ -184,12 +185,11 @@ locals {
     for route_table_key, route_table_object in local.route_table_map : 
     "${route_table_key}__0/0" => {
       "rt_key"  = route_table_key
-      "target_key" = try(local.nat_gw_by_vpc_az[route_table_object.vpc_key][route_table_object.az][0], local.nat_gw_by_vpc[route_table_object.vpc_key][0], [])
+      "target_key" = try(local.nat_gw_by_vpc_az[route_table_object.vpc_key][route_table_object.az][0], local.nat_gw_by_vpc[route_table_object.vpc_key][0], null)
       "destination_prefix" = "0.0.0.0/0"
-    } if route_table_object.inject_nat 
+    } if route_table_object.inject_nat && can(local.nat_gw_by_vpc[route_table_object.vpc_key][0])
   }
 }
-
 
 # ROUTE TABLE ASSOCIATIONS
 # ------------------------
@@ -207,9 +207,42 @@ locals {
 
 locals {
   valid_route_table_keys = keys(local.route_table_map)
+  valid_subnet_keys = keys(local.subnet_map)
 
   subnet_route_table_associations = toset([
     for subnet_key, subnet in local.subnet_map : 
     subnet_key if subnet.has_route_table && contains(local.valid_route_table_keys, subnet_key)
   ])
+
+  # subnets_without_matching_route_tables:
+  #   - Includes subnets flagged with has_route_table == true
+  #   - But missing a corresponding route_table_map entry
+  #   - Useful for diagnostics and surfacing misconfigurations
+
+  subnets_without_matching_route_tables = [
+    for subnet_key, subnet in local.subnet_map : 
+    subnet_key if subnet.has_route_table && !can(local.route_table_map[subnet_key])
+  ]
+
+  unused_route_tables_without_matching_subnet = [
+    for route_table_key, route_table_object in var.route_table_config : 
+    route_table_key if !can(local.subnet_map[route_table_key])
+  ]
+
+  nat_gw_route_plans_without_viable_nat_gw_target = [
+    for route_table_key, route_table_object in local.route_table_map : 
+    route_table_key if route_table_object.inject_nat && !can(local.nat_gw_by_vpc[route_table_object.vpc_key][0])
+  ]
+
+  igw_route_plans_without_viable_igw_target = [
+    for route_table_key, route_table_object in local.route_table_map : 
+    route_table_key if route_table_object.inject_igw && !can(local.igw_attach_map[route_table_object.vpc_key])
+  ]
+
+  nat_gw_subnets_without_igw = [
+    for subnet_key, subnet in local.subnet_map :
+    subnet_key if subnet.has_nat_gw && !can(local.igw_attach_map[subnet.vpc_key])
+  ]
 }
+
+

@@ -1,24 +1,24 @@
-/*  
-output "ec2_instances" {
-    value = {for each_key, each_value in aws_instance.main : each_key => each_value.id}
+output "subnets_without_matching_route_tables" {
+  value = local.subnets_without_matching_route_tables
+  description = "Subnets flagged with has_route_table but missing a corresponding route table config"
 }
 
-output "eip_public_ip" {
-    value = {for each_key, each_value in aws_eip.main : each_key => each_value.public_ip}
+output "unused_route_tables_without_matching_subnet" {
+  value = local.unused_route_tables_without_matching_subnet
+  description = "Route table configs that reference subnets not present in vpc_config"
 }
 
-output "eip_public_dns" {
-    value = {for each_key, each_value in aws_eip.main : each_key => each_value.public_dns}
+output "nat_gw_route_plans_without_viable_nat_gw_target" {
+  value = local.nat_gw_route_plans_without_viable_nat_gw_target
+  description = "Route plans that inject NAT but fail to resolve a valid NAT Gateway target"
 }
 
-output "security_group_ids" {
-    value = {for each_key, each_value in aws_security_group.main : each_key => each_value.id}
+output "igw_route_plans_without_viable_igw_target" {
+  value = local.igw_route_plans_without_viable_igw_target
+  description = "Route plans that inject IGW but the VPC lacks an attached IGW"
 }
 
-output "security_group_ingress_rules" {
-    value = {for each_key, each_value in aws_vpc_security_group_ingress_rule.main : each_key => each_value.id}
+output "nat_gw_subnets_without_igw" {
+  value = local.nat_gw_subnets_without_igw
+  description = "Subnets requesting NAT Gateway creation but whose VPC lacks an IGW"
 }
-
-output "security_group_egress_rules" {
-    value = {for each_key, each_value in aws_vpc_security_group_egress_rule.main : each_key => each_value.id}
-} */
