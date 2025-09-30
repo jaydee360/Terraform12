@@ -4,6 +4,8 @@ resource "aws_vpc" "main" {
   for_each = var.vpc_config
 
   cidr_block = each.value.vpc_cidr
+  enable_dns_support    = each.value.enable_dns_support
+  enable_dns_hostnames  = each.value.enable_dns_hostnames
   tags = merge(
     { "Name" = each.key },
     each.value.tags,
@@ -122,3 +124,18 @@ resource "aws_route_table_association" "main" {
   subnet_id      = aws_subnet.main[each.value].id
   route_table_id = aws_route_table.main[each.value].id
 } 
+
+resource "aws_instance" "main" {
+  for_each = local.ec2_instance_map
+
+  ami                         = each.value.ami
+  instance_type               = each.value.instance_type
+  key_name                    = each.value.key_name
+  associate_public_ip_address = each.value.associate_public_ip_address
+  user_data                   = each.value.user_data_script != null ? file("${path.module}/${each.value.user_data_script}") : null
+  subnet_id                   = aws_subnet.main[each.value.subnet_id].id
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}

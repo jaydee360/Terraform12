@@ -245,4 +245,9 @@ locals {
   ]
 }
 
+locals {
+  ec2_instance_map = {
+    for ec2_key, ec2_obj in var.ec2_config : ec2_key => merge(ec2_obj, {subnet_id = "${ec2_obj.vpc}__${ec2_obj.subnet}"})
+  }
+}
 

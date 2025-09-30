@@ -51,3 +51,11 @@ output "elastic_ip_ids" {
   value = {for k, eip in aws_eip.nat : k => eip.id}
   description = "Elastic IP IDs keyed by subnet"
 }
+
+output "igw_route_ids" {
+  value = {for k, r in aws_route.igw : k => r.id}  
+}
+
+output "ec2_instance_ids" {
+  value = {for k, i in aws_instance.main : k => i.id}  
+}

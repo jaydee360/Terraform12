@@ -163,5 +163,34 @@ variable "route_table_config" {
   }
 }
 
+variable "ec2_config" {
+  type = map(object({
+    ami = string,
+    instance_type = string,
+    vpc = string
+    subnet = string
+    key_name = string
+    associate_public_ip_address = optional(bool,false)
+    assign_eip = optional(bool,false)
+    sg_keys = optional(set(string),null)
+    user_data_script = optional(string,null)
+    tags = optional(map(string),null)
+  }))
+  default = {
+    "web_01" = {
+      ami = "ami-0150ccaf51ab55a51"
+      instance_type = "t3.micro"
+      vpc = "vpc-lab-dev-000"
+      subnet = "snet-lab-dev-000-public-a"
+      key_name = "A4L"
+      associate_public_ip_address = true
+      user_data_script = "server-script.sh"
+      tags = {
+        Role = "frontend"
+      }
+    }
+  }
+}
+
 
 
