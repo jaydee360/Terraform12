@@ -22,3 +22,32 @@ output "nat_gw_subnets_without_igw" {
   value = local.nat_gw_subnets_without_igw
   description = "Subnets requesting NAT Gateway creation but whose VPC lacks an IGW"
 }
+
+output "vpc_ids" {
+  value = {for k, v in aws_vpc.main : k => v.id}
+  description = "VPC IDs keyed by VPC name"
+}
+
+output "subnet_ids_by_type" {
+  value = {
+    public  = {for k, s in aws_subnet.main : k => s.id if lookup(s.tags, "type", "") == "public"}
+    private = {for k, s in aws_subnet.main : k => s.id if lookup(s.tags, "type", "") == "private"}
+    no_type = {for k, s in aws_subnet.main : k => s.id if !contains(keys(s.tags),"type")}
+  }
+  description = "Subnet IDs grouped by type"
+}
+
+output "route_table_ids" {
+  value = {for k, rt in aws_route_table.main : k => rt.id}
+  description = "Route table IDs keyed by route table name"
+}
+
+output "nat_gateway_ids" {
+  value = {for k, nat in aws_nat_gateway.main : k => nat.id}
+  description = "NAT Gateway IDs keyed by subnet"
+}
+
+output "elastic_ip_ids" {
+  value = {for k, eip in aws_eip.nat : k => eip.id}
+  description = "Elastic IP IDs keyed by subnet"
+}
