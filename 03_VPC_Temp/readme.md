@@ -1,4 +1,4 @@
-#  Step-by-Step Challenge
+#  Step-by-Step Challenge Part 1: Basic VPC Infrastructure
 ## Step 1: Define Structured Input Variables
 - Create a variable to represent your VPC configuration (e.g., name, CIDR block).
 - Create a nested map or object variable to represent subnet configurations:
@@ -43,3 +43,61 @@
 - Add a conditional flag to enable/disable NAT Gateway creation.
 - Modularize the VPC and subnet logic into reusable modules.
 - Use locals to simplify complex expressions or derived values.
+
+---
+   <br>   
+   <br>   
+
+
+
+# Step-by-Step Challenge Part 2: EC2 Placement and Network Alignment
+## Step 6: Define EC2 Instance Configuration
+Create a new input variable to define EC2 instances:
+- Instance name or role
+- Subnet key (where it should be placed)
+- Instance type
+- Optional metadata (e.g., tags, user data, security group references)
+
+**Goal:** Practice declaring structured instance configs and referencing subnet placement.
+
+## Step 7: Transform Instance Data for Placement
+Use locals to:
+- Validate that each instance references a valid subnet
+- Group instances by subnet type or AZ
+- Build dynamic tags and naming conventions
+
+**Goal:** Practice filtering and validating instance placement logic.
+
+## Step 8: Create EC2 Instances
+Use for_each to create EC2 instances from the transformed data.
+- Reference subnet ID from your existing subnet map
+- Attach security groups (can be static or derived later)
+- Inject user data if provided
+
+**Goal:** Validate that your instance config drives clean, narratable resource creation.
+
+## Step 9: Security Groups
+Create security groups for public and private instances:
+- Public: allow SSH/HTTP from the internet
+- Private: allow internal traffic only
+Use locals to:
+- Assign security groups based on subnet type
+- Validate that each instance has a security group
+
+**Goal:** Practice conditional resource creation and dynamic association.
+
+## Step 10: Outputs
+Output:
+- EC2 instance IDs grouped by subnet type or AZ
+- Private IPs for internal reference
+- Security group IDs
+
+**Goal:** Surface narratable infrastructure state for debugging or downstream use.
+
+## Bonus Challenges
+|Challenge|Goal|
+|----|----|
+|Validate instance placement in subnets with route tables | Practice diagnostic locals|
+|Surface instances placed in subnets without IGW or NAT	| Reinforce semantic alignment|
+|Inject templated user data based on instance role	| Practice dynamic string interpolation|
+|Add lifecycle rules or EBS volume attachments	| Extend resource modeling idioms|
