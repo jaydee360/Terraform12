@@ -251,3 +251,33 @@ locals {
   }
 }
 
+# commenst
+
+locals {
+  ingress_rules = {
+    for enriched_rule in distinct(flatten([for sg_key, sg_obj in var.security_groups : 
+      [for rule_idx, rule in sg_obj.ingress : 
+        merge(rule, {
+          sg_key    = "${sg_key}"
+          rule_hash = md5(jsonencode(merge(rule, {sg_key = "${sg_key}"})))
+        })
+      ]
+    ])) : enriched_rule.rule_hash => enriched_rule
+  }
+}
+
+locals {
+  egress_rules = {
+    for enriched_rule in distinct(flatten([for sg_key, sg_obj in var.security_groups : 
+      [for rule_idx, rule in sg_obj.egress : 
+        merge(rule, {
+          sg_key    = "${sg_key}"
+          rule_hash = md5(jsonencode(merge(rule, {sg_key = "${sg_key}"})))
+        })
+      ]
+    ])) : enriched_rule.rule_hash => enriched_rule
+  }
+}
+
+
+

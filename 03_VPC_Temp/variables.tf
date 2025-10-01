@@ -192,5 +192,89 @@ variable "ec2_config" {
   }
 }
 
+variable "security_groups" {
+  type = map(object({
+    description = string
+    vpc_id = optional(string)
+    ingress_ref = optional(string)
+    ingress = list(object({
+      description = string
+      from_port = number
+      to_port = number
+      protocol = string
+      cidr_block = string
+    }))
+    egress_ref = optional(string)
+    egress = list(object({
+      description = string
+      from_port = optional(number)
+      to_port = optional(number)
+      protocol = string
+      cidr_block = string
+    }))
+  }))
+  default = {
+    "JD-DB-SG-1" = {
+      description = "Default"
+      ingress = [
+        {
+          description = "1433-IN"
+          from_port = 1433
+          to_port = 1433
+          protocol = "tcp"
+          cidr_block =  "10.0.0.0/16" 
+        },
+        {
+          description = "1433-IN"
+          from_port = 1433
+          to_port = 1433
+          protocol = "tcp"
+          cidr_block =  "10.0.0.0/16" 
+        },
+        {
+          description = "3389-IN"
+          from_port = 3389
+          to_port = 3389
+          protocol = "tcp"
+          cidr_block =  "10.0.0.0/16" 
+        }
+      ]
+      egress = [
+        {
+          description = "ANY-OUT"
+          protocol = "-1"
+          cidr_block =  "0.0.0.0/0" 
+        }
+      ]
+    }
+    "JD-LAB-WEB-US-E-1" = {
+      description = "Default"
+      ingress = [
+        {
+          description = "1433-IN"
+          from_port = 1433
+          to_port = 1433
+          protocol = "tcp"
+          cidr_block =  "10.0.0.0/16" 
+        },
+        {
+          description = "3389-IN"
+          from_port = 3389
+          to_port = 3389
+          protocol = "tcp"
+          cidr_block =  "10.0.0.0/16" 
+        }
+      ]
+      egress = [
+        {
+          description = "ANY-OUT"
+          protocol = "-1"
+          cidr_block =  "0.0.0.0/0" 
+        }
+      ]
+    }
+  }
+}
+
 
 

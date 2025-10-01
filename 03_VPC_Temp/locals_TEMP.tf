@@ -1,4 +1,79 @@
 /* 
+[for sg_key, sg_obj in var.security_groups : sg_obj.ingress]
+
+[for sg_key, sg_obj in var.security_groups : 
+  [for rule_idx, rule in sg_obj.ingress : 
+    merge(rule, {
+      rule_id="${sg_key}-INGRESS-R${rule_idx}"
+      sg_key="${sg_key}"
+    })
+  ]
+]
+
+flatten([for sg_key, sg_obj in var.security_groups : 
+  [for rule_idx, rule in sg_obj.ingress : 
+    merge(rule, {
+      rule_id="${sg_key}-INGRESS-R${rule_idx}"
+      sg_key="${sg_key}"
+    })
+  ]
+])
+
+
+{for enriched_rule in flatten([for sg_key, sg_obj in var.security_groups : 
+    [for rule_idx, rule in sg_obj.ingress : 
+      merge(rule, {
+        rule_id="${sg_key}-INGRESS-R${rule_idx}"
+        sg_key="${sg_key}"
+      })
+    ]
+  ]) : enriched_rule.rule_id => enriched_rule
+}
+
+{for enriched_rule in flatten([for sg_key, sg_obj in var.security_groups : 
+    [for rule_idx, rule in sg_obj.ingress : 
+      merge(rule, {
+        sg_key="${sg_key}"
+      })
+    ]
+  ]) : md5(jsonencode(enriched_rule)) => enriched_rule
+}
+
+flatten([for sg_key, sg_obj in var.security_groups : 
+  [for rule_idx, rule in sg_obj.ingress : 
+    merge(rule, {
+      sg_key    ="${sg_key}"
+      rule_hash = md5(<WHAT>)
+    })
+  ]
+])
+
+flatten([for sg_key, sg_obj in var.security_groups : 
+  [for rule_idx, rule in sg_obj.ingress : 
+    merge(rule, {
+      sg_key    ="${sg_key}"
+      rule_hash = md5(jsonencode(merge(rule, {sg_key = "${sg_key}"})))
+    })
+  ]
+])
+ */
+ 
+/* locals {
+  ingress_rules = {
+    for enriched_rule in distinct(flatten([for sg_key, sg_obj in var.security_groups : 
+      [for rule_idx, rule in sg_obj.ingress : 
+        merge(rule, {
+          sg_key    ="${sg_key}"
+          rule_hash = md5(jsonencode(merge(rule, {sg_key = "${sg_key}"})))
+        })
+      ]
+    ])) : enriched_rule.rule_hash => enriched_rule
+  }
+}
+ */
+
+
+/* 
 # itterate through each vpc_key & vpc_object >> itterate through each vpc_object's subnet map
 # for each subnet, construct a new map, with a new semantic compound key (vpc_key + subnet_key)
 # merge the original subnet object with 2 additional keys & values for enrichment (vpc_key + subnet_uid)
