@@ -197,21 +197,21 @@ variable "security_groups" {
     description = string
     vpc_id = optional(string)
     ingress_ref = optional(string)
-    ingress = list(object({
+    ingress = optional(list(object({
       description = string
       from_port = number
       to_port = number
       protocol = string
       cidr_block = string
-    }))
+    })))
     egress_ref = optional(string)
-    egress = list(object({
+    egress = optional(list(object({
       description = string
       from_port = optional(number)
       to_port = optional(number)
       protocol = string
       cidr_block = string
-    }))
+    })))
   }))
   default = {
     "JD-DB-SG-1" = {

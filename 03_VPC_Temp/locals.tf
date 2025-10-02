@@ -213,11 +213,12 @@ locals {
     for subnet_key, subnet in local.subnet_map : 
     subnet_key if subnet.has_route_table && contains(local.valid_route_table_keys, subnet_key)
   ])
+}
 
-  # subnets_without_matching_route_tables:
-  #   - Includes subnets flagged with has_route_table == true
-  #   - But missing a corresponding route_table_map entry
-  #   - Useful for diagnostics and surfacing misconfigurations
+locals {
+
+  # FOR DIAGNOSTICS
+  # VARIETY OF SCENARIOS
 
   subnets_without_matching_route_tables = [
     for subnet_key, subnet in local.subnet_map : 
@@ -245,39 +246,136 @@ locals {
   ]
 }
 
+# EC2 instances
+# -------------
+
 locals {
   ec2_instance_map = {
     for ec2_key, ec2_obj in var.ec2_config : ec2_key => merge(ec2_obj, {subnet_id = "${ec2_obj.vpc}__${ec2_obj.subnet}"})
   }
 }
 
-# commenst
+# SG INGRESS RULE AGGREGATION
+# ---------------------------
+# This block collects all ingress rules—both inline and shared—into a unified, deduplicated map.
+# - Inline rules are extracted directly from SGs (if ingress_ref IS null).
+# - Shared rules overrride inline rules (if ingress_ref NOT null). They are sourced from 'shared_security_group_rules' map using the ingress_ref as a map key
+# - Each rule is enriched with:
+#   - sg_key: the SG it belongs to
+#   - rule_hash: a unique fingerprint for deduplication
+#   - ref: true if shared, false if inline
+# - The final map (ingress_rules_map) is keyed by rule_hash for traceability and safe resource creation.
 
 locals {
-  ingress_rules = {
-    for enriched_rule in distinct(flatten([for sg_key, sg_obj in var.security_groups : 
-      [for rule_idx, rule in sg_obj.ingress : 
-        merge(rule, {
-          sg_key    = "${sg_key}"
-          rule_hash = md5(jsonencode(merge(rule, {sg_key = "${sg_key}"})))
-        })
-      ]
-    ])) : enriched_rule.rule_hash => enriched_rule
+  # INLINE INGRESS RULES
+  # --------------------
+  # For each SG in security_groups:
+  # - If ingress_ref is null AND ingress is non-null:
+  #   - Iterate over each inline ingress rule
+  #   - Enrich each rule with:
+  #     - sg_key: the SG it belongs to
+  #     - rule_hash: a unique fingerprint for deduplication
+  #     - ref: false (indicates inline origin)
+  # - Flatten the nested list of enriched rules into a single flat list
+  inline_ingress_rules = flatten([
+    for sg_key, sg_obj in var.security_groups : (sg_obj.ingress_ref == null && sg_obj.ingress != null) ?
+    [for rule in sg_obj.ingress : merge(rule, {
+      sg_key    = sg_key
+      rule_hash = md5(jsonencode(merge(rule, { sg_key = sg_key })))
+      ref       = false
+    })] : []
+  ])
+
+  # REFERENCED INGRESS RULES
+  # ------------------------
+  # For each SG in security_groups:
+  # - If ingress_ref is non-null AND shared_security_group_rules contains the referenced ingress list:
+  #   - Iterate over each referenced ingress rule
+  #   - Enrich each rule with:
+  #     - sg_key: the SG it belongs to
+  #     - rule_hash: a unique fingerprint for deduplication
+  #     - ref: true (indicates shared origin)
+  # - Flatten the nested list of enriched rules into a single flat list
+  referenced_ingress_rules = flatten([
+    for sg_key, sg_obj in var.security_groups : (sg_obj.ingress_ref != null && can(var.shared_security_group_rules[sg_obj.ingress_ref].ingress)) ?
+    [for rule in var.shared_security_group_rules[sg_obj.ingress_ref].ingress : merge(rule, {
+      sg_key    = sg_key
+      rule_hash = md5(jsonencode(merge(rule, { sg_key = sg_key })))
+      ref       = true
+    })] : []
+  ])
+
+  # ALL INGRESS RULES
+  # -----------------
+  # Combine inline and referenced ingress rules into a single list
+  # - Flattening ensures a uniform structure for downstream use
+  all_ingress_rules = flatten([[for rule in local.inline_ingress_rules : rule], [for rule in local.referenced_ingress_rules : rule]])
+
+  # INGRESS RULES MAP
+  # -----------------
+  # Build a map of unique ingress rules keyed by rule_hash
+  # - Ensures deduplication and traceability
+  # This map is used to create the actual 'aws_vpc_security_group_ingress_rule' resource
+  ingress_rules_map = {
+    for rule in distinct(local.all_ingress_rules) :
+    rule.rule_hash => rule
   }
 }
 
 locals {
-  egress_rules = {
-    for enriched_rule in distinct(flatten([for sg_key, sg_obj in var.security_groups : 
-      [for rule_idx, rule in sg_obj.egress : 
-        merge(rule, {
-          sg_key    = "${sg_key}"
-          rule_hash = md5(jsonencode(merge(rule, {sg_key = "${sg_key}"})))
-        })
-      ]
-    ])) : enriched_rule.rule_hash => enriched_rule
+    # FOR DIAGNOSTICS
+    sg_in_rules_list_flat = sort([for element in local.ingress_rules_map : "${element.sg_key}-${element.description}-${element.rule_hash}"])
+
+    sg_in_rules_by_sg = {
+    for sg_key in keys(var.security_groups) :
+    sg_key => [
+      for rule in local.ingress_rules_map : "${rule.rule_hash}-DESC:${rule.description}-REF:${rule.ref}" if rule.sg_key == sg_key
+    ]
   }
 }
 
+# SG EGRESS RULE AGGREGATION
+# ---------------------------
+# This block collects all egress rules—both inline and shared—into a unified, deduplicated map.
+# detailed comments are ommitted because the logic and purpose are identical to those of INGRESS RULE AGGREGATION
+# the egress lists are used instead of ingress
+locals {
+  inline_egress_rules = flatten([
+    for sg_key, sg_obj in var.security_groups : (sg_obj.egress_ref == null && sg_obj.egress != null) ?
+    [for rule in sg_obj.egress : merge(rule, {
+      sg_key    = sg_key
+      rule_hash = md5(jsonencode(merge(rule, { sg_key = sg_key })))
+      ref       = false
+    })] : []
+  ])
+
+  referenced_egress_rules = flatten([
+    for sg_key, sg_obj in var.security_groups : (sg_obj.egress_ref != null && can(var.shared_security_group_rules[sg_obj.egress_ref].egress)) ?
+    [for rule in var.shared_security_group_rules[sg_obj.egress_ref].egress : merge(rule, {
+      sg_key    = sg_key
+      rule_hash = md5(jsonencode(merge(rule, { sg_key = sg_key })))
+      ref       = true
+    })] : []
+  ])
+
+  all_egress_rules = flatten([[for rule in local.inline_egress_rules : rule], [for rule in local.referenced_egress_rules : rule]])
+
+  egress_rules_map = {
+    for rule in distinct(local.all_egress_rules) :
+    rule.rule_hash => rule
+  }
+}
+
+locals {
+    # FOR DIAGNOSTICS
+    sg_eg_rules_list_flat = sort([for element in local.egress_rules_map : "${element.sg_key}-${element.description}-${element.rule_hash}"])
+
+    sg_eg_rules_by_sg = {
+    for sg_key in keys(var.security_groups) :
+    sg_key => [
+      for rule in local.egress_rules_map : "${rule.rule_hash}-DESC:${rule.description}-REF:${rule.ref}" if rule.sg_key == sg_key
+    ]
+  }
+}
 
 

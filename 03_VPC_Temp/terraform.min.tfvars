@@ -258,7 +258,7 @@ security_groups = {
                 protocol = "tcp"
                 cidr_block =  "10.0.0.0/16" 
             }
-      ]
+        ]
         egress = [
             {
                 description = "ANY-OUT"
@@ -266,6 +266,12 @@ security_groups = {
                 cidr_block =  "0.0.0.0/0" 
             }
         ]
+    }
+    "SG-1-APP" = {
+        description = "Default"
+        # ingress_ref = "APP-RULES"
+        # ingress = []
+        # egress = []
     }
 }
 
@@ -283,6 +289,13 @@ shared_security_group_rules = {
                 description = "456-IN"
                 from_port = 456
                 to_port = 456
+                protocol = "tcp"
+                cidr_block =  "10.0.0.0/16" 
+            },
+            {
+                description = "789-IN"
+                from_port = 789
+                to_port = 789
                 protocol = "tcp"
                 cidr_block =  "10.0.0.0/16" 
             },
@@ -310,6 +323,10 @@ shared_security_group_rules = {
                 cidr_block =  "10.0.0.0/16" 
             }
         ]
+    }
+    "APP-RULES" = {
+        ingress = []
+        egress = []
     }
 }
 
