@@ -1,6 +1,94 @@
 /* 
 [for sg_key, sg_obj in var.security_groups : sg_obj.ingress]
+*/
 
+# [for sg_key, sg_obj in var.security_groups : sg_obj.ingress]
+# flatten([for sg_key, sg_obj in var.security_groups : sg_obj.ingress_ref == null ? sg_obj.ingress : var.shared_security_group_rules[sg_obj.ingress_ref].ingress])
+
+locals {
+  ingress_rules_1 = {
+    for enriched_rule in distinct(flatten([for sg_key, sg_obj in var.security_groups : 
+      [for rule_idx, rule in sg_obj.ingress : 
+        merge(rule, {
+          sg_key    ="${sg_key}"
+          rule_hash = md5(jsonencode(merge(rule, {sg_key = "${sg_key}"})))
+        })
+      ]
+    ])) : enriched_rule.rule_hash => enriched_rule
+  }
+}
+
+locals {
+  ingress_rules_2 = {
+    for enriched_rule in distinct(flatten(
+      [for sg_key, sg_obj in var.security_groups : sg_obj.ingress_ref == null ?
+        [for rule_idx, rule in sg_obj.ingress : 
+          merge(rule, {
+            sg_key    ="${sg_key}"
+            rule_hash = md5(jsonencode(merge(rule, {sg_key = "${sg_key}"})))
+          })
+        ] :
+        [for rule_idx, rule in var.shared_security_group_rules[sg_obj.ingress_ref].ingress : 
+          merge(rule, {
+            sg_key    ="${sg_key}"
+            rule_hash = md5(jsonencode(merge(rule, {sg_key = "${sg_key}"})))
+          })
+        ]
+      ]
+    )) : enriched_rule.rule_hash => enriched_rule
+  }
+}
+
+locals {
+  inline_ingress_rules = flatten([
+    for sg_key, sg_obj in var.security_groups : sg_obj.ingress_ref == null ?
+    [for rule in sg_obj.ingress : merge(rule, {
+      sg_key    = sg_key
+      rule_hash = md5(jsonencode(merge(rule, { sg_key = sg_key })))
+      ref       = false
+    })] : []
+  ])
+}
+
+locals {
+  referenced_ingress_rules = flatten([
+    for sg_key, sg_obj in var.security_groups : sg_obj.ingress_ref != null ?
+    [for rule in var.shared_security_group_rules[sg_obj.ingress_ref].ingress : merge(rule, {
+      sg_key    = sg_key
+      rule_hash = md5(jsonencode(merge(rule, { sg_key = sg_key })))
+      ref       = true
+    })] : []
+  ])
+}
+
+locals {
+  all_ingress_rules = flatten([[for rule in local.inline_ingress_rules : rule], [for rule in local.referenced_ingress_rules : rule]])
+
+  ingress_rules_3 = {
+    for rule in distinct(local.all_ingress_rules) :
+    rule.rule_hash => rule
+  }
+}
+
+
+/* {for enriched_rule in distinct(flatten(
+  [for sg_key, sg_obj in var.security_groups : sg_obj.ingress_ref == null ?
+    [for rule_idx, rule in sg_obj.ingress : 
+      merge(rule, {
+        sg_key    ="${sg_key}"
+        rule_hash = md5(jsonencode(merge(rule, {sg_key = "${sg_key}"})))
+      })
+    ] :
+    [for rule_idx, rule in var.shared_security_group_rules[sg_obj.ingress_ref].ingress : 
+      merge(rule, {
+        sg_key    ="${sg_key}"
+        rule_hash = md5(jsonencode(merge(rule, {sg_key = "${sg_key}"})))
+      })
+    ]
+  ])) : enriched_rule.rule_hash => enriched_rule
+} */
+
+/*
 [for sg_key, sg_obj in var.security_groups : 
   [for rule_idx, rule in sg_obj.ingress : 
     merge(rule, {

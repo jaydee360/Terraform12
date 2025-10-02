@@ -276,5 +276,67 @@ variable "security_groups" {
   }
 }
 
+variable "shared_security_group_rules" {
+  type = map(object({
+    ingress = list(object({
+      description = string
+      from_port = number
+      to_port = number
+      protocol = string
+      cidr_block = string
+    }))
+    egress = list(object({
+      description = string
+      from_port = optional(number)
+      to_port = optional(number)
+      protocol = string
+      cidr_block = string
+    }))
+  }))
+  default = {
+    "DB-RULES" = {
+      ingress = [
+        {
+          description = "123-IN"
+          from_port = 123
+          to_port = 123
+          protocol = "tcp"
+          cidr_block =  "10.0.0.0/16" 
+        },
+        {
+          description = "456-IN"
+          from_port = 456
+          to_port = 456
+          protocol = "tcp"
+          cidr_block =  "10.0.0.0/16" 
+        },
+        {
+          description = "789-IN"
+          from_port = 789
+          to_port = 789
+          protocol = "tcp"
+          cidr_block =  "10.0.0.0/16" 
+        }
+      ]
+      egress = [
+        {
+          description = "987-OUT"
+          from_port = 987
+          to_port = 987
+          protocol = "tcp"
+          cidr_block =  "10.0.0.0/16" 
+        },
+        {
+          description = "654-IN"
+          from_port = 654
+          to_port = 654
+          protocol = "tcp"
+          cidr_block =  "10.0.0.0/16" 
+        }
+      ]
+    }
+  }
+}
+
 
 

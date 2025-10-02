@@ -198,3 +198,118 @@ ec2_config = {
         }
     }
 }
+
+security_groups = {
+    "SG-1-DB" = {
+        description = "Default"
+        ingress_ref = "DB-RULES"
+        ingress = [
+            {
+                description = "1433-IN"
+                from_port = 1433
+                to_port = 1433
+                protocol = "tcp"
+                cidr_block =  "10.0.0.0/16" 
+            },
+            {
+                description = "1433-IN"
+                from_port = 1433
+                to_port = 1433
+                protocol = "tcp"
+                cidr_block =  "10.0.0.0/16" 
+            },
+            {
+                description = "3389-IN"
+                from_port = 3389
+                to_port = 3389
+                protocol = "tcp"
+                cidr_block =  "10.0.0.0/16" 
+            }
+        ]
+        egress = [
+            {
+                description = "ANY-OUT"
+                protocol = "-1"
+                cidr_block =  "0.0.0.0/0" 
+            }
+        ]
+    }
+    "SG-2-WEB" = {
+        description = "Default"
+        ingress = [
+            {
+                description = "80-IN"
+                from_port = 80
+                to_port = 80
+                protocol = "tcp"
+                cidr_block =  "10.0.0.0/16" 
+            },
+            {
+                description = "443-IN"
+                from_port = 443
+                to_port = 443
+                protocol = "tcp"
+                cidr_block =  "10.0.0.0/16" 
+            },
+            {
+                description = "3389-IN"
+                from_port = 3389
+                to_port = 3389
+                protocol = "tcp"
+                cidr_block =  "10.0.0.0/16" 
+            }
+      ]
+        egress = [
+            {
+                description = "ANY-OUT"
+                protocol = "-1"
+                cidr_block =  "0.0.0.0/0" 
+            }
+        ]
+    }
+}
+
+shared_security_group_rules = {
+    "DB-RULES" = {
+        ingress = [
+            {
+                description = "123-IN"
+                from_port = 123
+                to_port = 123
+                protocol = "tcp"
+                cidr_block =  "10.0.0.0/16" 
+            },
+            {
+                description = "456-IN"
+                from_port = 456
+                to_port = 456
+                protocol = "tcp"
+                cidr_block =  "10.0.0.0/16" 
+            },
+            {
+                description = "789-IN"
+                from_port = 789
+                to_port = 789
+                protocol = "tcp"
+                cidr_block =  "10.0.0.0/16" 
+            }
+        ]
+        egress = [
+            {
+                description = "987-OUT"
+                from_port = 987
+                to_port = 987
+                protocol = "tcp"
+                cidr_block =  "10.0.0.0/16" 
+            },
+            {
+                description = "654-IN"
+                from_port = 654
+                to_port = 654
+                protocol = "tcp"
+                cidr_block =  "10.0.0.0/16" 
+            }
+        ]
+    }
+}
+
