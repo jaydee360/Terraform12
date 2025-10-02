@@ -172,7 +172,7 @@ variable "ec2_config" {
     key_name = string
     associate_public_ip_address = optional(bool,false)
     assign_eip = optional(bool,false)
-    sg_keys = optional(set(string),null)
+    vpc_security_group_ids = optional(set(string),null)
     user_data_script = optional(string,null)
     tags = optional(map(string),null)
   }))

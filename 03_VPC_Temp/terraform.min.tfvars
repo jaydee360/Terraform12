@@ -192,7 +192,8 @@ ec2_config = {
         subnet = "snet-lab-dev-000-public-a"
         key_name = "A4L"
         associate_public_ip_address = true
-        # user_data_script = "server-script.sh"
+        user_data_script = "server-script.sh"
+        vpc_security_group_ids = ["SG-2-WEB", "SG-FAKE"]
         tags = {
             Role = "frontend"
         }
@@ -244,21 +245,28 @@ security_group_config = {
                 from_port = 80
                 to_port = 80
                 protocol = "tcp"
-                cidr_block =  "10.0.0.0/16" 
+                cidr_block =  "0.0.0.0/0" 
             },
             {
                 description = "443-IN"
                 from_port = 443
                 to_port = 443
                 protocol = "tcp"
-                cidr_block =  "10.0.0.0/16" 
+                cidr_block =  "0.0.0.0/0"
+            },
+            {
+                description = "22-IN"
+                from_port = 22
+                to_port = 22
+                protocol = "tcp"
+                cidr_block =  "0.0.0.0/0" 
             },
             {
                 description = "3389-IN"
                 from_port = 3389
                 to_port = 3389
                 protocol = "tcp"
-                cidr_block =  "10.0.0.0/16" 
+                cidr_block =  "0.0.0.0/0"
             }
         ]
         egress = [
@@ -270,7 +278,7 @@ security_group_config = {
         ]
     }
     "SG-1-APP" = {
-        vpc_id      = "vpc-lab-dev-000"
+        vpc_id      = "vpc-lab-dev-001"
         description = "SG-1-APP currently inert"
         # ingress_ref = "APP-RULES"
         # ingress = []

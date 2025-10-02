@@ -134,8 +134,42 @@ resource "aws_instance" "main" {
   associate_public_ip_address = each.value.associate_public_ip_address
   user_data                   = each.value.user_data_script != null ? file("${path.module}/${each.value.user_data_script}") : null
   subnet_id                   = aws_subnet.main[each.value.subnet_id].id
+  vpc_security_group_ids      = flatten([for element in each.value.vpc_security_group_ids : try(aws_security_group.main[element].id,[])])
 
   lifecycle {
     create_before_destroy = true
   }
+}
+
+# [for element in ec2_config["web_02"]["vpc_security_group_ids"] : aws_security_group.main[element].id]
+# [for element in var.ec2_config["web_02"]["vpc_security_group_ids"] : local.valid_security_group_map[element].description]
+# flatten([for element in var.ec2_config["web_02"]["vpc_security_group_ids"] : try(local.valid_security_group_map[element].description,[])])
+# [for element in each.value.vpc_security_group_ids : aws_security_group.main[element].id]
+# flatten([for element in each.value.vpc_security_group_ids : try(aws_security_group.main[element].id,[])])
+
+resource "aws_security_group" "main" {
+  for_each = local.valid_security_group_map
+
+  name    = each.key
+  vpc_id  = aws_vpc.main[each.value.vpc_id].id
+}
+
+resource "aws_vpc_security_group_ingress_rule" "main" {
+  for_each          = local.ingress_rules_map
+  security_group_id = aws_security_group.main[each.value.sg_key].id
+  description       = each.value.description
+  from_port         = each.value.from_port
+  to_port           = each.value.to_port
+  ip_protocol       = each.value.protocol
+  cidr_ipv4         = each.value.cidr_block
+}
+
+resource "aws_vpc_security_group_egress_rule" "main" {
+  for_each          = local.egress_rules_map
+  security_group_id = aws_security_group.main[each.value.sg_key].id
+  description       = each.value.description
+  from_port         = each.value.from_port
+  to_port           = each.value.to_port
+  ip_protocol       = each.value.protocol
+  cidr_ipv4         = each.value.cidr_block
 }

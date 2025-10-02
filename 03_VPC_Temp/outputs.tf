@@ -59,3 +59,15 @@ output "igw_route_ids" {
 output "ec2_instance_ids" {
   value = {for k, i in aws_instance.main : k => i.id}  
 }
+
+output "aws_security_group_ids" {
+  value = {for k, sg in aws_security_group.main: k => sg.id}
+}
+
+output "aws_vpc_security_group_ingress_rule_ids" {
+  value = {for k, ir in aws_vpc_security_group_ingress_rule.main : k => ir.id}
+}
+
+output "aws_vpc_security_group_egress_rule_ids" {
+  value = {for k, er in aws_vpc_security_group_egress_rule.main : k => er.id}
+}
