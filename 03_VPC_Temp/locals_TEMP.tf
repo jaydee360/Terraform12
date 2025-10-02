@@ -1,3 +1,32 @@
+/* locals {
+  sg_map = {
+    for sg_key, sg_obj in var.security_group_config : sg_key => sg_obj if can(var.vpc_config[sg_obj.vpc_id])
+  }
+
+  sg_map_2 = {
+    for sg_key, sg_obj in var.security_group_config : sg_key => sg_obj if contains(keys(var.vpc_config), sg_obj.vpc_id)
+  }
+
+  sg_map_3 = {
+    for sg_key, sg_obj in var.security_group_config : sg_key => {
+      "desc" = sg_obj.description
+      "ingress_ref" = sg_obj.ingress_ref
+      "egress_ref" = sg_obj.egress_ref
+      "vpc_id" = sg_obj.vpc_id
+    } if contains(keys(var.vpc_config), sg_obj.vpc_id)
+  }
+
+  sg_map_4 = {
+    for sg_key, sg_obj in var.security_group_config : sg_key => {
+      for k, v in sg_obj : 
+        k => v if !contains(["ingress","egress","tags"],k)
+    } if contains(keys(var.vpc_config), sg_obj.vpc_id)
+  }
+
+}
+ */
+
+
 /* 
 [for sg_key, sg_obj in var.security_groups : sg_obj.ingress]
 */

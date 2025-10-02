@@ -199,9 +199,10 @@ ec2_config = {
     }
 }
 
-security_groups = {
+security_group_config = {
     "SG-1-DB" = {
-        description = "Default"
+        vpc_id      = "vpc-lab-dev-000"
+        description = "SG-1-DB referencing DB-RULES"
         ingress_ref = "DB-RULES"
         ingress = [
             {
@@ -235,7 +236,8 @@ security_groups = {
         ]
     }
     "SG-2-WEB" = {
-        description = "Default"
+        vpc_id      = "vpc-lab-dev-000"
+        description = "SG-2-WEB with inline rules"
         ingress = [
             {
                 description = "80-IN"
@@ -268,7 +270,8 @@ security_groups = {
         ]
     }
     "SG-1-APP" = {
-        description = "Default"
+        vpc_id      = "vpc-lab-dev-000"
+        description = "SG-1-APP currently inert"
         # ingress_ref = "APP-RULES"
         # ingress = []
         # egress = []

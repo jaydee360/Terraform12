@@ -192,10 +192,10 @@ variable "ec2_config" {
   }
 }
 
-variable "security_groups" {
+variable "security_group_config" {
   type = map(object({
     description = string
-    vpc_id = optional(string)
+    vpc_id = string
     ingress_ref = optional(string)
     ingress = optional(list(object({
       description = string
@@ -215,6 +215,7 @@ variable "security_groups" {
   }))
   default = {
     "JD-DB-SG-1" = {
+      vpc_id = "VPC-XXXXXX"
       description = "Default"
       ingress = [
         {
@@ -248,6 +249,7 @@ variable "security_groups" {
       ]
     }
     "JD-LAB-WEB-US-E-1" = {
+      vpc_id = "VPC-XXXXXX"
       description = "Default"
       ingress = [
         {

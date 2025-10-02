@@ -254,9 +254,19 @@ locals {
   }
 }
 
+# create a new sg_map from the var.security_group_config map
+# for each sg_key, sg_obj in var.security_group_config : sg_key => sg_obj if lookup sg_obj.vpc_id from var.vpc_config succeeds
+
+locals {
+  valid_security_group_map = {
+    for sg_key, sg_obj in var.security_group_config : sg_key => sg_obj if contains(keys(var.vpc_config), sg_obj.vpc_id)
+  }
+}
+
+
 # SECURITY GROUP INGRESS RULES — AGGREGATION LOGIC
 # -------------------------------------------------
-# This block builds a unified, deduplicated map of all ingress rules across security groups.
+# This block builds a unified, deduplicated map of all ingress rules across VALID security groups.
 # It supports both inline rule definitions and shared rule references, with override precedence.
 #
 # - inline_ingress_rules:
@@ -289,7 +299,7 @@ locals {
   #     - ref: false (indicates inline origin)
   # - Flatten the nested list of enriched rules into a single flat list
   inline_ingress_rules = flatten([
-    for sg_key, sg_obj in var.security_groups : (sg_obj.ingress_ref == null && sg_obj.ingress != null) ?
+    for sg_key, sg_obj in local.valid_security_group_map : (sg_obj.ingress_ref == null && sg_obj.ingress != null) ?
     [for rule in sg_obj.ingress : merge(rule, {
       sg_key    = sg_key
       rule_hash = md5(jsonencode(merge(rule, { sg_key = sg_key })))
@@ -308,7 +318,7 @@ locals {
   #     - ref: true (indicates shared origin)
   # - Flatten the nested list of enriched rules into a single flat list
   referenced_ingress_rules = flatten([
-    for sg_key, sg_obj in var.security_groups : (sg_obj.ingress_ref != null && can(var.shared_security_group_rules[sg_obj.ingress_ref].ingress)) ?
+    for sg_key, sg_obj in local.valid_security_group_map : (sg_obj.ingress_ref != null && can(var.shared_security_group_rules[sg_obj.ingress_ref].ingress)) ?
     [for rule in var.shared_security_group_rules[sg_obj.ingress_ref].ingress : merge(rule, {
       sg_key    = sg_key
       rule_hash = md5(jsonencode(merge(rule, { sg_key = sg_key })))
@@ -333,18 +343,6 @@ locals {
   }
 }
 
-locals {
-    # FOR DIAGNOSTICS
-    sg_in_rules_list_flat = sort([for element in local.ingress_rules_map : "${element.sg_key}-${element.description}-${element.rule_hash}"])
-
-    sg_in_rules_by_sg = {
-    for sg_key in keys(var.security_groups) :
-    sg_key => [
-      for rule in local.ingress_rules_map : "${rule.rule_hash}-DESC:${rule.description}-REF:${rule.ref}" if rule.sg_key == sg_key
-    ]
-  }
-}
-
 # SG EGRESS RULE AGGREGATION
 # ---------------------------
 # This block collects all egress rules—both inline and shared—into a unified, deduplicated map.
@@ -352,7 +350,7 @@ locals {
 # the egress lists are used instead of ingress
 locals {
   inline_egress_rules = flatten([
-    for sg_key, sg_obj in var.security_groups : (sg_obj.egress_ref == null && sg_obj.egress != null) ?
+    for sg_key, sg_obj in local.valid_security_group_map : (sg_obj.egress_ref == null && sg_obj.egress != null) ?
     [for rule in sg_obj.egress : merge(rule, {
       sg_key    = sg_key
       rule_hash = md5(jsonencode(merge(rule, { sg_key = sg_key })))
@@ -361,7 +359,7 @@ locals {
   ])
 
   referenced_egress_rules = flatten([
-    for sg_key, sg_obj in var.security_groups : (sg_obj.egress_ref != null && can(var.shared_security_group_rules[sg_obj.egress_ref].egress)) ?
+    for sg_key, sg_obj in local.valid_security_group_map : (sg_obj.egress_ref != null && can(var.shared_security_group_rules[sg_obj.egress_ref].egress)) ?
     [for rule in var.shared_security_group_rules[sg_obj.egress_ref].egress : merge(rule, {
       sg_key    = sg_key
       rule_hash = md5(jsonencode(merge(rule, { sg_key = sg_key })))
@@ -379,14 +377,23 @@ locals {
 
 locals {
     # FOR DIAGNOSTICS
+    sg_in_rules_list_flat = sort([for element in local.ingress_rules_map : "${element.sg_key}-${element.description}-${element.rule_hash}"])
+
     sg_eg_rules_list_flat = sort([for element in local.egress_rules_map : "${element.sg_key}-${element.description}-${element.rule_hash}"])
 
+    sg_in_rules_by_sg = {
+      for sg_key in keys(local.valid_security_group_map) :
+      sg_key => [
+        for rule in local.ingress_rules_map : "${rule.rule_hash}-DESC:${rule.description}-REF:${rule.ref}" if rule.sg_key == sg_key
+      ]
+    }
+
     sg_eg_rules_by_sg = {
-    for sg_key in keys(var.security_groups) :
-    sg_key => [
-      for rule in local.egress_rules_map : "${rule.rule_hash}-DESC:${rule.description}-REF:${rule.ref}" if rule.sg_key == sg_key
-    ]
-  }
+      for sg_key in keys(local.valid_security_group_map) :
+      sg_key => [
+        for rule in local.egress_rules_map : "${rule.rule_hash}-DESC:${rule.description}-REF:${rule.ref}" if rule.sg_key == sg_key
+      ]
+    }
 }
 
 
