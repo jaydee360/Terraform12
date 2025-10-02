@@ -248,23 +248,34 @@ locals {
 
 # EC2 instances
 # -------------
-
 locals {
   ec2_instance_map = {
     for ec2_key, ec2_obj in var.ec2_config : ec2_key => merge(ec2_obj, {subnet_id = "${ec2_obj.vpc}__${ec2_obj.subnet}"})
   }
 }
 
-# SG INGRESS RULE AGGREGATION
-# ---------------------------
-# This block collects all ingress rules—both inline and shared—into a unified, deduplicated map.
-# - Inline rules are extracted directly from SGs (if ingress_ref IS null).
-# - Shared rules overrride inline rules (if ingress_ref NOT null). They are sourced from 'shared_security_group_rules' map using the ingress_ref as a map key
-# - Each rule is enriched with:
-#   - sg_key: the SG it belongs to
-#   - rule_hash: a unique fingerprint for deduplication
-#   - ref: true if shared, false if inline
-# - The final map (ingress_rules_map) is keyed by rule_hash for traceability and safe resource creation.
+# SECURITY GROUP INGRESS RULES — AGGREGATION LOGIC
+# -------------------------------------------------
+# This block builds a unified, deduplicated map of all ingress rules across security groups.
+# It supports both inline rule definitions and shared rule references, with override precedence.
+#
+# - inline_ingress_rules:
+#     Extracts rules defined directly in each SG, only if ingress_ref is null and ingress is non-null.
+#
+# - referenced_ingress_rules:
+#     Pulls rules from shared_security_group_rules via ingress_ref, only if the reference is valid.
+#
+# - all_ingress_rules:
+#     Combines both inline and referenced rules into a single flat list.
+#
+# - ingress_rules_map:
+#     Deduplicates the combined list using rule_hash and builds a map keyed by hash.
+#     Each rule is enriched with:
+#       - sg_key: the SG it belongs to
+#       - rule_hash: a unique fingerprint
+#       - ref: true if shared, false if inline
+#
+# This structure ensures traceability, override safety, and clean resource creation.
 
 locals {
   # INLINE INGRESS RULES
