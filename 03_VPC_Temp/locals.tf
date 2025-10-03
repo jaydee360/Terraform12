@@ -29,8 +29,8 @@ locals {
 # IGWs
 # ----
 # multi-step itteration and transformation
-# Extracts and enriches IGW definitions from vpc_config, tagging each with its parent VPC key.
-# Builds filtered maps to drive conditional IGW creation and attachment logic.
+# First, extract and enriche IGW definitions from vpc_config, tagging each with its parent VPC key.
+# Second, build filtered maps to drive conditional IGW creation and attachment logic.
 # Enables modular IGW provisioning based on per-VPC flags, maintaining semantic clarity and operational intent.
 
 # Step 1: Build a flat list of IGW objects from vpc_config
@@ -262,7 +262,6 @@ locals {
     for sg_key, sg_obj in var.security_group_config : sg_key => sg_obj if contains(keys(var.vpc_config), sg_obj.vpc_id)
   }
 }
-
 
 # SECURITY GROUP INGRESS RULES — AGGREGATION LOGIC
 # -------------------------------------------------

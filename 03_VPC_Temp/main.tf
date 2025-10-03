@@ -134,6 +134,12 @@ resource "aws_instance" "main" {
   associate_public_ip_address = each.value.associate_public_ip_address
   user_data                   = each.value.user_data_script != null ? file("${path.module}/${each.value.user_data_script}") : null
   subnet_id                   = aws_subnet.main[each.value.subnet_id].id
+  # vpc_security_group_ids must resolve symbolic SG keys (defined in the ec2 instance data) to actual SG resource IDs.
+  # Direct resolution like `aws_security_group.main[each.value.vpc_security_group_ids]` fails because the 'each.value.vpc_security_group_ids' contains a list of strings,
+  # and Terraform does not support direct indexing into a resource map using a list.
+  # Instead, we use a list comprehension to iterate over each list element and resolve it individually.
+  # `try()` ensures missing or invalid keys (e.g., SG-FAKE) return an empty list, preserving apply safety.
+  # `flatten()` collapses the nested list into a flat list of strings, as required by vpc_security_group_ids.
   vpc_security_group_ids      = flatten([for element in each.value.vpc_security_group_ids : try(aws_security_group.main[element].id,[])])
 
   lifecycle {
