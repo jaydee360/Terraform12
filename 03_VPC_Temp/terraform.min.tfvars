@@ -200,6 +200,26 @@ ec2_config = {
     }
 }
 
+prefix_list_config = {
+    JD-HOME-LAB = {
+        name           = "JD-HOME-LAB"
+        address_family = "IPv4"
+        max_entries    = 5
+        entries = [
+            { cidr = "212.56.102.213/32", description = "JD Home Lab Internet IP" }
+        ]
+    }
+    PREFIX-LIST-TEST = {
+        name           = "PREFIX-LIST-TEST"
+        address_family = "IPv4"
+        max_entries    = 5
+        entries = [
+            { cidr = "192.168.100.0/24", description = "Partner A" },
+            { cidr = "192.168.101.0/24", description = "Partner B" }
+        ]
+    }
+}
+
 security_group_config = {
     "SG-1-DB" = {
         vpc_id      = "vpc-lab-dev-000"
@@ -211,28 +231,31 @@ security_group_config = {
                 from_port = 1433
                 to_port = 1433
                 protocol = "tcp"
-                cidr_block =  "10.0.0.0/16" 
+                cidr_ipv4 =  "10.0.0.0/16" 
             },
             {
                 description = "1433-IN"
                 from_port = 1433
                 to_port = 1433
                 protocol = "tcp"
-                cidr_block =  "10.0.0.0/16" 
+                cidr_ipv4 =  "10.0.0.0/16" 
             },
             {
                 description = "3389-IN"
                 from_port = 3389
                 to_port = 3389
                 protocol = "tcp"
-                cidr_block =  "10.0.0.0/16" 
+                cidr_ipv4 =  "10.0.0.0/16" 
             }
         ]
+        # egress_ref = "DB-RULES"
         egress = [
             {
-                description = "ANY-OUT"
+                description = "ANY-ANY-OUT"
                 protocol = "-1"
-                cidr_block =  "0.0.0.0/0" 
+                referenced_security_group_id = "SG-2-WEB"
+                prefix_list_id = "JD-HOME-LAB"
+                cidr_ipv4 =  "0.0.0.0/0" 
             }
         ]
     }
@@ -245,35 +268,45 @@ security_group_config = {
                 from_port = 80
                 to_port = 80
                 protocol = "tcp"
-                cidr_block =  "0.0.0.0/0" 
+                prefix_list_id = "JD-HOME-LAB"
+                cidr_ipv4 =  "0.0.0.0/0" 
             },
             {
                 description = "443-IN"
                 from_port = 443
                 to_port = 443
                 protocol = "tcp"
-                cidr_block =  "0.0.0.0/0"
+                prefix_list_id = "JD-HOME-LAB"
+                cidr_ipv4 =  "0.0.0.0/0"
             },
             {
                 description = "22-IN"
                 from_port = 22
                 to_port = 22
                 protocol = "tcp"
-                cidr_block =  "0.0.0.0/0" 
+                cidr_ipv4 =  "0.0.0.0/0" 
             },
             {
                 description = "3389-IN"
                 from_port = 3389
                 to_port = 3389
                 protocol = "tcp"
-                cidr_block =  "0.0.0.0/0"
+                cidr_ipv4 =  "0.0.0.0/0"
+            },
+            {
+                description = "DB-IN-TEST"
+                from_port = 8080
+                to_port = 8080
+                protocol = "tcp"
+                referenced_security_group_id = "SG-1-DB"
+                cidr_ipv4 =  "0.0.0.0/0"
             }
         ]
         egress = [
             {
-                description = "ANY-OUT"
+                description = "ANY-ANY-OUT"
                 protocol = "-1"
-                cidr_block =  "0.0.0.0/0" 
+                cidr_ipv4 =  "0.0.0.0/0" 
             }
         ]
     }
@@ -290,32 +323,34 @@ shared_security_group_rules = {
     "DB-RULES" = {
         ingress = [
             {
-                description = "123-IN"
+                description = "123-IN-NEW"
                 from_port = 123
                 to_port = 123
                 protocol = "tcp"
-                cidr_block =  "10.0.0.0/16" 
+                prefix_list_id = "JD-HOME-LAB"
+                cidr_ipv4 =  "10.0.0.0/16" 
             },
             {
                 description = "456-IN"
                 from_port = 456
                 to_port = 456
                 protocol = "tcp"
-                cidr_block =  "10.0.0.0/16" 
+                cidr_ipv4 =  "10.0.0.0/16" 
             },
             {
                 description = "789-IN"
                 from_port = 789
                 to_port = 789
                 protocol = "tcp"
-                cidr_block =  "10.0.0.0/16" 
+                referenced_security_group_id = "SG-2-WEB"
+                cidr_ipv4 =  "10.0.0.0/16" 
             },
             {
                 description = "789-IN"
                 from_port = 789
                 to_port = 789
                 protocol = "tcp"
-                cidr_block =  "10.0.0.0/16" 
+                cidr_ipv4 =  "10.0.0.0/16" 
             }
         ]
         egress = [
@@ -324,14 +359,16 @@ shared_security_group_rules = {
                 from_port = 987
                 to_port = 987
                 protocol = "tcp"
-                cidr_block =  "10.0.0.0/16" 
+                referenced_security_group_id = "SG-2-WEB"
+                cidr_ipv4 =  "10.0.0.0/16" 
             },
             {
                 description = "654-IN"
                 from_port = 654
                 to_port = 654
                 protocol = "tcp"
-                cidr_block =  "10.0.0.0/16" 
+                prefix_list_id = "JD-HOME-LAB"
+                cidr_ipv4 =  "10.0.0.0/16" 
             }
         ]
     }

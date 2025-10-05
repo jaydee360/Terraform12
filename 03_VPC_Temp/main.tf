@@ -162,20 +162,44 @@ resource "aws_security_group" "main" {
 
 resource "aws_vpc_security_group_ingress_rule" "main" {
   for_each          = local.ingress_rules_map
+
   security_group_id = aws_security_group.main[each.value.sg_key].id
   description       = each.value.description
   from_port         = each.value.from_port
   to_port           = each.value.to_port
   ip_protocol       = each.value.protocol
-  cidr_ipv4         = each.value.cidr_block
+  referenced_security_group_id  = try(aws_security_group.main[each.value.referenced_security_group_id].id, null)
+  prefix_list_id                = try(aws_ec2_managed_prefix_list.main[each.value.prefix_list_id].id, null)
+  cidr_ipv4                     = each.value.cidr_ipv4
 }
 
 resource "aws_vpc_security_group_egress_rule" "main" {
   for_each          = local.egress_rules_map
+
   security_group_id = aws_security_group.main[each.value.sg_key].id
   description       = each.value.description
   from_port         = each.value.from_port
   to_port           = each.value.to_port
   ip_protocol       = each.value.protocol
-  cidr_ipv4         = each.value.cidr_block
+  referenced_security_group_id  = try(aws_security_group.main[each.value.referenced_security_group_id].id, null)
+  prefix_list_id                = try(aws_ec2_managed_prefix_list.main[each.value.prefix_list_id].id, null)
+  cidr_ipv4                     = each.value.cidr_ipv4
+}
+
+resource "aws_ec2_managed_prefix_list" "main" {
+  for_each        = local.prefix_list_map
+
+  name            = each.value.name
+  address_family  = each.value.address_family
+  max_entries     = each.value.max_entries
+
+  dynamic "entry" {
+    for_each = each.value.entries
+
+    content {
+      cidr        = entry.value.cidr
+      description = try(entry.value.description, null)
+    }   
+  }
+
 }

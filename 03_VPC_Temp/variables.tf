@@ -192,6 +192,19 @@ variable "ec2_config" {
   }
 }
 
+variable "prefix_list_config" {
+  type = map(object({
+    name = string
+    address_family = string
+    max_entries = number
+    region = optional(string)
+    entries = list(object({
+      cidr = string
+      description = optional(string)
+    }))
+  }))
+}
+
 variable "security_group_config" {
   type = map(object({
     description = string
@@ -202,7 +215,9 @@ variable "security_group_config" {
       from_port = number
       to_port = number
       protocol = string
-      cidr_block = string
+      referenced_security_group_id = optional(string)
+      prefix_list_id = optional(string)
+      cidr_ipv4 = optional(string)
     })))
     egress_ref = optional(string)
     egress = optional(list(object({
@@ -210,72 +225,26 @@ variable "security_group_config" {
       from_port = optional(number)
       to_port = optional(number)
       protocol = string
-      cidr_block = string
+      referenced_security_group_id = optional(string)
+      prefix_list_id = optional(string)
+      cidr_ipv4 = optional(string)
     })))
   }))
-  default = {
-    "JD-DB-SG-1" = {
-      vpc_id = "VPC-XXXXXX"
-      description = "Default"
-      ingress = [
-        {
-          description = "1433-IN"
-          from_port = 1433
-          to_port = 1433
-          protocol = "tcp"
-          cidr_block =  "10.0.0.0/16" 
-        },
-        {
-          description = "1433-IN"
-          from_port = 1433
-          to_port = 1433
-          protocol = "tcp"
-          cidr_block =  "10.0.0.0/16" 
-        },
-        {
-          description = "3389-IN"
-          from_port = 3389
-          to_port = 3389
-          protocol = "tcp"
-          cidr_block =  "10.0.0.0/16" 
-        }
-      ]
-      egress = [
-        {
-          description = "ANY-OUT"
-          protocol = "-1"
-          cidr_block =  "0.0.0.0/0" 
-        }
-      ]
-    }
-    "JD-LAB-WEB-US-E-1" = {
-      vpc_id = "VPC-XXXXXX"
-      description = "Default"
-      ingress = [
-        {
-          description = "1433-IN"
-          from_port = 1433
-          to_port = 1433
-          protocol = "tcp"
-          cidr_block =  "10.0.0.0/16" 
-        },
-        {
-          description = "3389-IN"
-          from_port = 3389
-          to_port = 3389
-          protocol = "tcp"
-          cidr_block =  "10.0.0.0/16" 
-        }
-      ]
-      egress = [
-        {
-          description = "ANY-OUT"
-          protocol = "-1"
-          cidr_block =  "0.0.0.0/0" 
-        }
-      ]
-    }
-  }
+
+/*   validation {
+    condition = alltrue([
+      for sg in var.security_group_config : (
+        sg.ingress != null ? alltrue([
+          for rule in sg.ingress : length(compact([
+            rule.cidr_block,
+            rule.prefix_list_id,
+            rule.referenced_security_group_id
+          ])) == 1
+        ]) : true
+      )
+    ])
+    error_message = "VALIDATION: Each ingress rule must specify exactly one of: cidr_block, prefix_list_id, or referenced_security_group_id."
+  } */
 }
 
 variable "shared_security_group_rules" {
@@ -285,59 +254,21 @@ variable "shared_security_group_rules" {
       from_port = number
       to_port = number
       protocol = string
-      cidr_block = string
+      referenced_security_group_id = optional(string)
+      prefix_list_id = optional(string)
+      cidr_ipv4 = optional(string)
     }))
     egress = list(object({
       description = string
       from_port = optional(number)
       to_port = optional(number)
       protocol = string
-      cidr_block = string
+      referenced_security_group_id = optional(string)
+      prefix_list_id = optional(string)
+      cidr_ipv4 = optional(string)
     }))
   }))
-  default = {
-    "DB-RULES" = {
-      ingress = [
-        {
-          description = "123-IN"
-          from_port = 123
-          to_port = 123
-          protocol = "tcp"
-          cidr_block =  "10.0.0.0/16" 
-        },
-        {
-          description = "456-IN"
-          from_port = 456
-          to_port = 456
-          protocol = "tcp"
-          cidr_block =  "10.0.0.0/16" 
-        },
-        {
-          description = "789-IN"
-          from_port = 789
-          to_port = 789
-          protocol = "tcp"
-          cidr_block =  "10.0.0.0/16" 
-        }
-      ]
-      egress = [
-        {
-          description = "987-OUT"
-          from_port = 987
-          to_port = 987
-          protocol = "tcp"
-          cidr_block =  "10.0.0.0/16" 
-        },
-        {
-          description = "654-IN"
-          from_port = 654
-          to_port = 654
-          protocol = "tcp"
-          cidr_block =  "10.0.0.0/16" 
-        }
-      ]
-    }
-  }
+
 }
 
 
