@@ -184,7 +184,7 @@ route_table_config = {
     } */
 }
 
-ec2_config = {
+/* ec2_config = {
     "web_02" = {
         ami = "ami-0150ccaf51ab55a51"
         instance_type = "t3.micro"
@@ -198,7 +198,7 @@ ec2_config = {
             Role = "frontend"
         }
     }
-}
+} */
 
 ec2_config_v2 = {
     "web_01" = {
