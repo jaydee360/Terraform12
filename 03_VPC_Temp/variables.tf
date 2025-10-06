@@ -163,7 +163,7 @@ variable "route_table_config" {
   }
 }
 
-variable "ec2_config" {
+/* variable "ec2_config" {
   type = map(object({
     ami = string,
     instance_type = string,
@@ -190,6 +190,17 @@ variable "ec2_config" {
       }
     }
   }
+} */
+
+variable "ec2_config_v2" {
+  type = map(object({
+    ami = string,
+    instance_type = string,
+    key_name = string
+    user_data_script = optional(string,null)
+    eni_refs = list(string)
+    tags = optional(map(string),null)
+  }))
 }
 
 variable "eni_config" {

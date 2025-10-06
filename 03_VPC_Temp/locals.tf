@@ -249,9 +249,40 @@ locals {
 # EC2 instances
 # -------------
 locals {
-  ec2_instance_map = {
-    for ec2_key, ec2_obj in var.ec2_config : ec2_key => merge(ec2_obj, {subnet_id = "${ec2_obj.vpc}__${ec2_obj.subnet}"})
+
+#   ec2_instance_map = {
+#     for ec2_key, ec2_obj in var.ec2_config : ec2_key => merge(ec2_obj, {subnet_id = "${ec2_obj.vpc}__${ec2_obj.subnet}"})
+#   }
+
+  reverse_ec2_instances_by_eni_ref = {
+    for grp_key in (distinct(flatten([for ec2_key, ec2_obj in var.ec2_config_v2 : 
+      [for eni in ec2_obj.eni_refs : eni]]))) : 
+    grp_key => [
+      for inst_key, inst_obj in var.ec2_config_v2 : inst_key if contains(inst_obj.eni_refs, grp_key)
+    ]
   }
+
+  valid_ec2_instance_map = {
+    for ec2_key, ec2_obj in var.ec2_config_v2 : ec2_key => ec2_obj if 
+    length(ec2_obj.eni_refs) > 0 
+    &&
+    alltrue([for eni in ec2_obj.eni_refs : contains(keys(local.valid_eni_map), eni)]) 
+    && 
+    alltrue([for eni in ec2_obj.eni_refs : length(local.reverse_ec2_instances_by_eni_ref[eni]) == 1])
+  }
+}
+
+locals {
+  valid_eni_attachments = merge(
+    [for ec2_key, ec2_obj in local.valid_ec2_instance_map : 
+      {for idx, eni in ec2_obj.eni_refs : "${ec2_key}__${eni}" => {
+        attachment_id         = "${ec2_key}__${eni}"
+        instance_id           = ec2_key
+        network_interface_id  = eni
+        device_index          = idx
+      } if idx > 0 } 
+    ]...
+  )
 }
 
 # ELASTIC NETWORK INTERFACES (ENIs)
@@ -281,6 +312,8 @@ locals {
     ) if contains(keys(local.subnet_map), "${eni_obj.vpc}__${eni_obj.subnet}")
   }
 }
+
+
 
 #
 # Prefix Lists

@@ -79,3 +79,7 @@ output "aws_ec2_managed_prefix_list_ids" {
 output "aws_network_interface_ids" {
   value = {for k, eni in aws_network_interface.main : k => eni.id}
 }
+
+output "aws_network_interface_attachment_ids" {
+  value = {for k, att in aws_network_interface_attachment.main : k => att.id}
+}

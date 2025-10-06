@@ -125,7 +125,7 @@ resource "aws_route_table_association" "main" {
   route_table_id = aws_route_table.main[each.value].id
 } 
 
-resource "aws_instance" "main" {
+/* resource "aws_instance" "main" {
   for_each = local.ec2_instance_map
 
   ami                         = each.value.ami
@@ -145,6 +145,22 @@ resource "aws_instance" "main" {
   lifecycle {
     create_before_destroy = true
   }
+} */
+
+resource "aws_instance" "main" {
+  for_each = local.valid_ec2_instance_map
+
+  ami                         = each.value.ami
+  instance_type               = each.value.instance_type
+  key_name                    = each.value.key_name
+  user_data                   = each.value.user_data_script != null ? file("${path.module}/${each.value.user_data_script}") : null
+  primary_network_interface  {
+    network_interface_id = aws_network_interface.main[each.value.eni_refs[0]].id
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_network_interface" "main" {
@@ -158,11 +174,13 @@ resource "aws_network_interface" "main" {
   security_groups         = flatten([for element in each.value.security_groups : try(aws_security_group.main[element].id, [])])
 }
 
-# [for element in ec2_config["web_02"]["vpc_security_group_ids"] : aws_security_group.main[element].id]
-# [for element in var.ec2_config["web_02"]["vpc_security_group_ids"] : local.valid_security_group_map[element].description]
-# flatten([for element in var.ec2_config["web_02"]["vpc_security_group_ids"] : try(local.valid_security_group_map[element].description,[])])
-# [for element in each.value.vpc_security_group_ids : aws_security_group.main[element].id]
-# flatten([for element in each.value.vpc_security_group_ids : try(aws_security_group.main[element].id,[])])
+resource "aws_network_interface_attachment" "main" {
+  for_each = local.valid_eni_attachments
+
+  instance_id = aws_instance.main[each.value.instance_id].id
+  network_interface_id = aws_network_interface.main[each.value.network_interface_id].id
+  device_index = each.value.device_index
+}
 
 resource "aws_security_group" "main" {
   for_each = local.valid_security_group_map
