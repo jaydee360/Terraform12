@@ -75,3 +75,7 @@ output "aws_vpc_security_group_egress_rule_ids" {
 output "aws_ec2_managed_prefix_list_ids" {
   value = {for k, l in aws_ec2_managed_prefix_list.main : k => l.id}
 }
+
+output "aws_network_interface_ids" {
+  value = {for k, eni in aws_network_interface.main : k => eni.id}
+}

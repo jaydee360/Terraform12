@@ -254,6 +254,35 @@ locals {
   }
 }
 
+# ELASTIC NETWORK INTERFACES (ENIs)
+# ---------------------------------
+
+locals {
+  valid_eni_map = {
+    for eni_key, eni_obj in var.eni_config : eni_key => merge(
+      eni_obj, {subnet_id = "${eni_obj.vpc}__${eni_obj.subnet}"},
+      eni_obj.private_ip_list_enabled == true && eni_obj.private_ip_list != null && length(eni_obj.private_ip_list) > 0 ? 
+      {
+        private_ip_list_enabled = eni_obj.private_ip_list_enabled
+        private_ip_list = eni_obj.private_ip_list
+        private_ips_count = null
+      } : 
+      eni_obj.private_ips_count != null && eni_obj.private_ips_count > 0 ? 
+      {
+        private_ip_list_enabled = null
+        private_ip_list = null
+        private_ips_count = eni_obj.private_ips_count
+      } : 
+      {
+        private_ip_list_enabled = null
+        private_ip_list = null
+        private_ips_count = null
+      }
+    ) if contains(keys(local.subnet_map), "${eni_obj.vpc}__${eni_obj.subnet}")
+  }
+}
+
+#
 # Prefix Lists
 # ------------
 locals {
@@ -262,8 +291,11 @@ locals {
   }
 }
 
-# create a new sg_map from the var.security_group_config map
-# for each sg_key, sg_obj in var.security_group_config : sg_key => sg_obj if lookup sg_obj.vpc_id from var.vpc_config succeeds
+# SECURITY GROUP - VALIDATION
+# ---------------------------
+# create a new map of VALID security groups from the var.security_group_config map
+# Validity is determined by checking the VPC_ID of the security group against keys in VPC_CONFIG data
+# - This validated map of security groups is used in all downstream locals
 
 locals {
   valid_security_group_map = {
@@ -310,12 +342,14 @@ locals {
     for sg_key, sg_obj in local.valid_security_group_map : (sg_obj.ingress_ref == null && sg_obj.ingress != null) ?
     [for rule in sg_obj.ingress : merge(rule, (
       (rule.referenced_security_group_id != null && contains(keys(local.valid_security_group_map), rule.referenced_security_group_id)) ? {
+        # does not cuurent check the validity
         referenced_security_group_id  = rule.referenced_security_group_id
         prefix_list_id                = null
         cidr_ipv4                     = null
       } : 
       rule.prefix_list_id != null && contains(keys(local.prefix_list_map), rule.prefix_list_id) ? {
         referenced_security_group_id  = null
+        # does not cuurent check the validity
         prefix_list_id                = rule.prefix_list_id
         cidr_ipv4                     = null
       } : {
@@ -336,12 +370,14 @@ locals {
     for sg_key, sg_obj in local.valid_security_group_map : (sg_obj.ingress_ref != null && can(var.shared_security_group_rules[sg_obj.ingress_ref].ingress)) ?
     [for rule in var.shared_security_group_rules[sg_obj.ingress_ref].ingress : merge(rule, (
       (rule.referenced_security_group_id != null && contains(keys(local.valid_security_group_map), rule.referenced_security_group_id)) ? {
+        # does not cuurent check the validity
         referenced_security_group_id  = rule.referenced_security_group_id
         prefix_list_id                = null
         cidr_ipv4                     = null
       } : 
       rule.prefix_list_id != null && contains(keys(local.prefix_list_map), rule.prefix_list_id) ? {
         referenced_security_group_id  = null
+        # does not cuurent check the validity
         prefix_list_id                = rule.prefix_list_id
         cidr_ipv4                     = null
       } : {
@@ -398,12 +434,14 @@ locals {
     for sg_key, sg_obj in local.valid_security_group_map : (sg_obj.egress_ref == null && sg_obj.egress != null) ?
     [for rule in sg_obj.egress : merge(rule, (
       (rule.referenced_security_group_id != null && contains(keys(local.valid_security_group_map), rule.referenced_security_group_id)) ? {
+        # does not cuurent check the validity        
         referenced_security_group_id  = rule.referenced_security_group_id
         prefix_list_id                = null
         cidr_ipv4                     = null
       } : 
       rule.prefix_list_id != null && contains(keys(local.prefix_list_map), rule.prefix_list_id) ? {
         referenced_security_group_id  = null
+        # does not cuurent check the validity
         prefix_list_id                = rule.prefix_list_id
         cidr_ipv4                     = null
       } : {
@@ -420,12 +458,14 @@ locals {
     for sg_key, sg_obj in local.valid_security_group_map : (sg_obj.egress_ref != null && can(var.shared_security_group_rules[sg_obj.egress_ref].egress)) ?
     [for rule in var.shared_security_group_rules[sg_obj.egress_ref].egress : merge(rule, (
       (rule.referenced_security_group_id != null && contains(keys(local.valid_security_group_map), rule.referenced_security_group_id)) ? {
+        # does not cuurent check the validity
         referenced_security_group_id  = rule.referenced_security_group_id
         prefix_list_id                = null
         cidr_ipv4                     = null
       } : 
       rule.prefix_list_id != null && contains(keys(local.prefix_list_map), rule.prefix_list_id) ? {
         referenced_security_group_id  = null
+        # does not cuurent check the validity
         prefix_list_id                = rule.prefix_list_id
         cidr_ipv4                     = null
       } : {
@@ -463,7 +503,7 @@ locals {
 }
 
 locals {
-    # FOR DIAGNOSTICS
+    # FOR SG RULE DIAGNOSTICS
     sg_in_rules_list_flat = sort([for element in local.ingress_rules_map : "${element.sg_key}-${element.description}-${element.rule_hash}"])
 
     sg_eg_rules_list_flat = sort([for element in local.egress_rules_map : "${element.sg_key}-${element.description}-${element.rule_hash}"])

@@ -192,6 +192,18 @@ variable "ec2_config" {
   }
 }
 
+variable "eni_config" {
+  type = map(object({
+    vpc = string
+    subnet = string
+    description = optional(string, null)
+    private_ip_list_enabled = optional(bool, false)
+    private_ip_list = optional(set(string),null)
+    private_ips_count = optional(number, null)
+    security_groups = optional(set(string),null)
+  }))
+}
+
 variable "prefix_list_config" {
   type = map(object({
     name = string
@@ -268,8 +280,9 @@ variable "shared_security_group_rules" {
       cidr_ipv4 = optional(string)
     }))
   }))
-
 }
+
+
 
 
 

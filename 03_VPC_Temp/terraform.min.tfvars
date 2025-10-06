@@ -200,6 +200,24 @@ ec2_config = {
     }
 }
 
+eni_config = {
+  "web_02" = {
+    description = "jd test web_02"
+    vpc = "vpc-lab-dev-000"
+    subnet = "snet-lab-dev-000-public-b"
+    private_ip_list_enabled = true
+    private_ip_list = ["10.0.1.10"]
+    security_groups = ["SG-2-WEB", "SG-FAKE"]
+  }
+  "web_01" = {
+    description = "jd test web_01"
+    vpc = "vpc-lab-dev-000"
+    subnet = "snet-lab-dev-000-public-a"
+    private_ips_count = 2
+    security_groups = ["SG-2-WEB", "SG-FAKE"]
+  }
+}
+
 prefix_list_config = {
     JD-HOME-LAB = {
         name           = "JD-HOME-LAB"
@@ -221,7 +239,7 @@ prefix_list_config = {
 }
 
 security_group_config = {
-    "SG-1-DB" = {
+/*     "SG-1-DB" = {
         vpc_id      = "vpc-lab-dev-000"
         description = "SG-1-DB referencing DB-RULES"
         ingress_ref = "DB-RULES"
@@ -258,7 +276,7 @@ security_group_config = {
                 cidr_ipv4 =  "0.0.0.0/0" 
             }
         ]
-    }
+    } */
     "SG-2-WEB" = {
         vpc_id      = "vpc-lab-dev-000"
         description = "SG-2-WEB with inline rules"
@@ -310,13 +328,13 @@ security_group_config = {
             }
         ]
     }
-    "SG-1-APP" = {
+/*     "SG-1-APP" = {
         vpc_id      = "vpc-lab-dev-001"
         description = "SG-1-APP currently inert"
         # ingress_ref = "APP-RULES"
         # ingress = []
         # egress = []
-    }
+    } */
 }
 
 shared_security_group_rules = {

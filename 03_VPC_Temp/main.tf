@@ -140,11 +140,22 @@ resource "aws_instance" "main" {
   # Instead, we use a list comprehension to iterate over each list element and resolve it individually.
   # `try()` ensures missing or invalid keys (e.g., SG-FAKE) return an empty list, preserving apply safety.
   # `flatten()` collapses the nested list into a flat list of strings, as required by vpc_security_group_ids.
-  vpc_security_group_ids      = flatten([for element in each.value.vpc_security_group_ids : try(aws_security_group.main[element].id,[])])
+  vpc_security_group_ids      = flatten([for element in each.value.vpc_security_group_ids : try(aws_security_group.main[element].id, [])])
 
   lifecycle {
     create_before_destroy = true
   }
+}
+
+resource "aws_network_interface" "main" {
+  for_each = local.valid_eni_map
+
+  subnet_id               = aws_subnet.main[each.value.subnet_id].id
+  description             = each.value.description
+  private_ip_list_enabled = each.value.private_ip_list_enabled
+  private_ip_list         = each.value.private_ip_list
+  private_ips_count       = each.value.private_ips_count
+  security_groups         = flatten([for element in each.value.security_groups : try(aws_security_group.main[element].id, [])])
 }
 
 # [for element in ec2_config["web_02"]["vpc_security_group_ids"] : aws_security_group.main[element].id]
