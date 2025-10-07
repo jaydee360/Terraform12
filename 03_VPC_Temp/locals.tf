@@ -313,7 +313,13 @@ locals {
   }
 }
 
-
+locals {
+  subnet_has_igw_route = {
+    for route_table_key,  route_table_object in local.route_table_map : 
+    route_table_key => "true"
+    if route_table_object.inject_igw && can(local.igw_attach_map[route_table_object.vpc_key])
+  }
+}
 
 #
 # Prefix Lists
