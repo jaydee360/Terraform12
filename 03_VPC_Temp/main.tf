@@ -147,6 +147,17 @@ resource "aws_route_table_association" "main" {
   }
 } */
 
+resource "aws_network_interface" "main" {
+  for_each = local.valid_eni_map
+
+  subnet_id               = aws_subnet.main[each.value.subnet_id].id
+  description             = each.value.description
+  private_ip_list_enabled = each.value.private_ip_list_enabled
+  private_ip_list         = each.value.private_ip_list
+  private_ips_count       = each.value.private_ips_count
+  security_groups         = flatten([for element in each.value.security_groups : try(aws_security_group.main[element].id, [])])
+}
+
 resource "aws_instance" "main" {
   for_each = local.valid_ec2_instance_map
 
@@ -161,17 +172,6 @@ resource "aws_instance" "main" {
   lifecycle {
     create_before_destroy = true
   }
-}
-
-resource "aws_network_interface" "main" {
-  for_each = local.valid_eni_map
-
-  subnet_id               = aws_subnet.main[each.value.subnet_id].id
-  description             = each.value.description
-  private_ip_list_enabled = each.value.private_ip_list_enabled
-  private_ip_list         = each.value.private_ip_list
-  private_ips_count       = each.value.private_ips_count
-  security_groups         = flatten([for element in each.value.security_groups : try(aws_security_group.main[element].id, [])])
 }
 
 resource "aws_network_interface_attachment" "main" {
