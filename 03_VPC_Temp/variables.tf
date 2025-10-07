@@ -52,80 +52,11 @@ variable "vpc_config" {
     subnets = map(object({
       subnet_cidr = string
       az          = string
-      is_public   = optional(bool, false)
       has_route_table = optional(bool, false)
       has_nat_gw  = optional(bool, false)
       tags        = optional(map(string))
     }))
   }))
-  default = {
-    "vpc-lab-dev-000" = {
-      vpc_cidr = "10.0.0.0/16"
-      tags = {
-      }
-      igw = {
-        create = true
-        attach = true
-        tags = {
-        }
-      }
-      subnets = {
-        "snet-lab-dev-000-a" = {
-          az          = "a"
-          subnet_cidr = "10.0.0.0/24"
-          tags = {
-          }
-          has_route_table = true
-          has_nat_gw = true
-        }
-        "snet-lab-dev-000-b" = {
-          az          = "b"
-          subnet_cidr = "10.0.1.0/24"
-          tags = {
-          }
-          has_route_table = true
-          has_nat_gw = false
-        }
-        "snet-lab-dev-000-c" = {
-          az          = "c"
-          subnet_cidr = "10.0.2.0/24"
-          tags = {
-          }
-          has_route_table = true
-          has_nat_gw = false
-        }
-      }
-    }
-    "vpc-lab-dev-100" = {
-      vpc_cidr = "10.1.0.0/16"
-      tags = {
-      }
-      igw = {
-        create = true
-        attach = true
-        tags = {
-        }
-      }
-      subnets = {
-        "snet-lab-dev-100-a" = {
-          az          = "a"
-          subnet_cidr = "10.1.0.0/24"
-          tags = {
-          }
-          has_route_table = true
-          has_nat_gw = false
-        }
-        "snet-lab-dev-100-b" = {
-          az          = "b"
-          subnet_cidr = "10.1.1.0/24"
-          tags = {
-          }
-          has_route_table = true
-          has_nat_gw = false
-        }
-      }
-    }
-  }
 }
 
 # route_table_config is a map keyed by "vpc_key__subnet_key"
@@ -147,14 +78,6 @@ variable "route_table_config" {
     })))
     tags          = optional(map(string),{})
   }))
-  default = {
-    "vpc-lab-dev-000__snet-lab-dev-000-a" = {
-      inject_igw = true
-    }
-    "vpc-lab-dev-000__snet-lab-dev-000-c" = {
-      inject_nat = true
-    }
-  }
   validation {
     condition = alltrue([for v in var.route_table_config : 
       !(v.inject_igw && v.inject_nat)
@@ -176,20 +99,6 @@ variable "route_table_config" {
     user_data_script = optional(string,null)
     tags = optional(map(string),null)
   }))
-  default = {
-    "web_01" = {
-      ami = "ami-0150ccaf51ab55a51"
-      instance_type = "t3.micro"
-      vpc = "vpc-lab-dev-000"
-      subnet = "snet-lab-dev-000-public-a"
-      key_name = "A4L"
-      associate_public_ip_address = true
-      user_data_script = "server-script.sh"
-      tags = {
-        Role = "frontend"
-      }
-    }
-  }
 } */
 
 variable "ec2_config_v2" {
@@ -253,21 +162,6 @@ variable "security_group_config" {
       cidr_ipv4 = optional(string)
     })))
   }))
-
-/*   validation {
-    condition = alltrue([
-      for sg in var.security_group_config : (
-        sg.ingress != null ? alltrue([
-          for rule in sg.ingress : length(compact([
-            rule.cidr_block,
-            rule.prefix_list_id,
-            rule.referenced_security_group_id
-          ])) == 1
-        ]) : true
-      )
-    ])
-    error_message = "VALIDATION: Each ingress rule must specify exactly one of: cidr_block, prefix_list_id, or referenced_security_group_id."
-  } */
 }
 
 variable "shared_security_group_rules" {
