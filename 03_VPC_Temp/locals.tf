@@ -343,6 +343,7 @@ locals {
     eni_obj, {
       subnet_id   = "${eni_obj.vpc}__${eni_obj.subnet}"
       ec2_key     = ec2_key
+      ec2_nic_ref = eni_key
       index       = tonumber(substr(eni_key, length(eni_key) - 1, 1))
     },
     eni_obj.private_ip_list_enabled == true && eni_obj.private_ip_list != null && length(eni_obj.private_ip_list) > 0 ? 
@@ -394,6 +395,21 @@ locals {
   }
 
 }
+
+locals {
+  primary_nic_ref = "nic0"
+
+  ec2_eni_lookup_map = {
+    for ec2_key, ec2_obj in local.valid_ec2_instance_map_v2 : ec2_key => {
+      for eni_map_key, eni_map_obj in local.valid_eni_map_v2 : eni_map_obj.ec2_nic_ref => eni_map_key
+      if eni_map_obj.ec2_key == ec2_key
+    }
+  }
+}
+
+
+# [for ec2_key, ec2_obj in local.valid_ec2_instance_map_v2 : [for eni_map_key, eni_map_obj in local.valid_eni_map_v2 : eni_map_key if eni_map_obj.ec2_key == ec2_key]]
+# {for ec2_key, ec2_obj in local.valid_ec2_instance_map_v2 : ec2_key => {for eni_map_key, eni_map_obj in local.valid_eni_map_v2 : eni_map_obj.ec2_nic_ref => eni_map_key if eni_map_obj.ec2_key == ec2_key}}
 
 #
 # Prefix Lists

@@ -219,7 +219,7 @@ ec2_config_v2 = {
                 description = "jd test web_01"
                 vpc = "vpc-lab-dev-000"
                 subnet = "snet-lab-dev-000-public-a"
-                private_ips_count = 2
+                private_ips_count = 1
                 security_groups = ["SG-2-WEB", "SG-FAKE"]
             }
         }

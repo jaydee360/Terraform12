@@ -176,6 +176,13 @@ resource "aws_network_interface" "main" {
   network_interface = aws_network_interface.main[each.key].id
 } */
 
+resource "aws_eip" "eni" {
+  for_each = local.valid_eni_eip_map_v2
+
+  domain            = "vpc"
+  network_interface = aws_network_interface.main[each.key].id
+} 
+
 /* resource "aws_instance" "main" {
   for_each = local.valid_ec2_instance_map
 
@@ -193,6 +200,23 @@ resource "aws_network_interface" "main" {
   }
 } */
 
+resource "aws_instance" "main" {
+  for_each = local.valid_ec2_instance_map_v2
+
+  ami                         = each.value.ami
+  instance_type               = each.value.instance_type
+  key_name                    = each.value.key_name
+  user_data                   = each.value.user_data_script != null ? file("${path.module}/${each.value.user_data_script}") : null
+  
+  primary_network_interface  {
+    network_interface_id = aws_network_interface.main[local.ec2_eni_lookup_map[each.key][local.primary_nic_ref]].id
+  }
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
 /* resource "aws_network_interface_attachment" "main" {
   for_each = local.valid_eni_attachments
 
@@ -200,6 +224,14 @@ resource "aws_network_interface" "main" {
   network_interface_id = aws_network_interface.main[each.value.network_interface_id].id
   device_index = each.value.device_index
 } */
+
+resource "aws_network_interface_attachment" "main" {
+  for_each = local.valid_eni_attachments_v2
+
+  instance_id = aws_instance.main[each.value.instance_id].id
+  network_interface_id = aws_network_interface.main[each.value.network_interface_id].id
+  device_index = each.value.device_index
+}
 
 resource "aws_security_group" "main" {
   for_each = local.valid_security_group_map
