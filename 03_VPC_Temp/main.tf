@@ -158,6 +158,13 @@ resource "aws_network_interface" "main" {
   security_groups         = flatten([for element in each.value.security_groups : try(aws_security_group.main[element].id, [])])
 }
 
+resource "aws_eip" "eni" {
+  for_each = local.valid_eni_eip_map
+
+  domain            = "vpc"
+  network_interface = aws_network_interface.main[each.key].id
+}
+
 resource "aws_instance" "main" {
   for_each = local.valid_ec2_instance_map
 
@@ -165,6 +172,7 @@ resource "aws_instance" "main" {
   instance_type               = each.value.instance_type
   key_name                    = each.value.key_name
   user_data                   = each.value.user_data_script != null ? file("${path.module}/${each.value.user_data_script}") : null
+  
   primary_network_interface  {
     network_interface_id = aws_network_interface.main[each.value.eni_refs[0]].id
   }

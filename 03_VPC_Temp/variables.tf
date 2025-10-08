@@ -118,9 +118,10 @@ variable "eni_config" {
     subnet = string
     description = optional(string, null)
     private_ip_list_enabled = optional(bool, false)
-    private_ip_list = optional(set(string),null)
+    private_ip_list = optional(set(string), null)
     private_ips_count = optional(number, null)
-    security_groups = optional(set(string),null)
+    security_groups = optional(set(string), null)
+    assign_eip = optional(bool, false)
   }))
 }
 

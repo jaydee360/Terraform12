@@ -39,15 +39,15 @@ vpc_config = {
                 has_route_table = true
                 has_nat_gw = false
             }
-            # "snet-lab-dev-000-public-d" = {
-            #     az          = "c"
-            #     subnet_cidr = "10.0.3.0/24"
-            #     tags = {
-            #         "type" = "public"
-            #     }
-            #     has_route_table = true
-            #     has_nat_gw = true
-            # }
+            "snet-lab-dev-000-public-d" = {
+                az          = "d"
+                subnet_cidr = "10.0.3.0/24"
+                tags = {
+                    "type" = "public"
+                }
+                has_route_table = true
+                has_nat_gw = false
+            }
             # "snet-lab-dev-000-private-a" = {
             #     az          = "a"
             #     subnet_cidr = "10.0.4.0/24"
@@ -149,10 +149,10 @@ route_table_config = {
     "vpc-lab-dev-000__snet-lab-dev-000-public-c" = {
         inject_igw = true
     }
-/*     "vpc-lab-dev-000__snet-lab-dev-000-public-d" = {
-        inject_igw = true
+     "vpc-lab-dev-000__snet-lab-dev-000-public-d" = {
+        inject_igw = false
     }
-    "vpc-lab-dev-000__snet-lab-dev-000-private-a" = {
+/*    "vpc-lab-dev-000__snet-lab-dev-000-private-a" = {
         inject_nat = true
     }
     "vpc-lab-dev-000__snet-lab-dev-000-private-b" = {
@@ -241,16 +241,6 @@ ec2_config_v2 = {
             Role = "frontend"
         }
     }
-    "web_05" = {
-        ami = "ami-0150ccaf51ab55a51"
-        instance_type = "t3.micro"
-        key_name = "A4L"
-        user_data_script = "server-script.sh"
-        eni_refs = ["web_01:nic0"]
-        tags = {
-            Role = "frontend"
-        }
-    }
 }
 
 eni_config = {
@@ -259,6 +249,7 @@ eni_config = {
     vpc = "vpc-lab-dev-000"
     subnet = "snet-lab-dev-000-public-a"
     security_groups = ["SG-2-WEB", "SG-FAKE"]
+    assign_eip = true
   }
   "web_01:nic1" = {
     description = "jd test web_01"
@@ -271,6 +262,7 @@ eni_config = {
     vpc = "vpc-lab-dev-000"
     subnet = "snet-lab-dev-000-public-b"
     security_groups = ["SG-2-WEB", "SG-FAKE"]
+    assign_eip = true
   }
   "web_02:nic1" = {
     description = "jd test web_02"
@@ -281,25 +273,26 @@ eni_config = {
   "web_03:nic0" = {
     description = "jd test web_03"
     vpc = "vpc-lab-dev-000"
-    subnet = "snet-lab-dev-000-public-b"
+    subnet = "snet-lab-dev-000-public-c"
     security_groups = ["SG-2-WEB", "SG-FAKE"]
   }
   "web_03:nic1" = {
     description = "jd test web_03"
     vpc = "vpc-lab-dev-000"
-    subnet = "snet-lab-dev-000-public-b"
+    subnet = "snet-lab-dev-000-public-c"
     security_groups = ["SG-2-WEB", "SG-FAKE"]
   }
   "web_04:nic0" = {
     description = "jd test web_04"
     vpc = "vpc-lab-dev-000"
-    subnet = "snet-lab-dev-000-public-b"
+    subnet = "snet-lab-dev-000-public-d"
     security_groups = ["SG-2-WEB", "SG-FAKE"]
+    assign_eip = true
   }
   "web_04:nic1" = {
     description = "jd test web_04"
     vpc = "vpc-lab-dev-000"
-    subnet = "snet-lab-dev-000-public-b"
+    subnet = "snet-lab-dev-000-public-d"
     security_groups = ["SG-2-WEB", "SG-FAKE"]
   }
 }

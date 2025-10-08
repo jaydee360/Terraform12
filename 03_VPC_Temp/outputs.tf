@@ -83,3 +83,7 @@ output "aws_network_interface_ids" {
 output "aws_network_interface_attachment_ids" {
   value = {for k, att in aws_network_interface_attachment.main : k => att.id}
 }
+
+output "aws_eip_eni_ids" {
+  value = {for k, eip in aws_eip.eni : k => eip.id}
+}

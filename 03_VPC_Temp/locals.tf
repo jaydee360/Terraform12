@@ -321,6 +321,16 @@ locals {
   }
 }
 
+locals {
+  valid_eni_eip_map = {
+    for eip_key, eip_obj in local.valid_eni_map : eip_key => {
+      assign_eip = eip_obj.assign_eip
+      subnet_id = eip_obj.subnet_id
+      subnet_has_igw_route = lookup(local.subnet_has_igw_route, eip_obj.subnet_id, false)
+    } if eip_obj.assign_eip && lookup(local.subnet_has_igw_route, eip_obj.subnet_id, false)
+  }
+}
+
 #
 # Prefix Lists
 # ------------
