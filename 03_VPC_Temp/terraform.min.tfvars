@@ -206,7 +206,23 @@ ec2_config_v2 = {
         instance_type = "t3.micro"
         key_name = "A4L"
         user_data_script = "server-script.sh"
-        eni_refs = ["web_01:nic0", "web_01:nic1"]
+        # eni_refs = ["web_01:nic0", "web_01:nic1"]
+        network_interfaces = {
+            "nic0" = {
+                description = "jd test web_01"
+                vpc = "vpc-lab-dev-000"
+                subnet = "snet-lab-dev-000-public-a"
+                security_groups = ["SG-2-WEB", "SG-FAKE"]
+                # assign_eip = true
+            }
+            "nic1" = {
+                description = "jd test web_01"
+                vpc = "vpc-lab-dev-000"
+                subnet = "snet-lab-dev-000-public-a"
+                private_ips_count = 2
+                security_groups = ["SG-2-WEB", "SG-FAKE"]
+            }
+        }
         tags = {
             Role = "frontend"
         }
@@ -216,31 +232,70 @@ ec2_config_v2 = {
         instance_type = "t3.micro"
         key_name = "A4L"
         user_data_script = "server-script.sh"
-        eni_refs = ["web_02:nic0", "web_02:nic1"]
+        # eni_refs = ["web_02:nic0", "web_02:nic1"]
+        network_interfaces = {
+            "nic0" = {
+                description = "jd test web_02"
+                vpc = "vpc-lab-dev-000"
+                subnet = "snet-lab-dev-000-public-b"
+                security_groups = ["SG-2-WEB", "SG-FAKE"]
+                # assign_eip = true
+            }
+            "nic1" = {
+                description = "jd test web_02"
+                vpc = "vpc-lab-dev-000"
+                subnet = "snet-lab-dev-000-public-b"
+                private_ip_list_enabled = true
+                private_ip_list = ["10.0.1.20"]
+                security_groups = ["SG-2-WEB", "SG-FAKE"]
+            }
+        }
         tags = {
             Role = "frontend"
         }
     }
-    "web_03" = {
-        ami = "ami-0150ccaf51ab55a51"
-        instance_type = "t3.micro"
-        key_name = "A4L"
-        user_data_script = "server-script.sh"
-        eni_refs = ["web_03:nic0", "web_03:nic1"]
-        tags = {
-            Role = "frontend"
-        }
-    }
-    "web_04" = {
-        ami = "ami-0150ccaf51ab55a51"
-        instance_type = "t3.micro"
-        key_name = "A4L"
-        user_data_script = "server-script.sh"
-        eni_refs = []
-        tags = {
-            Role = "frontend"
-        }
-    }
+    # "web_03" = {
+    #     ami = "ami-0150ccaf51ab55a51"
+    #     instance_type = "t3.micro"
+    #     key_name = "A4L"
+    #     user_data_script = "server-script.sh"
+    #     # eni_refs = ["web_03:nic0", "web_03:nic1"]
+    #     network_interfaces = {
+    #         "nic0" = {
+    #             description = "jd test web_03"
+    #             vpc = "vpc-lab-dev-000"
+    #             subnet = "snet-lab-dev-000-public-c"
+    #             security_groups = ["SG-2-WEB", "SG-FAKE"]
+    #         }
+    #         "nic1" = {
+    #             description = "jd test web_03"
+    #             vpc = "vpc-lab-dev-000"
+    #             subnet = "snet-lab-dev-000-public-c"
+    #             security_groups = ["SG-2-WEB", "SG-FAKE"]
+    #         }
+    #     }
+    #     tags = {
+    #         Role = "frontend"
+    #     }
+    # }
+    # "web_04" = {
+    #     ami = "ami-0150ccaf51ab55a51"
+    #     instance_type = "t3.micro"
+    #     key_name = "A4L"
+    #     user_data_script = "server-script.sh"
+    #     # eni_refs = []
+    #     network_interfaces = {
+    #         "nic0" = {
+    #             description = "jd test web_03"
+    #             vpc = "vpc-lab-dev-000"
+    #             subnet = "snet-lab-dev-000-public-c"
+    #             security_groups = ["SG-2-WEB", "SG-FAKE"]
+    #         }
+    #     }
+    #     tags = {
+    #         Role = "frontend"
+    #     }
+    # }
 }
 
 eni_config = {

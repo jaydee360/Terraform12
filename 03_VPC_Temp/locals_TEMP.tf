@@ -1,3 +1,55 @@
+/* 
+# simple list and map reproduction: OUTER to loop through the instances, and INNER to loop through the NICs
+[for ec2_key, ec2_obj in var.ec2_config_v2 : [for eni_key, eni_obj in ec2_obj.network_interfaces : "${ec2_key} ---> ${eni_key} / ${eni_obj.vpc} / ${eni_obj.subnet}"]]
+{for ec2_key, ec2_obj in var.ec2_config_v2 : "OUTER-LOOP: ${ec2_key}" => [for eni_key, eni_obj in ec2_obj.network_interfaces : "INNER-LOOP: ${ec2_key} ---> ${eni_key} / ${eni_obj.vpc} / ${eni_obj.subnet}"]}
+
+# Prototype expression to test for the presence of nic0 in the keys of nested network interfaces map
+[for ec2_key, ec2_obj in var.ec2_config_v2 : ec2_key if contains(keys(ec2_obj.network_interfaces), "nic0")]
+
+# Prototype expression to output distinct vpc on each instance network interfaces
+[for ec2_key, ec2_obj in var.ec2_config_v2 : "DISTINCT VPCs in ${ec2_key} NICs = ${length(distinct([for eni_key, eni_obj in ec2_obj.network_interfaces : eni_obj.vpc]))}"]
+
+# Prototype expression to test & filter results if no more than 1 distinct vpc on the network interfaces
+[for ec2_key, ec2_obj in var.ec2_config_v2 : ec2_key if length(distinct([for eni_key, eni_obj in ec2_obj.network_interfaces : eni_obj.vpc])) == 1]
+
+# get a list of VPCs accross ec2 instance network interfaces
+flatten([for ec2_key, ec2_obj in var.ec2_config_v2 : distinct([for eni_key, eni_obj in ec2_obj.network_interfaces : eni_obj.vpc])])
+
+# get a list of instance, nics and VPCs accross the FIRST network interfaces (with and without narration)
+[for ec2_key, ec2_obj in var.ec2_config_v2 : [for eni_key, eni_obj in ec2_obj.network_interfaces : eni_obj.vpc][0]]
+[for ec2_key, ec2_obj in var.ec2_config_v2 : "${ec2_key}-->${[for eni_key, eni_obj in ec2_obj.network_interfaces : "${eni_key}->${eni_obj.vpc}"][0]}"]
+
+# Pseudocode to check that each network inteface vpc exists in vpc_config
+[for ec2_key, ec2_obj in var.ec2_config_v2 : ec2_key if [<EACH NIC> contains(keys(var.vpc_config), <VALUE>)]]
+# First attempt at realisation 
+# this give error: "The 'if' clause value is invalid: bool required, but have tuple."
+# shows that the innter loop is returning mutliple booleans, for one for each NIC evaluated
+[for ec2_key, ec2_obj in var.ec2_config_v2 : ec2_key if [for eni_key, eni_obj in ec2_obj.network_interfaces : contains(keys(var.vpc_config), eni_obj.vpc)]]
+
+# If we wrap the inner loop in an alltrue(), then it works 
+# This checks for each EC2 instance: all NICs VPC refs are valid against var.vpc_config
+[for ec2_key, ec2_obj in var.ec2_config_v2 : ec2_key if alltrue([for eni_key, eni_obj in ec2_obj.network_interfaces : contains(keys(var.vpc_config), eni_obj.vpc)])]
+
+# This is a way of testing the VPC reference only on the first item [0] from the collection of NICs
+# We can consider this test reliabe if we know that there is only 1 distinct VPC ref accross all NICs (e.g. they are all the same, so it doesnt matter which one we test)
+[for ec2_key, ec2_obj in var.ec2_config_v2 : ec2_key if contains(keys(var.vpc_config), [for eni_key, eni_obj in ec2_obj.network_interfaces : eni_obj.vpc][0])]
+
+# This was an attempt to use distinct VPC references, but distinct returns a list, where the contains() function expects a single value.
+# Result: Nothing is matched and the expression returns only an empty list
+[for ec2_key, ec2_obj in var.ec2_config_v2 : ec2_key if contains(keys(var.vpc_config), distinct([for eni_key, eni_obj in ec2_obj.network_interfaces : eni_obj.vpc]))]
+
+# this checks each EC2 instance: that all SUBNET refs on all NICs are valid against local.subnet_map.
+# it reconstructs the correct compound key from vpc__subnet
+[for ec2_key, ec2_obj in var.ec2_config_v2 : ec2_key if alltrue([for eni_key, eni_obj in ec2_obj.network_interfaces : contains(keys(local.subnet_map), "${eni_obj.vpc}__${eni_obj.subnet}")])]
+
+# these were experiments in testing contains with a literal lookup
+var.ec2_config_v2["web_01"].network_interfaces["nic0"].vpc
+contains(keys(var.vpc_config), var.ec2_config_v2["web_01"].network_interfaces["nic0"].vpc)
+*/
+
+# valid ENI map from ec2_config
+# [ for k, o in local.valid_ec2_instance_map_v2 : {for kk, oo in o.network_interfaces : kk => oo} ]
+
 /* locals {
   sg_map = {
     for sg_key, sg_obj in var.security_group_config : sg_key => sg_obj if can(var.vpc_config[sg_obj.vpc_id])

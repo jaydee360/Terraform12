@@ -107,9 +107,27 @@ variable "ec2_config_v2" {
     instance_type = string,
     key_name = string
     user_data_script = optional(string,null)
-    eni_refs = list(string)
+    eni_refs = optional(list(string))
     tags = optional(map(string),null)
+    network_interfaces = map(object({
+      vpc = string
+      subnet = string
+      description = optional(string, null)
+      private_ip_list_enabled = optional(bool, false)
+      private_ip_list = optional(set(string), null)
+      private_ips_count = optional(number, null)
+      security_groups = optional(set(string), null)
+      assign_eip = optional(bool, false)
+    }))
   }))
+  validation {
+    condition = alltrue([for ec2_obj in var.ec2_config_v2 : contains(keys(ec2_obj.network_interfaces), "nic0")])
+    error_message = "Each EC2 instance must define 'nic0' for use as the primary network interface"
+  }
+  validation {
+    condition = alltrue([for ec2_obj in var.ec2_config_v2 : length(distinct([for eni_key, eni_obj in ec2_obj.network_interfaces : eni_obj.vpc])) == 1])
+    error_message = "Each EC2 instance must have all its network interfaces in the same VPC"
+  }
 }
 
 variable "eni_config" {
