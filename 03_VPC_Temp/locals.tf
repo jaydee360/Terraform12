@@ -297,6 +297,15 @@ locals {
   )
 */
 
+  valid_eni_attachments_v2 = {
+    for eni_map_key, eni_map_obj in local.valid_eni_map_v2 : eni_map_key => {
+        instance_id           = eni_map_obj.ec2_key
+        network_interface_id  = eni_map_key
+        device_index          = eni_map_obj.index
+      }
+    if eni_map_obj.index > 0
+  } 
+
 } 
 
 
@@ -331,7 +340,11 @@ locals {
 
   valid_eni_map_v2 = merge([ 
     for ec2_key, ec2_obj in local.valid_ec2_instance_map_v2 : {for eni_key, eni_obj in ec2_obj.network_interfaces : "${ec2_key}__${eni_key}" => merge(
-    eni_obj, {subnet_id = "${eni_obj.vpc}__${eni_obj.subnet}"},
+    eni_obj, {
+      subnet_id   = "${eni_obj.vpc}__${eni_obj.subnet}"
+      ec2_key     = ec2_key
+      index       = tonumber(substr(eni_key, length(eni_key) - 1, 1))
+    },
     eni_obj.private_ip_list_enabled == true && eni_obj.private_ip_list != null && length(eni_obj.private_ip_list) > 0 ? 
       {
         private_ip_list_enabled = eni_obj.private_ip_list_enabled
@@ -362,15 +375,25 @@ locals {
   }
 }
 
-/* locals {
-  valid_eni_eip_map = {
+locals {
+
+/*   valid_eni_eip_map = {
     for eip_key, eip_obj in local.valid_eni_map : eip_key => {
       assign_eip = eip_obj.assign_eip
       subnet_id = eip_obj.subnet_id
       subnet_has_igw_route = lookup(local.subnet_has_igw_route, eip_obj.subnet_id, false)
     } if eip_obj.assign_eip && lookup(local.subnet_has_igw_route, eip_obj.subnet_id, false)
+  } */
+
+  valid_eni_eip_map_v2 = {
+    for eip_map_key, eip_map_obj in local.valid_eni_map_v2 : eip_map_key => {
+      assign_eip            = eip_map_obj.assign_eip
+      subnet_id             = eip_map_obj.subnet_id
+      subnet_has_igw_route  = lookup(local.subnet_has_igw_route, eip_map_obj.subnet_id, false)
+    } if eip_map_obj.assign_eip && lookup(local.subnet_has_igw_route, eip_map_obj.subnet_id, false)
   }
-} */
+
+}
 
 #
 # Prefix Lists

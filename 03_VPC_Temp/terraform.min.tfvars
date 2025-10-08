@@ -213,7 +213,7 @@ ec2_config_v2 = {
                 vpc = "vpc-lab-dev-000"
                 subnet = "snet-lab-dev-000-public-a"
                 security_groups = ["SG-2-WEB", "SG-FAKE"]
-                # assign_eip = true
+                assign_eip = true
             }
             "nic1" = {
                 description = "jd test web_01"
@@ -239,7 +239,7 @@ ec2_config_v2 = {
                 vpc = "vpc-lab-dev-000"
                 subnet = "snet-lab-dev-000-public-b"
                 security_groups = ["SG-2-WEB", "SG-FAKE"]
-                # assign_eip = true
+                assign_eip = true
             }
             "nic1" = {
                 description = "jd test web_02"
