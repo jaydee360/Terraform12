@@ -86,28 +86,12 @@ variable "route_table_config" {
   }
 }
 
-/* variable "ec2_config" {
-  type = map(object({
-    ami = string,
-    instance_type = string,
-    vpc = string
-    subnet = string
-    key_name = string
-    associate_public_ip_address = optional(bool,false)
-    assign_eip = optional(bool,false)
-    vpc_security_group_ids = optional(set(string),null)
-    user_data_script = optional(string,null)
-    tags = optional(map(string),null)
-  }))
-} */
-
 variable "ec2_config_v2" {
   type = map(object({
     ami = string,
     instance_type = string,
     key_name = string
     user_data_script = optional(string,null)
-    eni_refs = optional(list(string))
     tags = optional(map(string),null)
     network_interfaces = map(object({
       vpc = string
@@ -128,19 +112,6 @@ variable "ec2_config_v2" {
     condition = alltrue([for ec2_obj in var.ec2_config_v2 : length(distinct([for eni_key, eni_obj in ec2_obj.network_interfaces : eni_obj.vpc])) == 1])
     error_message = "Each EC2 instance must have all its network interfaces in the same VPC"
   }
-}
-
-variable "eni_config" {
-  type = map(object({
-    vpc = string
-    subnet = string
-    description = optional(string, null)
-    private_ip_list_enabled = optional(bool, false)
-    private_ip_list = optional(set(string), null)
-    private_ips_count = optional(number, null)
-    security_groups = optional(set(string), null)
-    assign_eip = optional(bool, false)
-  }))
 }
 
 variable "prefix_list_config" {

@@ -147,17 +147,6 @@ resource "aws_route_table_association" "main" {
   }
 } */
 
-/* resource "aws_network_interface" "main" {
-  for_each = local.valid_eni_map
-
-  subnet_id               = aws_subnet.main[each.value.subnet_id].id
-  description             = each.value.description
-  private_ip_list_enabled = each.value.private_ip_list_enabled
-  private_ip_list         = each.value.private_ip_list
-  private_ips_count       = each.value.private_ips_count
-  security_groups         = flatten([for element in each.value.security_groups : try(aws_security_group.main[element].id, [])])
-} */
-
 resource "aws_network_interface" "main" {
   for_each = local.valid_eni_map_v2
 
@@ -169,36 +158,12 @@ resource "aws_network_interface" "main" {
   security_groups         = flatten([for element in each.value.security_groups : try(aws_security_group.main[element].id, [])])
 }
 
-/* resource "aws_eip" "eni" {
-  for_each = local.valid_eni_eip_map
-
-  domain            = "vpc"
-  network_interface = aws_network_interface.main[each.key].id
-} */
-
 resource "aws_eip" "eni" {
   for_each = local.valid_eni_eip_map_v2
 
   domain            = "vpc"
   network_interface = aws_network_interface.main[each.key].id
 } 
-
-/* resource "aws_instance" "main" {
-  for_each = local.valid_ec2_instance_map
-
-  ami                         = each.value.ami
-  instance_type               = each.value.instance_type
-  key_name                    = each.value.key_name
-  user_data                   = each.value.user_data_script != null ? file("${path.module}/${each.value.user_data_script}") : null
-  
-  primary_network_interface  {
-    network_interface_id = aws_network_interface.main[each.value.eni_refs[0]].id
-  }
-
-  lifecycle {
-    create_before_destroy = true
-  }
-} */
 
 resource "aws_instance" "main" {
   for_each = local.valid_ec2_instance_map_v2
@@ -216,14 +181,6 @@ resource "aws_instance" "main" {
     create_before_destroy = true
   }
 }
-
-/* resource "aws_network_interface_attachment" "main" {
-  for_each = local.valid_eni_attachments
-
-  instance_id = aws_instance.main[each.value.instance_id].id
-  network_interface_id = aws_network_interface.main[each.value.network_interface_id].id
-  device_index = each.value.device_index
-} */
 
 resource "aws_network_interface_attachment" "main" {
   for_each = local.valid_eni_attachments_v2
@@ -281,5 +238,4 @@ resource "aws_ec2_managed_prefix_list" "main" {
       description = try(entry.value.description, null)
     }   
   }
-
 }
