@@ -47,9 +47,9 @@ output "nat_gateway_ids" {
   description = "NAT Gateway IDs keyed by subnet"
 }
 
-output "elastic_ip_ids" {
+output "aws_eip_nat_ids" {
   value = {for k, eip in aws_eip.nat : k => eip.id}
-  description = "Elastic IP IDs keyed by subnet"
+  description = "Elastic IP IDs keyed by nat_gw"
 }
 
 output "igw_route_ids" {
@@ -86,4 +86,5 @@ output "aws_network_interface_attachment_ids" {
 
 output "aws_eip_eni_ids" {
   value = {for k, eip in aws_eip.eni : k => eip.id}
+  description = "Elastic IP IDs keyed by ENI"
 }
