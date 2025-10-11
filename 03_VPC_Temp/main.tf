@@ -7,7 +7,7 @@ resource "aws_vpc" "main" {
   enable_dns_support    = each.value.enable_dns_support
   enable_dns_hostnames  = each.value.enable_dns_hostnames
   tags = merge(
-    { "Name" = each.key },
+    { Name = each.key },
     each.value.tags,
     var.default_tags
   )
@@ -22,7 +22,7 @@ resource "aws_subnet" "main" {
   cidr_block        = each.value.subnet_cidr
   availability_zone = each.value.az
   tags = merge(
-    { "Name" = each.value.subnet_key },
+    { Name = each.value.subnet_key },
     each.value.tags,
     var.default_tags
   )
@@ -36,7 +36,7 @@ resource "aws_internet_gateway" "main" {
 
   # vpc_id            = aws_vpc.main[each.value.vpc_key].id
   tags = merge(
-    { "Name" = each.key },
+    { Name = each.key },
     each.value.tags,
     var.default_tags
   )
@@ -45,10 +45,10 @@ resource "aws_internet_gateway" "main" {
 resource "aws_internet_gateway_attachment" "main" {
   # For each entry in igw_attach_map:
   # Attach the IGW to its corresponding VPC
-  # Because the IGW and VPC instances are keyed with the vpc_key, this same key can be used to reference both VPC and IGW resource instances
+  # Because the IGW and VPC instances are no longer keyed the same vpc_key, we now use 'each.value.vpc_key' to reference the VPC_Key for the attachment
   for_each = local.igw_attach_map
 
-  vpc_id              = aws_vpc.main[each.key].id
+  vpc_id              = aws_vpc.main[each.value.vpc_key].id
   internet_gateway_id = aws_internet_gateway.main[each.key].id
 }
 
@@ -60,9 +60,10 @@ resource "aws_eip" "nat" {
 
   domain        = "vpc"
   tags = merge(
-    {"Name" = each.key},
-    each.value.tags,
+    {Name = each.key},
+    # each.value.tags,     # NOTE: EIPs are derived from ENI's so need to think about instance level tags
     var.default_tags
+    
   )
 }
 
@@ -78,6 +79,11 @@ resource "aws_nat_gateway" "main" {
 
   subnet_id = aws_subnet.main[each.key].id
   allocation_id = aws_eip.nat[each.key].allocation_id
+  tags = merge(
+    {Name = each.key},
+    each.value.tags,
+    var.default_tags
+  )  
 }
 
 resource "aws_route_table" "main" {
@@ -88,7 +94,7 @@ resource "aws_route_table" "main" {
 
   vpc_id   = aws_vpc.main[each.value.vpc_key].id
   tags = merge(
-    { "Name" = each.key },
+    { Name = each.key },
     each.value.tags,
     var.default_tags
   )
@@ -102,6 +108,10 @@ resource "aws_route" "igw" {
   route_table_id         = aws_route_table.main[each.value.rt_key].id
   destination_cidr_block = each.value.destination_prefix
   gateway_id             = aws_internet_gateway.main[each.value.target_key].id
+
+  depends_on = [
+    aws_internet_gateway_attachment.main
+  ]
 }
 
 resource "aws_route" "nat_gw" {
@@ -125,28 +135,6 @@ resource "aws_route_table_association" "main" {
   route_table_id = aws_route_table.main[each.value].id
 } 
 
-/* resource "aws_instance" "old" {
-  for_each = local.ec2_instance_map
-
-  ami                         = each.value.ami
-  instance_type               = each.value.instance_type
-  key_name                    = each.value.key_name
-  associate_public_ip_address = each.value.associate_public_ip_address
-  user_data                   = each.value.user_data_script != null ? file("${path.module}/${each.value.user_data_script}") : null
-  subnet_id                   = aws_subnet.main[each.value.subnet_id].id
-  # vpc_security_group_ids must resolve symbolic SG keys (defined in the ec2 instance data) to actual SG resource IDs.
-  # Direct resolution like `aws_security_group.main[each.value.vpc_security_group_ids]` fails because the 'each.value.vpc_security_group_ids' contains a list of strings,
-  # and Terraform does not support direct indexing into a resource map using a list.
-  # Instead, we use a list comprehension to iterate over each list element and resolve it individually.
-  # `try()` ensures missing or invalid keys (e.g., SG-FAKE) return an empty list, preserving apply safety.
-  # `flatten()` collapses the nested list into a flat list of strings, as required by vpc_security_group_ids.
-  vpc_security_group_ids      = flatten([for element in each.value.vpc_security_group_ids : try(aws_security_group.main[element].id, [])])
-
-  lifecycle {
-    create_before_destroy = true
-  }
-} */
-
 resource "aws_network_interface" "main" {
   for_each = local.valid_eni_map_v2
 
@@ -155,7 +143,12 @@ resource "aws_network_interface" "main" {
   private_ip_list_enabled = each.value.private_ip_list_enabled
   private_ip_list         = each.value.private_ip_list
   private_ips_count       = each.value.private_ips_count
-  security_groups         = flatten([for element in each.value.security_groups : try(aws_security_group.main[element].id, [])])
+  security_groups         = length(each.value.security_groups) > 0 ? [for sg in each.value.security_groups : aws_security_group.main[sg].id] : [data.aws_security_group.default[each.value.vpc].id]
+  tags = merge(
+    {Name = each.key},
+    each.value.tags,
+    var.default_tags
+  )
 }
 
 resource "aws_eip" "eni" {
@@ -163,18 +156,28 @@ resource "aws_eip" "eni" {
 
   domain            = "vpc"
   network_interface = aws_network_interface.main[each.key].id
+  tags = merge(
+    {Name = each.key},
+    # each.value.tags,     # NOTE: EIPs are derived from ENI's so need to think about instance level tags
+    var.default_tags
+  )
 } 
 
 resource "aws_instance" "main" {
   for_each = local.valid_ec2_instance_map_v2
 
-  ami                         = each.value.ami
-  instance_type               = each.value.instance_type
-  key_name                    = each.value.key_name
-  user_data                   = each.value.user_data_script != null ? file("${path.module}/${each.value.user_data_script}") : null
-  
+  ami           = each.value.ami
+  instance_type = each.value.instance_type
+  key_name      = each.value.key_name
+  user_data     = each.value.user_data_script != null ? file("${path.module}/${each.value.user_data_script}") : null
+  tags = merge(
+    {Name = each.key},
+    each.value.tags,
+    var.default_tags
+  )
+
   primary_network_interface  {
-    network_interface_id = aws_network_interface.main[local.ec2_eni_lookup_map[each.key][local.primary_nic_ref]].id
+    network_interface_id = aws_network_interface.main[local.ec2_eni_lookup_map[each.key][local.primary_nic_name]].id
   }
 
   lifecycle {
@@ -190,11 +193,38 @@ resource "aws_network_interface_attachment" "main" {
   device_index = each.value.device_index
 }
 
+resource "aws_ec2_managed_prefix_list" "main" {
+  for_each        = local.prefix_list_map
+
+  name            = each.value.name
+  address_family  = each.value.address_family
+  max_entries     = each.value.max_entries
+  tags = merge(
+    {Name = each.key},
+    each.value.tags,
+    var.default_tags
+  )
+
+  dynamic "entry" {
+    for_each = each.value.entries
+
+    content {
+      cidr        = entry.value.cidr
+      description = try(entry.value.description, null)
+    }   
+  }
+}
+
 resource "aws_security_group" "main" {
   for_each = local.valid_security_group_map
 
   name    = each.key
   vpc_id  = aws_vpc.main[each.value.vpc_id].id
+  tags = merge(
+    {Name = each.key},
+    each.value.tags,
+    var.default_tags
+  )
 }
 
 resource "aws_vpc_security_group_ingress_rule" "main" {
@@ -208,6 +238,11 @@ resource "aws_vpc_security_group_ingress_rule" "main" {
   referenced_security_group_id  = try(aws_security_group.main[each.value.referenced_security_group_id].id, null)
   prefix_list_id                = try(aws_ec2_managed_prefix_list.main[each.value.prefix_list_id].id, null)
   cidr_ipv4                     = each.value.cidr_ipv4
+  tags = merge(
+    {Name = each.value.description},
+    # each.value.tags,
+    var.default_tags
+  )
 }
 
 resource "aws_vpc_security_group_egress_rule" "main" {
@@ -223,19 +258,3 @@ resource "aws_vpc_security_group_egress_rule" "main" {
   cidr_ipv4                     = each.value.cidr_ipv4
 }
 
-resource "aws_ec2_managed_prefix_list" "main" {
-  for_each        = local.prefix_list_map
-
-  name            = each.value.name
-  address_family  = each.value.address_family
-  max_entries     = each.value.max_entries
-
-  dynamic "entry" {
-    for_each = each.value.entries
-
-    content {
-      cidr        = entry.value.cidr
-      description = try(entry.value.description, null)
-    }   
-  }
-}

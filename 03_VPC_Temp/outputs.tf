@@ -1,3 +1,7 @@
+output "DATA_aws_security_group_default" {
+  value = {for k, v in data.aws_security_group.default : k => v.id}
+}
+
 output "DEBUG_subnets_without_matching_route_tables" {
   value = local.subnets_without_matching_route_tables
   description = "Subnets flagged with has_route_table but missing a corresponding route table config"
@@ -23,12 +27,20 @@ output "DEBUG_nat_gw_subnets_without_igw" {
   description = "Subnets requesting NAT Gateway creation but whose VPC lacks an IGW"
 }
 
-output "vpc_ids" {
+output "aws_vpc_ids" {
   value = {for k, v in aws_vpc.main : k => v.id}
   description = "VPC IDs keyed by VPC name"
 }
 
-output "subnet_ids_by_type" {
+output "aws_internet_gateway_ids" {
+  value = {for k, igw in aws_internet_gateway.main : k => igw.id }
+}
+
+output "aws_internet_gateway_attachment_ids" {
+  value = {for k, igw_att in aws_internet_gateway_attachment.main : k => igw_att.id}
+}
+
+output "aws_subnet_ids_by_type" {
   value = {
     public  = {for k, s in aws_subnet.main : k => s.id if lookup(s.tags, "type", "") == "public"}
     private = {for k, s in aws_subnet.main : k => s.id if lookup(s.tags, "type", "") == "private"}
@@ -42,6 +54,11 @@ output "route_table_ids" {
   description = "Route table IDs keyed by route table name"
 }
 
+output "route_table_association_ids" {
+  value = {for k, rta in aws_route_table_association.main : k => rta.id}
+  description = "Route table association IDs keyed by route table name"
+}
+
 output "nat_gateway_ids" {
   value = {for k, nat in aws_nat_gateway.main : k => nat.id}
   description = "NAT Gateway IDs keyed by subnet"
@@ -52,7 +69,7 @@ output "aws_eip_nat_ids" {
   description = "Elastic IP IDs keyed by nat_gw"
 }
 
-output "igw_route_ids" {
+output "aws_route_igw_ids" {
   value = {for k, r in aws_route.igw : k => r.id}  
 }
 

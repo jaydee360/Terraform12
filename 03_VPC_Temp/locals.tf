@@ -18,8 +18,8 @@ locals {
       { for subnet_key, subnet_obj in vpc_obj.subnets :
         "${vpc_key}__${subnet_key}" => 
           merge(subnet_obj, { 
-            vpc_key = "${vpc_key}", 
-            subnet_key = "${subnet_key}",
+            vpc_key = vpc_key, 
+            subnet_key = subnet_key,
             az = var.az_lookup[var.aws_region][subnet_obj.az]
           })
       }
@@ -37,49 +37,67 @@ locals {
 #   - Include only VPCs that define an IGW
 #   - Enrich each IGW object with its parent vpc_key
 locals {
+  igw_suffix = "IGW"
+
   igw_list = [
     for vpc_key, vpc_obj in var.vpc_config :
-    merge(vpc_obj.igw, { "vpc_key" = "${vpc_key}" }) if vpc_obj.igw != null
+    merge(vpc_obj.igw, { vpc_key = vpc_key }) if vpc_obj.igw != null
   ]
-}
 
 # Step 2: Build a map of IGWs to create
 #   - From igw_list, include only IGWs where create == true
 #   - Keyed by vpc_key
-locals {
+
   igw_create_map = {
     for igw_key, igw_obj in local.igw_list :
-    "${igw_obj.vpc_key}" => igw_obj if igw_obj.create
+    "${igw_obj.vpc_key}__${local.igw_suffix}" => igw_obj if igw_obj.create
   }
-}
 
 # Step 3: Build a map of IGWs to attach
 #   - From igw_list, include only IGWs where create == true and attach == true
 #   - Keyed by vpc_key
-locals {
+
   igw_attach_map = {
     for igw_key, igw_obj in local.igw_list :
-    "${igw_obj.vpc_key}" => igw_obj if igw_obj.attach && igw_obj.create
+    "${igw_obj.vpc_key}__${local.igw_suffix}" => igw_obj if igw_obj.attach && igw_obj.create
+  }
+
+# Step 4: Create a reverse lookup map of VPC KEY => IGW KEY to allow IGW lookup by VPC
+  vpc_to_igw_lookup_map = {
+    for key, obj in local.igw_attach_map :
+    obj.vpc_key => key
   }
 }
 
+
 # NAT GWs & Elastic IPs
 # ---------------------
-# Filters the local.subnet_map above to include only subnets flagged for NAT Gateway provisioning.
-# - Include only subnets where has_nat_gw == true
-# - Preserve original subnet_key as the map key
-# Result: A filtered map of NAT-enabled subnets
+# Filters the local.subnet_map above to include:
+# - Subnets that exist (from local.subnet_map)
+# - Subnets where 'has_nat_gw == true'
+# - Subnets are public (based on a valid IGW route - see 'local.subnet_has_igw_route' for details)
+# Result: A filtered map of NAT-enabled subnet objects
+#         The subnet_key remains the map key. 
+#         This key is used to create / identify both NAT_GWs and NAT_GW_EIP resource instances
 locals {
+  # nat_gw_map_old = {
+  #   for subnet_key, subnet in local.subnet_map :
+  #   subnet_key => subnet if subnet.has_nat_gw && can(local.igw_attach_map[subnet.vpc_key])
+  # }
   nat_gw_map = {
     for subnet_key, subnet in local.subnet_map :
-    subnet_key => subnet if subnet.has_nat_gw && can(local.igw_attach_map[subnet.vpc_key])
+    subnet_key => subnet if (
+      subnet.has_nat_gw && 
+      # can(local.igw_attach_map[subnet.vpc_key]) && 
+      lookup(local.subnet_has_igw_route, subnet_key, false)
+    )
   }
 }
 
 # ROUTE TABLES
 # ------------
 # For each route table entry in route_table_config:
-# check if we can access the route_table_key in the subnet_map
+# check if we can access the route_table_key in the subnet_map (the subnet exsts)
 # - Merge the original route table object with additional enrichment (attributes lookued up from local.subnet_map):
 #   - vpc_key 
 #   - subnet_key
@@ -91,9 +109,9 @@ locals {
     route_table_key => merge(
       route_table_object, 
       {
-      "vpc_key"    = local.subnet_map[route_table_key].vpc_key
-      "subnet_key" = local.subnet_map[route_table_key].subnet_key
-      "az"         = local.subnet_map[route_table_key].az
+        vpc_key    = local.subnet_map[route_table_key].vpc_key
+        subnet_key = local.subnet_map[route_table_key].subnet_key
+        az         = local.subnet_map[route_table_key].az
       }
     ) if can(local.subnet_map[route_table_key])
   } 
@@ -111,19 +129,21 @@ locals {
 #     - destination_prefix: "0.0.0.0/0" (default route)
 # Result: A map of IGW route injection plans
 locals {
+  igw_route_suffix = "IGW"
+
   igw_route_plan = {
     for route_table_key, route_table_object in local.route_table_map : 
-    "${route_table_key}__0/0" => {
-      "rt_key"  = route_table_key
-      "target_key" = route_table_object.vpc_key
-      "destination_prefix" = "0.0.0.0/0"
-    } if route_table_object.inject_igw && can(local.igw_attach_map[route_table_object.vpc_key])
+    "${route_table_key}__${local.igw_route_suffix}" => {
+      rt_key  = route_table_key
+      target_key = local.vpc_to_igw_lookup_map[route_table_object.vpc_key]
+      destination_prefix = "0.0.0.0/0"
+    } if route_table_object.inject_igw && can(local.vpc_to_igw_lookup_map[route_table_object.vpc_key])
   }
 }
 
 # NAT-GW ROUTES
 # -------------
-# Proximity-aware NAT routing using PRIMARY and SECONDARY lookups to find the closest NAT Gateway fkr each route_table_object
+# Proximity-aware NAT routing using PRIMARY and SECONDARY lookups to find the closest NAT Gateway for each route_table_object
 # Primary lookup:   NAT-GW by VPC & AZ, 
 # Secondary lookup: NAT-GW by VPC only (fallback)
 
@@ -179,14 +199,15 @@ locals {
 # - If none exists, fall back to any NAT Gateway in the same VPC
 # - If neither exists, assign an empty list (defensive default)
 # - Extract the first NAT Gateway key from the resolved list
-
 locals {
+  nat_gw_route_suffix = "NAT_GW"
+  
   nat_gw_route_plan = {
     for route_table_key, route_table_object in local.route_table_map : 
-    "${route_table_key}__0/0" => {
-      "rt_key"  = route_table_key
-      "target_key" = try(local.nat_gw_by_vpc_az[route_table_object.vpc_key][route_table_object.az][0], local.nat_gw_by_vpc[route_table_object.vpc_key][0], null)
-      "destination_prefix" = "0.0.0.0/0"
+    "${route_table_key}__${local.nat_gw_route_suffix}" => {
+      rt_key  = route_table_key
+      target_key = try(local.nat_gw_by_vpc_az[route_table_object.vpc_key][route_table_object.az][0], local.nat_gw_by_vpc[route_table_object.vpc_key][0], null)
+      destination_prefix = "0.0.0.0/0"
     } if route_table_object.inject_nat && can(local.nat_gw_by_vpc[route_table_object.vpc_key][0])
   }
 }
@@ -204,7 +225,6 @@ locals {
 # - Check if its key exists in the extracted route table keys from Step 1
 # - If both conditions are met, include the subnet key in the output list
 # Step 4: Result is a list of subnet keys eligible for route table association
-
 locals {
   valid_route_table_keys = keys(local.route_table_map)
   valid_subnet_keys = keys(local.subnet_map)
@@ -216,7 +236,6 @@ locals {
 }
 
 locals {
-
   # FOR DIAGNOSTICS
   # VARIETY OF SCENARIOS
 
@@ -237,7 +256,7 @@ locals {
 
   igw_route_plans_without_viable_igw_target = [
     for route_table_key, route_table_object in local.route_table_map : 
-    route_table_key if route_table_object.inject_igw && !can(local.igw_attach_map[route_table_object.vpc_key])
+    route_table_key if route_table_object.inject_igw && !can(local.vpc_to_igw_lookup_map[route_table_object.vpc_key])
   ]
 
   nat_gw_subnets_without_igw = [
@@ -278,7 +297,7 @@ locals {
 # ---------------------------------
 
 locals {
-  valid_eni_map_v2 = merge([ 
+  valid_eni_map_v2_old = merge([ 
     for ec2_key, ec2_obj in local.valid_ec2_instance_map_v2 : {for eni_key, eni_obj in ec2_obj.network_interfaces : "${ec2_key}__${eni_key}" => merge(
     eni_obj, {
       subnet_id   = "${eni_obj.vpc}__${eni_obj.subnet}"
@@ -308,12 +327,62 @@ locals {
 } 
 
 locals {
+  valid_eni_map_v2 = merge([ 
+    for ec2_key, ec2_obj in local.valid_ec2_instance_map_v2 : {for eni_key, eni_obj in ec2_obj.network_interfaces : "${ec2_key}__${eni_key}" => merge(
+    eni_obj, {
+      subnet_id       = "${eni_obj.vpc}__${eni_obj.subnet}"
+      ec2_key         = ec2_key
+      ec2_nic_ref     = eni_key
+      index           = tonumber(substr(eni_key, length(eni_key) - 1, 1))
+      security_groups = [for sg in coalesce(eni_obj.security_groups, []) : sg if contains(keys(local.valid_security_group_map), sg)]
+    },
+    eni_obj.private_ip_list_enabled == true && eni_obj.private_ip_list != null && length(eni_obj.private_ip_list) > 0 ? 
+      {
+        private_ip_list_enabled = eni_obj.private_ip_list_enabled
+        private_ip_list         = eni_obj.private_ip_list
+        private_ips_count       = null
+      } : 
+    eni_obj.private_ips_count != null && eni_obj.private_ips_count > 0 ? 
+      {
+        private_ip_list_enabled = null
+        private_ip_list         = null
+        private_ips_count       = eni_obj.private_ips_count
+      } : 
+      {
+        private_ip_list_enabled = null
+        private_ip_list         = null
+        private_ips_count       = null
+      }
+    )}
+  ]...)
+} 
+
+# {for eni_key, eni_obj  in local.valid_eni_map_v2 : eni_key => eni_obj}
+# {for eni_key, eni_obj  in local.valid_eni_map_v2 : eni_key => eni_obj.security_groups}
+# {for eni_key, eni_obj  in local.valid_eni_map_v2 : eni_key => [for sg in eni_obj .security_groups : sg if contains(keys(local.valid_security_group_map), sg)]}
+# {for eni_key, eni_obj in local.valid_eni_map_v2 : eni_key => 
+#   length([for sg in coalesce(eni_obj.security_groups, []) : sg if contains(keys(local.valid_security_group_map), sg)]) > 0 
+#   ? [for sg in coalesce(eni_obj.security_groups, []) : sg if contains(keys(local.valid_security_group_map), sg)]
+#   : null
+# }
+
+# {for eni_key, eni_obj in local.valid_eni_map_v2 : eni_key => (
+#   length([for sg in coalesce(eni_obj.security_groups, []) : sg if contains(keys(local.valid_security_group_map), sg)]) > 0 
+#   ? [for sg in coalesce(eni_obj.security_groups, []) : sg if contains(keys(local.valid_security_group_map), sg)]
+#   : null
+#   )
+# }
+
+# VALIDATE SUBNET HAS IGW ROUTE
+# -----------------------------
+locals {
   subnet_has_igw_route = {
     for route_table_key,  route_table_object in local.route_table_map : 
     route_table_key => "true"
-    if route_table_object.inject_igw && can(local.igw_attach_map[route_table_object.vpc_key])
+    if route_table_object.inject_igw && can(local.vpc_to_igw_lookup_map[route_table_object.vpc_key])
   }
 }
+
 
 locals {
   valid_eni_eip_map_v2 = {
@@ -326,7 +395,7 @@ locals {
 }
 
 locals {
-  primary_nic_ref = "nic0"
+  primary_nic_name = "nic0"
 
   ec2_eni_lookup_map = {
     for ec2_key, ec2_obj in local.valid_ec2_instance_map_v2 : ec2_key => {
@@ -388,7 +457,7 @@ locals {
 # - Clean, deterministic resource creation
 
 locals {
-  hash_exclusions = ["description","ref"]
+  hash_exclusions = ["description", "ref", "tags"]
 
   # NORMALISATION & ENRICHMENT (INLINE RULES - INGRESS)
   # ---------------------------------------------------

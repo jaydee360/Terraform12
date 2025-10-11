@@ -13,9 +13,9 @@ variable "aws_profile" {
 variable "default_tags" {
   type = map(string)
   default = {
-    "Environment" = "dev"
-    "Owner"       = "Jason"
-    "Source"      = "default_tags"
+    Environment = "dev"
+    Owner       = "jason"
+    DEFAULT_TAG = "yes"
   }
 }
 
@@ -43,7 +43,7 @@ variable "vpc_config" {
     vpc_cidr             = string
     enable_dns_support   = optional(bool, true)
     enable_dns_hostnames = optional(bool, false)
-    tags                 = optional(map(string))
+    tags                 = optional(map(string), null)
     igw = optional(object({
       create = bool
       attach = bool
@@ -54,7 +54,7 @@ variable "vpc_config" {
       az          = string
       has_route_table = optional(bool, false)
       has_nat_gw  = optional(bool, false)
-      tags        = optional(map(string))
+      tags        = optional(map(string), null)
     }))
   }))
 }
@@ -76,7 +76,7 @@ variable "route_table_config" {
       target_type   = string
       target_key    = string
     })))
-    tags          = optional(map(string),{})
+    tags          = optional(map(string), null)
   }))
   validation {
     condition = alltrue([for v in var.route_table_config : 
@@ -91,8 +91,8 @@ variable "ec2_config_v2" {
     ami = string,
     instance_type = string,
     key_name = string
-    user_data_script = optional(string,null)
-    tags = optional(map(string),null)
+    user_data_script = optional(string, null)
+    tags = optional(map(string), null)
     network_interfaces = map(object({
       vpc = string
       subnet = string
@@ -102,16 +102,59 @@ variable "ec2_config_v2" {
       private_ips_count = optional(number, null)
       security_groups = optional(set(string), null)
       assign_eip = optional(bool, false)
+      tags = optional(map(string), null)
     }))
   }))
   validation {
-    condition = alltrue([for ec2_obj in var.ec2_config_v2 : contains(keys(ec2_obj.network_interfaces), "nic0")])
-    error_message = "Each EC2 instance must define 'nic0' for use as the primary network interface"
+    condition = alltrue([
+      for ec2_obj in var.ec2_config_v2 : contains(keys(ec2_obj.network_interfaces), "nic0")
+    ])
+    error_message = "Each EC2 instance must define 'nic0' (primary network interface)"
   }
   validation {
-    condition = alltrue([for ec2_obj in var.ec2_config_v2 : length(distinct([for eni_key, eni_obj in ec2_obj.network_interfaces : eni_obj.vpc])) == 1])
+    condition = alltrue([
+      for ec2_obj in var.ec2_config_v2 : length(distinct([for eni_key, eni_obj in ec2_obj.network_interfaces : eni_obj.vpc])) == 1])
     error_message = "Each EC2 instance must have all its network interfaces in the same VPC"
   }
+  validation {
+    condition = alltrue([
+      for ec2_obj in var.ec2_config_v2 : 
+      alltrue([
+        for eni_key, eni_obj in ec2_obj.network_interfaces : 
+        contains(keys(local.subnet_map), "${eni_obj.vpc}__${eni_obj.subnet}")
+      ]) 
+      ? 
+      (length(distinct([
+        for eni_key, eni_obj in ec2_obj.network_interfaces : 
+        local.subnet_map["${eni_obj.vpc}__${eni_obj.subnet}"].az
+      ])) == 1)
+      : true
+    ])
+    error_message = "Each EC2 instance must have all network interfaces in the same AZ"
+  }
+  validation {
+    condition = alltrue(flatten([
+      for ec2_obj in var.ec2_config_v2 : [for eni_key in keys(ec2_obj.network_interfaces) :
+        can(regex("^nic[0-9]$", eni_key))
+      ]
+    ]))
+    error_message = "Network interface keys must follow the naming convention 'nicN', where N is a single digit number (e.g., 'nic0', 'nic1', 'nic2')"
+  }
+  # Valid VPC / Subnet references are a dependency of EC2 Instance validation
+  # EC2 instances with invalid VPC / Subnet references on NICs are not created. 
+  # If an existing EC2 instance VPC / Subnet references become invald, the instance will be destroyed. This is the dafult behaviour. 
+  # This behaviour can be changed by uncommenting the validation rule below 
+  # Implementing the VPC / Subnet validation check at the variable level will stop the plan, therefor preventing creation or destruction of EC2 instance with invalid refs
+  /*   
+    validation {
+      condition = alltrue([
+        for ec2_obj in var.ec2_config_v2 : (
+          alltrue([for eni_key, eni_obj in ec2_obj.network_interfaces : contains(keys(var.vpc_config), eni_obj.vpc)]) &&
+          alltrue([for eni_key, eni_obj in ec2_obj.network_interfaces : contains(keys(local.subnet_map), "${eni_obj.vpc}__${eni_obj.subnet}")])
+        )])
+      error_message = "Each EC2 instance must have valid VPC and Subnet references on allnetwork interfaces"
+    } 
+  */
 }
 
 variable "prefix_list_config" {
@@ -124,6 +167,7 @@ variable "prefix_list_config" {
       cidr = string
       description = optional(string)
     }))
+    tags = optional(map(string), null)
   }))
 }
 
@@ -151,6 +195,7 @@ variable "security_group_config" {
       prefix_list_id = optional(string)
       cidr_ipv4 = optional(string)
     })))
+    tags = optional(map(string), null)
   }))
 }
 

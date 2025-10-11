@@ -1,3 +1,5 @@
+
+
 /* 
 # simple list and map reproduction: OUTER to loop through the instances, and INNER to loop through the NICs
 [for ec2_key, ec2_obj in var.ec2_config_v2 : [for eni_key, eni_obj in ec2_obj.network_interfaces : "${ec2_key} ---> ${eni_key} / ${eni_obj.vpc} / ${eni_obj.subnet}"]]
