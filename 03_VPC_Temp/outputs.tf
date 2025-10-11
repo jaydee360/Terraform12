@@ -4,7 +4,7 @@ output "DATA_aws_security_group_default" {
 
 output "DEBUG_subnets_without_matching_route_tables" {
   value = local.subnets_without_matching_route_tables
-  description = "Subnets flagged with has_route_table but missing a corresponding route table config"
+  description = "Subnets flagged with associate_route_table but missing a corresponding route table config"
 }
 
 output "DEBUG_unused_route_tables_without_matching_subnet" {
@@ -49,17 +49,17 @@ output "aws_subnet_ids_by_type" {
   description = "Subnet IDs grouped by type"
 }
 
-output "route_table_ids" {
+output "aws_route_table_ids" {
   value = {for k, rt in aws_route_table.main : k => rt.id}
   description = "Route table IDs keyed by route table name"
 }
 
-output "route_table_association_ids" {
+output "aws_route_table_association_ids" {
   value = {for k, rta in aws_route_table_association.main : k => rta.id}
   description = "Route table association IDs keyed by route table name"
 }
 
-output "nat_gateway_ids" {
+output "aws_nat_gateway_ids" {
   value = {for k, nat in aws_nat_gateway.main : k => nat.id}
   description = "NAT Gateway IDs keyed by subnet"
 }
@@ -73,7 +73,11 @@ output "aws_route_igw_ids" {
   value = {for k, r in aws_route.igw : k => r.id}  
 }
 
-output "ec2_instance_ids" {
+output "aws_route_nat_gw_ids" {
+  value = {for k, r in aws_route.nat_gw : k => r.id}  
+}
+
+output "aws_instance_ids" {
   value = {for k, i in aws_instance.main : k => i.id}  
 }
 

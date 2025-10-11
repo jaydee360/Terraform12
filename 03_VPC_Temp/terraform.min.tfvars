@@ -25,29 +25,29 @@ vpc_config = {
                     "type" = "public"
                     "SUBNET_TAG" = "yes"
                 }
-                has_route_table = true
-                has_nat_gw = false
+                associate_route_table = true
+                create_nat_gw = false
             }
-            "snet-lab-dev-000-public-b" = {
-                az          = "b"
-                subnet_cidr = "10.0.1.0/24"
-                tags = {
-                    "type" = "public"
-                    "SUBNET_TAG" = "yes"
-                }
-                has_route_table = true
-                has_nat_gw = false
-            }
-            "snet-lab-dev-000-public-c" = {
-                az          = "c"
-                subnet_cidr = "10.0.2.0/24"
-                tags = {
-                    "type" = "public"
-                    "SUBNET_TAG" = "yes"
-                }
-                has_route_table = true
-                has_nat_gw = false
-            }
+            # "snet-lab-dev-000-public-b" = {
+            #     az          = "b"
+            #     subnet_cidr = "10.0.1.0/24"
+            #     tags = {
+            #         "type" = "public"
+            #         "SUBNET_TAG" = "yes"
+            #     }
+            #     associate_route_table = true
+            #     create_nat_gw = true
+            # }
+            # "snet-lab-dev-000-public-c" = {
+            #     az          = "c"
+            #     subnet_cidr = "10.0.2.0/24"
+            #     tags = {
+            #         "type" = "public"
+            #         "SUBNET_TAG" = "yes"
+            #     }
+            #     associate_route_table = true
+            #     create_nat_gw = false
+            # }
             # PRIVATE SUBNETS
             "snet-lab-dev-000-private-a" = {
                 az          = "a"
@@ -56,8 +56,8 @@ vpc_config = {
                     "type" = "private"
                     "SUBNET_TAG" = "yes"
                 }
-                has_route_table = false
-                has_nat_gw = false
+                associate_route_table = false
+                create_nat_gw = false
             }
             "snet-lab-dev-000-private-b" = {
                 az          = "b"
@@ -66,8 +66,8 @@ vpc_config = {
                     "type" = "private"
                     "SUBNET_TAG" = "yes"
                 }
-                has_route_table = false
-                has_nat_gw = false
+                associate_route_table = false
+                create_nat_gw = false
             }
             "snet-lab-dev-000-private-c" = {
                 az          = "c"
@@ -76,8 +76,8 @@ vpc_config = {
                     "type" = "private"
                     "SUBNET_TAG" = "yes"
                 }
-                has_route_table = false
-                has_nat_gw = false
+                associate_route_table = false
+                create_nat_gw = false
             }
         }
     }
@@ -102,8 +102,8 @@ vpc_config = {
     #             #         type = "public"
     #             #         VPC_TAG = "yes"
     #             #     }
-    #             #     has_route_table = false
-    #             #     has_nat_gw = false
+    #             #     associate_route_table = false
+    #             #     create_nat_gw = false
     #             # }
     #             # "snet-lab-dev-100-public-b" = {
     #             #     az          = "b"
@@ -112,8 +112,8 @@ vpc_config = {
     #             #         type = "public"
     #             #         VPC_TAG = "yes"
     #             #     }
-    #             #     has_route_table = false
-    #             #     has_nat_gw = false
+    #             #     associate_route_table = false
+    #             #     create_nat_gw = false
     #             # }
     #             # "snet-lab-dev-100-public-c" = {
     #             #     az          = "c"
@@ -122,8 +122,8 @@ vpc_config = {
     #             #         type = "public"
     #             #         VPC_TAG = "yes"
     #             #     }
-    #             #     has_route_table = false
-    #             #     has_nat_gw = false
+    #             #     associate_route_table = false
+    #             #     create_nat_gw = false
     #             # }
     #         # PRIVATE SUBNETS
     #             # "snet-lab-dev-100-private-a" = {
@@ -133,8 +133,8 @@ vpc_config = {
     #             #         type = "private"
     #             #         VPC_TAG = "yes"
     #             #     }
-    #             #     has_route_table = false
-    #             #     has_nat_gw = false
+    #             #     associate_route_table = false
+    #             #     create_nat_gw = false
     #             # }
     #             # "snet-lab-dev-100-private-b" = {
     #             #     az          = "b"
@@ -143,8 +143,8 @@ vpc_config = {
     #             #         type = "private"
     #             #         VPC_TAG = "yes"
     #             #     }
-    #             #     has_route_table = false
-    #             #     has_nat_gw = false
+    #             #     associate_route_table = false
+    #             #     create_nat_gw = false
     #             # }
     #             # "snet-lab-dev-100-private-c" = {
     #             #     az          = "c"
@@ -153,8 +153,8 @@ vpc_config = {
     #             #         type = "private"
     #             #         VPC_TAG = "yes"
     #             #     }
-    #             #     has_route_table = false
-    #             #     has_nat_gw = false
+    #             #     associate_route_table = false
+    #             #     create_nat_gw = false
     #             # }
     #             # "snet-lab-dev-100-private-d" = {
     #             #     az          = "d"
@@ -163,8 +163,8 @@ vpc_config = {
     #             #         type = "private"
     #             #         VPC_TAG = "yes"
     #             #     }
-    #             #     has_route_table = false
-    #             #     has_nat_gw = false
+    #             #     associate_route_table = false
+    #             #     create_nat_gw = false
     #             # }
     #     }
     # }
@@ -190,31 +190,31 @@ route_table_config = {
             RT_TAG = "yes"
         }
     }
-    # vpc-lab-dev-000 PRIVATE SUBNET RTs
-        #  "vpc-lab-dev-000__snet-lab-dev-000-public-d" = {
-        #     inject_igw = false
-        #     tags = {
-        #         RT_TAG = "yes"
-        #     }
-        # }
-        # "vpc-lab-dev-000__snet-lab-dev-000-private-a" = {
-        #     inject_nat = true
-        #     tags = {
-        #         RT_TAG = "yes"
-        #     }
-        # }
-        # "vpc-lab-dev-000__snet-lab-dev-000-private-b" = {
-        #     inject_nat = true
-        #     tags = {
-        #         RT_TAG = "yes"
-        #     }
-        # }
-        # "vpc-lab-dev-000__snet-lab-dev-000-private-c" = {
-        #     inject_nat = true
-        #     tags = {
-        #         RT_TAG = "yes"
-        #     }
-        # }
+    # "vpc-lab-dev-000__snet-lab-dev-000-public-d" = {
+    #     inject_igw = false
+    #     tags = {
+    #         RT_TAG = "yes"
+    #     }
+    # }
+#    vpc-lab-dev-000 PRIVATE SUBNET RTs
+    # "vpc-lab-dev-000__snet-lab-dev-000-private-a" = {
+    #     inject_nat = true
+    #     tags = {
+    #         RT_TAG = "yes"
+    #     }
+    # }
+    # "vpc-lab-dev-000__snet-lab-dev-000-private-b" = {
+    #     inject_nat = true
+    #     tags = {
+    #         RT_TAG = "yes"
+    #     }
+    # }
+    # "vpc-lab-dev-000__snet-lab-dev-000-private-c" = {
+    #     inject_nat = true
+    #     tags = {
+    #         RT_TAG = "yes"
+    #     }
+    # }
     # vpc-lab-dev-100 PUBLIC SUBNET RTs
         # "vpc-lab-dev-100__snet-lab-dev-100-public-a" = {
         #     inject_igw = false
@@ -262,38 +262,38 @@ route_table_config = {
 }
 
 ec2_config_v2 = {
-    "web_01" = {
-        ami = "ami-0150ccaf51ab55a51"
-        instance_type = "t3.micro"
-        key_name = "A4L"
-        user_data_script = "server-script.sh"
-        network_interfaces = {
-            "nic0" = {
-                description = "jd test web_01"
-                vpc = "vpc-lab-dev-000"
-                subnet = "snet-lab-dev-000-public-a"
-                # security_groups = ["web_01__nic0_ALT", "SG-FAKE"]
-                assign_eip = true
-                tags = {
-                    NIC0_TAGS = "yes"
-                }
-            }
-            # "nic1" = {
-            #     description = "jd test web_01"
-            #     vpc = "vpc-lab-dev-000"
-            #     subnet = "snet-lab-dev-000-public-a"
-            #     private_ips_count = 1
-            #     security_groups = ["SG-2-WEB", "SG-FAKE"]
-            #     tags = {
-            #         NIC1_TAGS = "yes"
-            #     }
-            # }
-        }
-        tags = {
-            Role = "frontend"
-            INST_TAGS = "yes"
-        }
-    }
+    # "web_01" = {
+    #     ami = "ami-0150ccaf51ab55a51"
+    #     instance_type = "t3.micro"
+    #     key_name = "A4L"
+    #     user_data_script = "server-script.sh"
+    #     network_interfaces = {
+    #         "nic0" = {
+    #             description = "jd test web_01"
+    #             vpc = "vpc-lab-dev-000"
+    #             subnet = "snet-lab-dev-000-public-a"
+    #             security_groups = ["web_01__nic0", "SG-FAKE"]
+    #             assign_eip = true
+    #             tags = {
+    #                 NIC0_TAGS = "yes"
+    #             }
+    #         }
+    #         # "nic1" = {
+    #         #     description = "jd test web_01"
+    #         #     vpc = "vpc-lab-dev-000"
+    #         #     subnet = "snet-lab-dev-000-public-a"
+    #         #     private_ips_count = 1
+    #         #     security_groups = ["SG-2-WEB", "SG-FAKE"]
+    #         #     tags = {
+    #         #         NIC1_TAGS = "yes"
+    #         #     }
+    #         # }
+    #     }
+    #     tags = {
+    #         Role = "frontend"
+    #         INST_TAGS = "yes"
+    #     }
+    # }
     # "web_02" = {
     #     ami = "ami-0150ccaf51ab55a51"
     #     instance_type = "t3.micro"
@@ -396,10 +396,69 @@ prefix_list_config = {
 }
 
 security_group_config = {
-    "web_01__nic0" = {
+    # "web_01__nic0" = {
+    #     vpc_id      = "vpc-lab-dev-000"
+    #     description = "SG-2-WEB with inline rules"
+    #     # ingress_ref = "DB-RULES"
+    #     ingress = [
+    #         {
+    #             description = "80-IN"
+    #             from_port = 80
+    #             to_port = 80
+    #             protocol = "tcp"
+    #             prefix_list_id = "JD-HOME-LAB"
+    #             cidr_ipv4 =  "0.0.0.0/0" 
+    #         },
+    #         {
+    #             description = "443-IN"
+    #             from_port = 443
+    #             to_port = 443
+    #             protocol = "tcp"
+    #             prefix_list_id = "JD-HOME-LAB"
+    #             cidr_ipv4 =  "0.0.0.0/0"
+    #         },
+    #         {
+    #             description = "22-IN"
+    #             from_port = 22
+    #             to_port = 22
+    #             protocol = "tcp"
+    #             prefix_list_id = "JD-HOME-LAB"
+    #             cidr_ipv4 =  "0.0.0.0/0" 
+    #         },
+    #         {
+    #             description = "3389-IN"
+    #             from_port = 3389
+    #             to_port = 3389
+    #             protocol = "tcp"
+    #             prefix_list_id = "JD-HOME-LAB"
+    #             cidr_ipv4 =  "0.0.0.0/0"
+    #         },
+    #         {
+    #             description = "DB-IN-TEST"
+    #             from_port = 8080
+    #             to_port = 8080
+    #             protocol = "tcp"
+    #             # referenced_security_group_id = "SG-1-DB"
+    #             prefix_list_id = "JD-HOME-LAB"
+    #             cidr_ipv4 =  "0.0.0.0/0"
+    #         }
+    #     ]
+    #     # egress_ref = "DB-RULES"
+    #     egress = [
+    #         {
+    #             description = "ANY-ANY-OUT"
+    #             protocol = "-1"
+    #             cidr_ipv4 =  "0.0.0.0/0" 
+    #         }
+    #     ]
+    #     tags = {
+    #         SG_TAGS = "yes"
+    #     }
+    # }
+    "web_01__nic0_web" = {
         vpc_id      = "vpc-lab-dev-000"
         description = "SG-2-WEB with inline rules"
-        # ingress_ref = "DB-RULES"
+        ingress_ref = "WEB-TRAFFIC-IN"
         ingress = [
             {
                 description = "80-IN"
@@ -416,68 +475,9 @@ security_group_config = {
                 protocol = "tcp"
                 prefix_list_id = "JD-HOME-LAB"
                 cidr_ipv4 =  "0.0.0.0/0"
-            },
-            {
-                description = "22-IN"
-                from_port = 22
-                to_port = 22
-                protocol = "tcp"
-                prefix_list_id = "JD-HOME-LAB"
-                cidr_ipv4 =  "0.0.0.0/0" 
-            },
-            {
-                description = "3389-IN"
-                from_port = 3389
-                to_port = 3389
-                protocol = "tcp"
-                prefix_list_id = "JD-HOME-LAB"
-                cidr_ipv4 =  "0.0.0.0/0"
-            },
-            {
-                description = "DB-IN-TEST"
-                from_port = 8080
-                to_port = 8080
-                protocol = "tcp"
-                # referenced_security_group_id = "SG-1-DB"
-                prefix_list_id = "JD-HOME-LAB"
-                cidr_ipv4 =  "0.0.0.0/0"
             }
         ]
-        # egress_ref = "DB-RULES"
-        egress = [
-            {
-                description = "ANY-ANY-OUT"
-                protocol = "-1"
-                cidr_ipv4 =  "0.0.0.0/0" 
-            }
-        ]
-        tags = {
-            SG_TAGS = "yes"
-        }
-    }
-    "web_01__nic0_ALT" = {
-        vpc_id      = "vpc-lab-dev-000"
-        description = "SG-2-WEB with inline rules"
-        # ingress_ref = "DB-RULES"
-        ingress = [
-            {
-                description = "80-IN"
-                from_port = 80
-                to_port = 80
-                protocol = "tcp"
-                prefix_list_id = "JD-HOME-LAB"
-                cidr_ipv4 =  "0.0.0.0/0" 
-            },
-            {
-                description = "443-IN"
-                from_port = 443
-                to_port = 443
-                protocol = "tcp"
-                prefix_list_id = "JD-HOME-LAB"
-                cidr_ipv4 =  "0.0.0.0/0"
-            }
-        ]
-        # egress_ref = "DB-RULES"
+        egress_ref = "ANY-OUT"
         egress = [
             {
                 description = "ANY-ANY-OUT"
@@ -540,6 +540,39 @@ security_group_config = {
 }
 
 shared_security_group_rules = {
+    "WEB-TRAFFIC-IN" = {
+        ingress = [
+            {
+                # cidr_ipv4 = "value"
+                description = "SHARED-80-IN"
+                from_port = 80
+                to_port = 80
+                prefix_list_id = "JD-HOME-LAB"
+                protocol = "tcp"
+                # referenced_security_group_id = ""
+            },
+            {
+                # cidr_ipv4 = "value"
+                description = "SHARED-443-IN"
+                from_port = 443
+                to_port = 443
+                prefix_list_id = "JD-HOME-LAB"
+                protocol = "tcp"
+                # referenced_security_group_id = ""
+            }
+        ]
+        egress = []
+    }
+    "ANY-OUT" = {
+        ingress = []
+        egress = [
+            {
+            description = "SHARED-ANY-OUT"
+            protocol = "-1"
+            cidr_ipv4 = "0.0.0.0/0"
+            }
+        ]
+    }
     # "DB-RULES" = {
     #     ingress = [
     #         {

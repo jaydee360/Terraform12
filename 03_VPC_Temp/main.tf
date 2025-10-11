@@ -77,7 +77,7 @@ resource "aws_nat_gateway" "main" {
   # - Ensures traceability and alignment across subnet, EIP, and NAT Gateway resources
   for_each      = local.nat_gw_map
 
-  subnet_id = aws_subnet.main[each.key].id
+  subnet_id = aws_subnet.main[each.value.subnet_id].id
   allocation_id = aws_eip.nat[each.key].allocation_id
   tags = merge(
     {Name = each.key},
@@ -127,7 +127,7 @@ resource "aws_route" "nat_gw" {
 resource "aws_route_table_association" "main" {
   # Creates a route table association between each subnet and its corresponding route table
   # Eligibility is handled in the local.subnet_route_table_associations
-  # - Subnet flagged with has_route_table == true
+  # - Subnet flagged with associate_route_table == true
   # - Subnet key exists in route_table_map
   for_each       = local.subnet_route_table_associations
 
@@ -256,5 +256,10 @@ resource "aws_vpc_security_group_egress_rule" "main" {
   referenced_security_group_id  = try(aws_security_group.main[each.value.referenced_security_group_id].id, null)
   prefix_list_id                = try(aws_ec2_managed_prefix_list.main[each.value.prefix_list_id].id, null)
   cidr_ipv4                     = each.value.cidr_ipv4
+  tags = merge(
+    {Name = each.value.description},
+    # each.value.tags,
+    var.default_tags
+  )
 }
 

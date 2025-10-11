@@ -52,8 +52,8 @@ variable "vpc_config" {
     subnets = map(object({
       subnet_cidr = string
       az          = string
-      has_route_table = optional(bool, false)
-      has_nat_gw  = optional(bool, false)
+      associate_route_table = optional(bool, false)
+      create_nat_gw  = optional(bool, false)
       tags        = optional(map(string), null)
     }))
   }))

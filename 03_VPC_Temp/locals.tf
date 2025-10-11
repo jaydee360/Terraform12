@@ -37,7 +37,7 @@ locals {
 #   - Include only VPCs that define an IGW
 #   - Enrich each IGW object with its parent vpc_key
 locals {
-  igw_suffix = "IGW"
+  igw_prefix = "IGW"
 
   igw_list = [
     for vpc_key, vpc_obj in var.vpc_config :
@@ -50,7 +50,7 @@ locals {
 
   igw_create_map = {
     for igw_key, igw_obj in local.igw_list :
-    "${igw_obj.vpc_key}__${local.igw_suffix}" => igw_obj if igw_obj.create
+    "${local.igw_prefix}__${igw_obj.vpc_key}" => igw_obj if igw_obj.create
   }
 
 # Step 3: Build a map of IGWs to attach
@@ -59,7 +59,7 @@ locals {
 
   igw_attach_map = {
     for igw_key, igw_obj in local.igw_list :
-    "${igw_obj.vpc_key}__${local.igw_suffix}" => igw_obj if igw_obj.attach && igw_obj.create
+    "${local.igw_prefix}__${igw_obj.vpc_key}" => igw_obj if igw_obj.attach && igw_obj.create
   }
 
 # Step 4: Create a reverse lookup map of VPC KEY => IGW KEY to allow IGW lookup by VPC
@@ -74,22 +74,18 @@ locals {
 # ---------------------
 # Filters the local.subnet_map above to include:
 # - Subnets that exist (from local.subnet_map)
-# - Subnets where 'has_nat_gw == true'
+# - Subnets where 'create_nat_gw == true'
 # - Subnets are public (based on a valid IGW route - see 'local.subnet_has_igw_route' for details)
 # Result: A filtered map of NAT-enabled subnet objects
 #         The subnet_key remains the map key. 
 #         This key is used to create / identify both NAT_GWs and NAT_GW_EIP resource instances
 locals {
-  # nat_gw_map_old = {
-  #   for subnet_key, subnet in local.subnet_map :
-  #   subnet_key => subnet if subnet.has_nat_gw && can(local.igw_attach_map[subnet.vpc_key])
-  # }
+  nat_gw_prefix = "NATGW"
+
   nat_gw_map = {
     for subnet_key, subnet in local.subnet_map :
-    subnet_key => subnet if (
-      subnet.has_nat_gw && 
-      # can(local.igw_attach_map[subnet.vpc_key]) && 
-      lookup(local.subnet_has_igw_route, subnet_key, false)
+    "${local.nat_gw_prefix}__${subnet_key}" => merge(subnet, {subnet_id = "${subnet.vpc_key}__${subnet.subnet_key}"}) if (
+      subnet.create_nat_gw && lookup(local.subnet_has_igw_route, subnet_key, false)
     )
   }
 }
@@ -215,13 +211,13 @@ locals {
 # ROUTE TABLE ASSOCIATIONS
 # ------------------------
 # List of subnets eligible for route table association
-# - Subnets flagged with has_route_table == true
+# - Subnets flagged with associate_route_table == true
 # - Subnet key exists in route_table_map
 
 # Step 1: Extract the route table keys from route_table_map
 # Step 2: Iterate over each subnet in subnet_map
 # Step 3: For each subnet:
-# - Check if it has an associated route table (has_route_table == true)
+# - Check if it has an associated route table (associate_route_table == true)
 # - Check if its key exists in the extracted route table keys from Step 1
 # - If both conditions are met, include the subnet key in the output list
 # Step 4: Result is a list of subnet keys eligible for route table association
@@ -231,7 +227,7 @@ locals {
 
   subnet_route_table_associations = toset([
     for subnet_key, subnet in local.subnet_map : 
-    subnet_key if subnet.has_route_table && contains(local.valid_route_table_keys, subnet_key)
+    subnet_key if subnet.associate_route_table && contains(local.valid_route_table_keys, subnet_key)
   ])
 }
 
@@ -241,7 +237,7 @@ locals {
 
   subnets_without_matching_route_tables = [
     for subnet_key, subnet in local.subnet_map : 
-    subnet_key if subnet.has_route_table && !can(local.route_table_map[subnet_key])
+    subnet_key if subnet.associate_route_table && !can(local.route_table_map[subnet_key])
   ]
 
   unused_route_tables_without_matching_subnet = [
@@ -261,7 +257,7 @@ locals {
 
   nat_gw_subnets_without_igw = [
     for subnet_key, subnet in local.subnet_map :
-    subnet_key if subnet.has_nat_gw && !can(local.igw_attach_map[subnet.vpc_key])
+    subnet_key if subnet.create_nat_gw && !can(local.subnet_has_igw_route[subnet_key])
   ]
 }
 
