@@ -32,8 +32,8 @@ vpc_config = {
             "public_subnet_010" = {
                 subnet_cidr = "10.0.1.0/24"
                 az = "b"
-                create_nat_gw = true
-                routing_policy = "invalid-policy"
+                create_nat_gw = false
+                routing_policy = "public"
                 associate_routing_policy = true
                 override_routing_policy = false
                 tags = {
@@ -121,38 +121,38 @@ route_table_config = {
 }
 
 ec2_config_v2 = {
-    # "web_01" = {
-    #     ami = "ami-0150ccaf51ab55a51"
-    #     instance_type = "t3.micro"
-    #     key_name = "A4L"
-    #     user_data_script = "server-script.sh"
-    #     network_interfaces = {
-    #         "nic0" = {
-    #             description = "jd test web_01"
-    #             vpc = "vpc-lab-dev-000"
-    #             subnet = "snet-lab-dev-000-public-a"
-    #             security_groups = ["web_01__nic0", "SG-FAKE"]
-    #             assign_eip = true
-    #             tags = {
-    #                 NIC0_TAGS = "yes"
-    #             }
-    #         }
-    #         # "nic1" = {
-    #         #     description = "jd test web_01"
-    #         #     vpc = "vpc-lab-dev-000"
-    #         #     subnet = "snet-lab-dev-000-public-a"
-    #         #     private_ips_count = 1
-    #         #     security_groups = ["SG-2-WEB", "SG-FAKE"]
-    #         #     tags = {
-    #         #         NIC1_TAGS = "yes"
-    #         #     }
-    #         # }
-    #     }
-    #     tags = {
-    #         Role = "frontend"
-    #         INST_TAGS = "yes"
-    #     }
-    # }
+    "web_01" = {
+        ami = "ami-0150ccaf51ab55a51"
+        instance_type = "t3.micro"
+        key_name = "A4L"
+        user_data_script = "server-script.sh"
+        network_interfaces = {
+            "nic0" = {
+                description = "jd test web_01"
+                vpc = "vpc_000"
+                subnet = "public_subnet_000"
+                security_groups = ["web_01__nic0_web", "SG-FAKE"]
+                assign_eip = true
+                tags = {
+                    NIC0_TAGS = "yes"
+                }
+            }
+            # "nic1" = {
+            #     description = "jd test web_01"
+            #     vpc = "vpc-lab-dev-000"
+            #     subnet = "snet-lab-dev-000-public-a"
+            #     private_ips_count = 1
+            #     security_groups = ["SG-2-WEB", "SG-FAKE"]
+            #     tags = {
+            #         NIC1_TAGS = "yes"
+            #     }
+            # }
+        }
+        tags = {
+            Role = "frontend"
+            INST_TAGS = "yes"
+        }
+    }
     # "web_02" = {
     #     ami = "ami-0150ccaf51ab55a51"
     #     instance_type = "t3.micro"
@@ -315,7 +315,7 @@ security_group_config = {
     #     }
     # }
     "web_01__nic0_web" = {
-        vpc_id      = "vpc-lab-dev-000"
+        vpc_id      = "vpc_000"
         description = "SG-2-WEB with inline rules"
         ingress_ref = "WEB-TRAFFIC-IN"
         ingress = [

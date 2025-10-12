@@ -60,14 +60,6 @@ locals {
 locals {
   rt_prefix = "RT:"
 
-  route_table_map_old = {
-    for subnet_key, subnet_obj in local.subnet_map : 
-    "${local.rt_prefix}${subnet_key}" => merge(
-      subnet_obj,
-      {subnet_map_key = subnet_key}
-    ) if subnet_obj.routing_policy != null && contains(keys(var.routing_policies), subnet_obj.routing_policy)
-  } 
-
   route_table_map = {
     for subnet_key, subnet_obj in local.subnet_map : 
     "${local.rt_prefix}${subnet_key}" => merge(
@@ -81,17 +73,6 @@ locals {
 # -----------------------
 locals {
   routing_intent_prefix = "RI:"
-
-  route_table_intent_map_old = {
-    for rt_key, rt_obj in local.route_table_map :
-    "${local.routing_intent_prefix}${rt_key}" => merge(
-      rt_obj, {
-        rt_key              = rt_key
-        routing_policy_name = rt_obj.routing_policy
-        routing_policy      = lookup(var.routing_policies, rt_obj.routing_policy, null)
-      }
-    ) 
-  }
 
   route_table_intent_map = {
     for rt_key, rt_obj in local.route_table_map :
@@ -110,7 +91,6 @@ locals {
       }
     ) 
   }
-
 }
 
 # IGW ROUTES
@@ -140,24 +120,7 @@ locals {
 
 # NAT-GW ROUTES
 # -------------
-# Proximity-aware NAT routing using PRIMARY and SECONDARY lookups to find the closest NAT Gateway for each route_table_object
-# Primary lookup:   NAT-GW by VPC & AZ, 
-# Secondary lookup: NAT-GW by VPC only (fallback)
-
 # PRIMARY LOOKUP MAP
-# Groups NAT Gateway instances by their containing VPC and AZ
-# NAT-GW instances are keyed the same as the subnets where they reside.
-
-# Step 1: Extract all unique VPC keys from nat_gw_map
-# Step 2: For each VPC key:
-# - Step 2a: Extract all unique AZs where NAT Gateways exist for that VPC
-# - Step 2b: For each AZ in that VPC:
-#   - Step 2b.i: Collect all NAT Gateway instance keys where the NAT Gateway belongs to that VPC and AZ
-#   - Step 2b.ii: Store the list of NAT Gateway keys under that AZ
-# - Step 2c: Store the AZ-to-NAT-GW map under the current VPC key
-# Step 3: Result is a nested map: 
-# - nat_gw_by_vpc_az[vpc_key][az] = list of NAT Gateway instance keys
-
 locals {
   nat_gw_by_vpc_az = {
     for vpc_grp_key in distinct([
@@ -175,13 +138,6 @@ locals {
 }
 
 # SECONDARY LOOKUP MAP
-# Group NAT Gateway instances by their parent VPC only
-# NAT-GW instances are keyed the same as the subnets where they reside.
-
-# Step 1: Extract all VPC keys from nat_gw_map and deduplicate
-# Step 2: For each unique VPC key:
-# - Collect all NAT Gateway instances with a matching VPC key
-# Result: A map of VPC keys to lists of NAT Gateway instance keys
 locals {
   nat_gw_by_vpc = {
     for vpc_grp_key in distinct([for nat_gw_key, nat_gw_obj in local.nat_gw_map : nat_gw_obj.vpc_key]) :
@@ -190,12 +146,6 @@ locals {
 }
 
 # NAT Gateway route plan (AZ-aware with fallback)
-# For each route table flagged with inject_nat && where 1 NAT GW exits:
-# - Build a route entry for 0.0.0.0/0
-# - Attempt to find a NAT Gateway in the same VPC and AZ
-# - If none exists, fall back to any NAT Gateway in the same VPC
-# - If neither exists, assign an empty list (defensive default)
-# - Extract the first NAT Gateway key from the resolved list
 locals {
   nat_gw_route_prefix = "NATGW:"
   
@@ -211,19 +161,7 @@ locals {
 
 # ROUTE TABLE ASSOCIATIONS
 # ------------------------
-# List of subnets eligible for route table association
-# - Subnets flagged with associate_route_table == true
-# - Subnet key exists in route_table_map
-
-# Step 1: Extract the route table keys from route_table_map
-# Step 2: Iterate over each subnet in subnet_map
-# Step 3: For each subnet:
-# - Check if it has an associated route table (associate_route_table == true)
-# - Check if its key exists in the extracted route table keys from Step 1
-# - If both conditions are met, include the subnet key in the output list
-# Step 4: Result is a list of subnet keys eligible for route table association
 locals {
-
   rt_assoc_prefix = "RTASS:"
 
   subnet_route_table_associations = {
@@ -233,16 +171,7 @@ locals {
       route_table_id  = rt_key
     } if rt_obj.associate_routing_policy
   }
-
-  # valid_route_table_keys = keys(local.route_table_map)
-  # valid_subnet_keys = keys(local.subnet_map)
-
-  # subnet_route_table_associations = toset([
-  #   for subnet_key, subnet in local.subnet_map : 
-  #   subnet_key if subnet.associate_route_table && contains(local.valid_route_table_keys, subnet_key)
-  # ])
 }
-
 
 /* locals {
   # FOR DIAGNOSTICS
@@ -304,37 +233,6 @@ locals {
 
 # ELASTIC NETWORK INTERFACES (ENIs)
 # ---------------------------------
-
-locals {
-  valid_eni_map_v2_old = merge([ 
-    for ec2_key, ec2_obj in local.valid_ec2_instance_map_v2 : {for eni_key, eni_obj in ec2_obj.network_interfaces : "${ec2_key}__${eni_key}" => merge(
-    eni_obj, {
-      subnet_id   = "${eni_obj.vpc}__${eni_obj.subnet}"
-      ec2_key     = ec2_key
-      ec2_nic_ref = eni_key
-      index       = tonumber(substr(eni_key, length(eni_key) - 1, 1))
-    },
-    eni_obj.private_ip_list_enabled == true && eni_obj.private_ip_list != null && length(eni_obj.private_ip_list) > 0 ? 
-      {
-        private_ip_list_enabled = eni_obj.private_ip_list_enabled
-        private_ip_list = eni_obj.private_ip_list
-        private_ips_count = null
-      } : 
-    eni_obj.private_ips_count != null && eni_obj.private_ips_count > 0 ? 
-      {
-        private_ip_list_enabled = null
-        private_ip_list = null
-        private_ips_count = eni_obj.private_ips_count
-      } : 
-      {
-        private_ip_list_enabled = null
-        private_ip_list = null
-        private_ips_count = null
-      }
-    )}
-  ]...)
-} 
-
 locals {
   valid_eni_map_v2 = merge([ 
     for ec2_key, ec2_obj in local.valid_ec2_instance_map_v2 : {for eni_key, eni_obj in ec2_obj.network_interfaces : "${ec2_key}__${eni_key}" => merge(
@@ -366,25 +264,6 @@ locals {
   ]...)
 } 
 
-# {for eni_key, eni_obj  in local.valid_eni_map_v2 : eni_key => eni_obj}
-# {for eni_key, eni_obj  in local.valid_eni_map_v2 : eni_key => eni_obj.security_groups}
-# {for eni_key, eni_obj  in local.valid_eni_map_v2 : eni_key => [for sg in eni_obj .security_groups : sg if contains(keys(local.valid_security_group_map), sg)]}
-# {for eni_key, eni_obj in local.valid_eni_map_v2 : eni_key => 
-#   length([for sg in coalesce(eni_obj.security_groups, []) : sg if contains(keys(local.valid_security_group_map), sg)]) > 0 
-#   ? [for sg in coalesce(eni_obj.security_groups, []) : sg if contains(keys(local.valid_security_group_map), sg)]
-#   : null
-# }
-
-# {for eni_key, eni_obj in local.valid_eni_map_v2 : eni_key => (
-#   length([for sg in coalesce(eni_obj.security_groups, []) : sg if contains(keys(local.valid_security_group_map), sg)]) > 0 
-#   ? [for sg in coalesce(eni_obj.security_groups, []) : sg if contains(keys(local.valid_security_group_map), sg)]
-#   : null
-#   )
-# }
-
-
-
-/* 
 locals {
   valid_eni_eip_map_v2 = {
     for eip_map_key, eip_map_obj in local.valid_eni_map_v2 : eip_map_key => {
@@ -394,7 +273,7 @@ locals {
     } if eip_map_obj.assign_eip && lookup(local.subnet_has_igw_route, eip_map_obj.subnet_id, false)
   }
 } 
-*/
+
 
 locals {
   primary_nic_name = "nic0"

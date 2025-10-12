@@ -135,131 +135,131 @@ resource "aws_route_table_association" "main" {
   route_table_id = aws_route_table.main[each.value.route_table_id].id
 } 
 
-# resource "aws_network_interface" "main" {
-#   for_each = local.valid_eni_map_v2
+resource "aws_network_interface" "main" {
+  for_each = local.valid_eni_map_v2
 
-#   subnet_id               = aws_subnet.main[each.value.subnet_id].id
-#   description             = each.value.description
-#   private_ip_list_enabled = each.value.private_ip_list_enabled
-#   private_ip_list         = each.value.private_ip_list
-#   private_ips_count       = each.value.private_ips_count
-#   security_groups         = length(each.value.security_groups) > 0 ? [for sg in each.value.security_groups : aws_security_group.main[sg].id] : [data.aws_security_group.default[each.value.vpc].id]
-#   tags = merge(
-#     {Name = each.key},
-#     each.value.tags,
-#     var.default_tags
-#   )
-# }
+  subnet_id               = aws_subnet.main[each.value.subnet_id].id
+  description             = each.value.description
+  private_ip_list_enabled = each.value.private_ip_list_enabled
+  private_ip_list         = each.value.private_ip_list
+  private_ips_count       = each.value.private_ips_count
+  security_groups         = length(each.value.security_groups) > 0 ? [for sg in each.value.security_groups : aws_security_group.main[sg].id] : [data.aws_security_group.default[each.value.vpc].id]
+  tags = merge(
+    {Name = each.key},
+    each.value.tags,
+    var.default_tags
+  )
+}
 
-# resource "aws_eip" "eni" {
-#   for_each = local.valid_eni_eip_map_v2
+resource "aws_eip" "eni" {
+  for_each = local.valid_eni_eip_map_v2
 
-#   domain            = "vpc"
-#   network_interface = aws_network_interface.main[each.key].id
-#   tags = merge(
-#     {Name = each.key},
-#     # each.value.tags,     # NOTE: EIPs are derived from ENI's so need to think about instance level tags
-#     var.default_tags
-#   )
-# } 
+  domain            = "vpc"
+  network_interface = aws_network_interface.main[each.key].id
+  tags = merge(
+    {Name = each.key},
+    # each.value.tags,     # NOTE: EIPs are derived from ENI's so need to think about instance level tags
+    var.default_tags
+  )
+} 
 
-# resource "aws_instance" "main" {
-#   for_each = local.valid_ec2_instance_map_v2
+resource "aws_instance" "main" {
+  for_each = local.valid_ec2_instance_map_v2
 
-#   ami           = each.value.ami
-#   instance_type = each.value.instance_type
-#   key_name      = each.value.key_name
-#   user_data     = each.value.user_data_script != null ? file("${path.module}/${each.value.user_data_script}") : null
-#   tags = merge(
-#     {Name = each.key},
-#     each.value.tags,
-#     var.default_tags
-#   )
+  ami           = each.value.ami
+  instance_type = each.value.instance_type
+  key_name      = each.value.key_name
+  user_data     = each.value.user_data_script != null ? try(file("${path.module}/${each.value.user_data_script}"), null) : null
+  tags = merge(
+    {Name = each.key},
+    each.value.tags,
+    var.default_tags
+  )
 
-#   primary_network_interface  {
-#     network_interface_id = aws_network_interface.main[local.ec2_eni_lookup_map[each.key][local.primary_nic_name]].id
-#   }
+  primary_network_interface  {
+    network_interface_id = aws_network_interface.main[local.ec2_eni_lookup_map[each.key][local.primary_nic_name]].id
+  }
 
-#   lifecycle {
-#     create_before_destroy = true
-#   }
-# }
+  lifecycle {
+    create_before_destroy = true
+  }
+}
 
-# resource "aws_network_interface_attachment" "main" {
-#   for_each = local.valid_eni_attachments_v2
+resource "aws_network_interface_attachment" "main" {
+  for_each = local.valid_eni_attachments_v2
 
-#   instance_id = aws_instance.main[each.value.instance_id].id
-#   network_interface_id = aws_network_interface.main[each.value.network_interface_id].id
-#   device_index = each.value.device_index
-# }
+  instance_id = aws_instance.main[each.value.instance_id].id
+  network_interface_id = aws_network_interface.main[each.value.network_interface_id].id
+  device_index = each.value.device_index
+}
 
-# resource "aws_ec2_managed_prefix_list" "main" {
-#   for_each        = local.prefix_list_map
+resource "aws_ec2_managed_prefix_list" "main" {
+  for_each        = local.prefix_list_map
 
-#   name            = each.value.name
-#   address_family  = each.value.address_family
-#   max_entries     = each.value.max_entries
-#   tags = merge(
-#     {Name = each.key},
-#     each.value.tags,
-#     var.default_tags
-#   )
+  name            = each.value.name
+  address_family  = each.value.address_family
+  max_entries     = each.value.max_entries
+  tags = merge(
+    {Name = each.key},
+    each.value.tags,
+    var.default_tags
+  )
 
-#   dynamic "entry" {
-#     for_each = each.value.entries
+  dynamic "entry" {
+    for_each = each.value.entries
 
-#     content {
-#       cidr        = entry.value.cidr
-#       description = try(entry.value.description, null)
-#     }   
-#   }
-# }
+    content {
+      cidr        = entry.value.cidr
+      description = try(entry.value.description, null)
+    }   
+  }
+}
 
-# resource "aws_security_group" "main" {
-#   for_each = local.valid_security_group_map
+resource "aws_security_group" "main" {
+  for_each = local.valid_security_group_map
 
-#   name    = each.key
-#   vpc_id  = aws_vpc.main[each.value.vpc_id].id
-#   tags = merge(
-#     {Name = each.key},
-#     each.value.tags,
-#     var.default_tags
-#   )
-# }
+  name    = each.key
+  vpc_id  = aws_vpc.main[each.value.vpc_id].id
+  tags = merge(
+    {Name = each.key},
+    each.value.tags,
+    var.default_tags
+  )
+}
 
-# resource "aws_vpc_security_group_ingress_rule" "main" {
-#   for_each          = local.ingress_rules_map
+resource "aws_vpc_security_group_ingress_rule" "main" {
+  for_each          = local.ingress_rules_map
 
-#   security_group_id = aws_security_group.main[each.value.sg_key].id
-#   description       = each.value.description
-#   from_port         = each.value.from_port
-#   to_port           = each.value.to_port
-#   ip_protocol       = each.value.protocol
-#   referenced_security_group_id  = try(aws_security_group.main[each.value.referenced_security_group_id].id, null)
-#   prefix_list_id                = try(aws_ec2_managed_prefix_list.main[each.value.prefix_list_id].id, null)
-#   cidr_ipv4                     = each.value.cidr_ipv4
-#   tags = merge(
-#     {Name = each.value.description},
-#     # each.value.tags,
-#     var.default_tags
-#   )
-# }
+  security_group_id = aws_security_group.main[each.value.sg_key].id
+  description       = each.value.description
+  from_port         = each.value.from_port
+  to_port           = each.value.to_port
+  ip_protocol       = each.value.protocol
+  referenced_security_group_id  = try(aws_security_group.main[each.value.referenced_security_group_id].id, null)
+  prefix_list_id                = try(aws_ec2_managed_prefix_list.main[each.value.prefix_list_id].id, null)
+  cidr_ipv4                     = each.value.cidr_ipv4
+  tags = merge(
+    {Name = each.value.description},
+    # each.value.tags,
+    var.default_tags
+  )
+}
 
-# resource "aws_vpc_security_group_egress_rule" "main" {
-#   for_each          = local.egress_rules_map
+resource "aws_vpc_security_group_egress_rule" "main" {
+  for_each          = local.egress_rules_map
 
-#   security_group_id = aws_security_group.main[each.value.sg_key].id
-#   description       = each.value.description
-#   from_port         = each.value.from_port
-#   to_port           = each.value.to_port
-#   ip_protocol       = each.value.protocol
-#   referenced_security_group_id  = try(aws_security_group.main[each.value.referenced_security_group_id].id, null)
-#   prefix_list_id                = try(aws_ec2_managed_prefix_list.main[each.value.prefix_list_id].id, null)
-#   cidr_ipv4                     = each.value.cidr_ipv4
-#   tags = merge(
-#     {Name = each.value.description},
-#     # each.value.tags,
-#     var.default_tags
-#   )
-# }
+  security_group_id = aws_security_group.main[each.value.sg_key].id
+  description       = each.value.description
+  from_port         = each.value.from_port
+  to_port           = each.value.to_port
+  ip_protocol       = each.value.protocol
+  referenced_security_group_id  = try(aws_security_group.main[each.value.referenced_security_group_id].id, null)
+  prefix_list_id                = try(aws_ec2_managed_prefix_list.main[each.value.prefix_list_id].id, null)
+  cidr_ipv4                     = each.value.cidr_ipv4
+  tags = merge(
+    {Name = each.value.description},
+    # each.value.tags,
+    var.default_tags
+  )
+}
 
