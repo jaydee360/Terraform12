@@ -2,9 +2,9 @@ aws_region = "us-east-1"
 aws_profile = "terraform"
 
 vpc_config = {
-    "vpc-lab-dev-000" = {
+    "vpc_01" = {
         vpc_cidr = "10.0.0.0/16"
-        enable_dns_support   = true
+        enable_dns_support = true
         enable_dns_hostnames = true
         tags = {
             VPC_TAG = "yes"
@@ -17,257 +17,385 @@ vpc_config = {
             }
         }
         subnets = {
-            # PUBLIC SUBNETS
-            "snet-lab-dev-000-public-a" = {
-                az          = "a"
+            "public_subnet_01" = {
                 subnet_cidr = "10.0.0.0/24"
-                tags = {
-                    "type" = "public"
-                    "SUBNET_TAG" = "yes"
+                az = "a"
+                route_table = {
+                    associate = true
+                    rt_suffix = "test"
                 }
-                route_table_ref = "rt-shared-public"
-                associate_route_table = true
-                create_nat_gw = false
-            }
-            "snet-lab-dev-000-public-b" = {
-                az          = "b"
-                subnet_cidr = "10.0.1.0/24"
-                tags = {
-                    "type" = "public"
-                    "SUBNET_TAG" = "yes"
-                }
-                route_table_ref = "rt-shared-public"
                 associate_route_table = true
                 create_nat_gw = true
-            }
-            "snet-lab-dev-000-public-c" = {
-                az          = "c"
-                subnet_cidr = "10.0.2.0/24"
                 tags = {
-                    "type" = "public"
-                    "SUBNET_TAG" = "yes"
+                    type = "public"
+                    SUBNET_TAG = "yes"
                 }
-                route_table_ref = "rt-shared-public"
+            }
+            "public_subnet_02" = {
+                subnet_cidr = "10.0.1.0/24"
+                az = "b"
+                route_table = {
+                    associate = true
+                    rt_suffix = "test"
+                }
+                associate_route_table = true
+                create_nat_gw = true
+                tags = {
+                    type = "public"
+                    SUBNET_TAG = "yes"
+                }
+            }
+            "public_subnet_03" = {
+                subnet_cidr = "10.0.2.0/24"
+                az = "c"
+                route_table = {
+                    associate = true
+                    rt_suffix = "test"
+                }
+                associate_route_table = true
+                create_nat_gw = true
+                tags = {
+                    type = "public"
+                    SUBNET_TAG = "yes"
+                }
+            }
+            "private_subnet_01" = {
+                subnet_cidr = "10.0.4.0/24"
+                az = "a"
+                route_table = {
+                    associate = true
+                    rt_suffix = "test"
+                }
                 associate_route_table = true
                 create_nat_gw = false
-            }
-            # PRIVATE SUBNETS
-            "snet-lab-dev-000-private-a" = {
-                az          = "a"
-                subnet_cidr = "10.0.4.0/24"
                 tags = {
-                    "type" = "private"
-                    "SUBNET_TAG" = "yes"
+                    type = "private"
+                    SUBNET_TAG = "yes"
                 }
-                associate_route_table = false
-                create_nat_gw = false
             }
-            "snet-lab-dev-000-private-b" = {
-                az          = "b"
+            "private_subnet_02" = {
                 subnet_cidr = "10.0.5.0/24"
-                tags = {
-                    "type" = "private"
-                    "SUBNET_TAG" = "yes"
+                az = "b"
+                route_table = {
+                    associate = true
+                    rt_suffix = "test"
                 }
-                associate_route_table = false
+                associate_route_table = true
                 create_nat_gw = false
+                tags = {
+                    type = "private"
+                    SUBNET_TAG = "yes"
+                }
             }
-            "snet-lab-dev-000-private-c" = {
-                az          = "c"
+            "private_subnet_03" = {
                 subnet_cidr = "10.0.6.0/24"
-                tags = {
-                    "type" = "private"
-                    "SUBNET_TAG" = "yes"
+                az = "c"
+                route_table = {
+                    associate = true
+                    rt_suffix = "test"
                 }
-                associate_route_table = false
+                associate_route_table = true
                 create_nat_gw = false
+                tags = {
+                    type = "private"
+                    SUBNET_TAG = "yes"
+                }
             }
         }
     }
-    # "vpc-lab-dev-100" = {
-    #     vpc_cidr = "10.1.0.0/16"
-    #     tags = {
-    #         VPC_TAG = "yes"
-    #     }
-    #     igw = {
-    #         create = true
-    #         attach = true
-    #         tags = {
-    #             IGW_TAG = "yes"
-    #         }
-    #     }
-    #     subnets = {
-    #         # PUBLIC SUBNETS
-    #             # "snet-lab-dev-100-public-a" = {
-    #             #     az          = "a"
-    #             #     subnet_cidr = "10.1.0.0/24"
-    #             #     tags = {
-    #             #         type = "public"
-    #             #         VPC_TAG = "yes"
-    #             #     }
-    #             #     associate_route_table = false
-    #             #     create_nat_gw = false
-    #             # }
-    #             # "snet-lab-dev-100-public-b" = {
-    #             #     az          = "b"
-    #             #     subnet_cidr = "10.1.1.0/24"
-    #             #     tags = {
-    #             #         type = "public"
-    #             #         VPC_TAG = "yes"
-    #             #     }
-    #             #     associate_route_table = false
-    #             #     create_nat_gw = false
-    #             # }
-    #             # "snet-lab-dev-100-public-c" = {
-    #             #     az          = "c"
-    #             #     subnet_cidr = "10.1.2.0/24"
-    #             #     tags = {
-    #             #         type = "public"
-    #             #         VPC_TAG = "yes"
-    #             #     }
-    #             #     associate_route_table = false
-    #             #     create_nat_gw = false
-    #             # }
-    #         # PRIVATE SUBNETS
-    #             # "snet-lab-dev-100-private-a" = {
-    #             #     az          = "a"
-    #             #     subnet_cidr = "10.1.4.0/24"
-    #             #     tags = {
-    #             #         type = "private"
-    #             #         VPC_TAG = "yes"
-    #             #     }
-    #             #     associate_route_table = false
-    #             #     create_nat_gw = false
-    #             # }
-    #             # "snet-lab-dev-100-private-b" = {
-    #             #     az          = "b"
-    #             #     subnet_cidr = "10.1.5.0/24"
-    #             #     tags = {
-    #             #         type = "private"
-    #             #         VPC_TAG = "yes"
-    #             #     }
-    #             #     associate_route_table = false
-    #             #     create_nat_gw = false
-    #             # }
-    #             # "snet-lab-dev-100-private-c" = {
-    #             #     az          = "c"
-    #             #     subnet_cidr = "10.1.6.0/24"
-    #             #     tags = {
-    #             #         type = "private"
-    #             #         VPC_TAG = "yes"
-    #             #     }
-    #             #     associate_route_table = false
-    #             #     create_nat_gw = false
-    #             # }
-    #             # "snet-lab-dev-100-private-d" = {
-    #             #     az          = "d"
-    #             #     subnet_cidr = "10.1.7.0/24"
-    #             #     tags = {
-    #             #         type = "private"
-    #             #         VPC_TAG = "yes"
-    #             #     }
-    #             #     associate_route_table = false
-    #             #     create_nat_gw = false
-    #             # }
-    #     }
-    # }
 }
 
+# vpc_config = {
+#     "vpc-lab-dev-000" = {
+#         vpc_cidr = "10.0.0.0/16"
+#         enable_dns_support   = true
+#         enable_dns_hostnames = true
+#         tags = {
+#             VPC_TAG = "yes"
+#         }
+#         igw = {
+#             create = true
+#             attach = true
+#             tags = {
+#                 IGW_TAG = "yes"
+#             }
+#         }
+#         subnets = {
+#             # PUBLIC SUBNETS
+#             "snet-lab-dev-000-public-a" = {
+#                 az          = "a"
+#                 subnet_cidr = "10.0.0.0/24"
+#                 tags = {
+#                     "type" = "public"
+#                     "SUBNET_TAG" = "yes"
+#                 }
+#                 associate_route_table = true
+#                 create_nat_gw = false
+#             }
+#             "snet-lab-dev-000-public-b" = {
+#                 az          = "b"
+#                 subnet_cidr = "10.0.1.0/24"
+#                 tags = {
+#                     "type" = "public"
+#                     "SUBNET_TAG" = "yes"
+#                 }
+#                 associate_route_table = true
+#                 create_nat_gw = true
+#             }
+#             "snet-lab-dev-000-public-c" = {
+#                 az          = "c"
+#                 subnet_cidr = "10.0.2.0/24"
+#                 tags = {
+#                     "type" = "public"
+#                     "SUBNET_TAG" = "yes"
+#                 }
+#                 associate_route_table = true
+#                 create_nat_gw = false
+#             }
+#             # PRIVATE SUBNETS
+#             "snet-lab-dev-000-private-a" = {
+#                 az          = "a"
+#                 subnet_cidr = "10.0.4.0/24"
+#                 tags = {
+#                     "type" = "private"
+#                     "SUBNET_TAG" = "yes"
+#                 }
+#                 associate_route_table = false
+#                 create_nat_gw = false
+#             }
+#             "snet-lab-dev-000-private-b" = {
+#                 az          = "b"
+#                 subnet_cidr = "10.0.5.0/24"
+#                 tags = {
+#                     "type" = "private"
+#                     "SUBNET_TAG" = "yes"
+#                 }
+#                 associate_route_table = false
+#                 create_nat_gw = false
+#             }
+#             "snet-lab-dev-000-private-c" = {
+#                 az          = "c"
+#                 subnet_cidr = "10.0.6.0/24"
+#                 tags = {
+#                     "type" = "private"
+#                     "SUBNET_TAG" = "yes"
+#                 }
+#                 associate_route_table = false
+#                 create_nat_gw = false
+#             }
+#         }
+#     }
+#     # "vpc-lab-dev-100" = {
+#     #     vpc_cidr = "10.1.0.0/16"
+#     #     tags = {
+#     #         VPC_TAG = "yes"
+#     #     }
+#     #     igw = {
+#     #         create = true
+#     #         attach = true
+#     #         tags = {
+#     #             IGW_TAG = "yes"
+#     #         }
+#     #     }
+#     #     subnets = {
+#     #         # PUBLIC SUBNETS
+#     #             # "snet-lab-dev-100-public-a" = {
+#     #             #     az          = "a"
+#     #             #     subnet_cidr = "10.1.0.0/24"
+#     #             #     tags = {
+#     #             #         type = "public"
+#     #             #         VPC_TAG = "yes"
+#     #             #     }
+#     #             #     associate_route_table = false
+#     #             #     create_nat_gw = false
+#     #             # }
+#     #             # "snet-lab-dev-100-public-b" = {
+#     #             #     az          = "b"
+#     #             #     subnet_cidr = "10.1.1.0/24"
+#     #             #     tags = {
+#     #             #         type = "public"
+#     #             #         VPC_TAG = "yes"
+#     #             #     }
+#     #             #     associate_route_table = false
+#     #             #     create_nat_gw = false
+#     #             # }
+#     #             # "snet-lab-dev-100-public-c" = {
+#     #             #     az          = "c"
+#     #             #     subnet_cidr = "10.1.2.0/24"
+#     #             #     tags = {
+#     #             #         type = "public"
+#     #             #         VPC_TAG = "yes"
+#     #             #     }
+#     #             #     associate_route_table = false
+#     #             #     create_nat_gw = false
+#     #             # }
+#     #         # PRIVATE SUBNETS
+#     #             # "snet-lab-dev-100-private-a" = {
+#     #             #     az          = "a"
+#     #             #     subnet_cidr = "10.1.4.0/24"
+#     #             #     tags = {
+#     #             #         type = "private"
+#     #             #         VPC_TAG = "yes"
+#     #             #     }
+#     #             #     associate_route_table = false
+#     #             #     create_nat_gw = false
+#     #             # }
+#     #             # "snet-lab-dev-100-private-b" = {
+#     #             #     az          = "b"
+#     #             #     subnet_cidr = "10.1.5.0/24"
+#     #             #     tags = {
+#     #             #         type = "private"
+#     #             #         VPC_TAG = "yes"
+#     #             #     }
+#     #             #     associate_route_table = false
+#     #             #     create_nat_gw = false
+#     #             # }
+#     #             # "snet-lab-dev-100-private-c" = {
+#     #             #     az          = "c"
+#     #             #     subnet_cidr = "10.1.6.0/24"
+#     #             #     tags = {
+#     #             #         type = "private"
+#     #             #         VPC_TAG = "yes"
+#     #             #     }
+#     #             #     associate_route_table = false
+#     #             #     create_nat_gw = false
+#     #             # }
+#     #             # "snet-lab-dev-100-private-d" = {
+#     #             #     az          = "d"
+#     #             #     subnet_cidr = "10.1.7.0/24"
+#     #             #     tags = {
+#     #             #         type = "private"
+#     #             #         VPC_TAG = "yes"
+#     #             #     }
+#     #             #     associate_route_table = false
+#     #             #     create_nat_gw = false
+#     #             # }
+#     #     }
+#     # }
+# }
+
 route_table_config = {
-    # vpc-lab-dev-000 PUBLIC SUBNET RTs
-    "rt-shared-public" = {
+    # TEMP PUBLIC SUBNET RTs
+    "vpc_01__public_subnet_01" = {
         inject_igw = true
-        tags = {
-            RT_TAG = "PUBLIC SHARED RT"
-        }
-    }
-    "vpc-lab-dev-000__snet-lab-dev-000-public-a" = {
-        inject_igw = true
+        inject_nat = false
         tags = {
             RT_TAG = "yes"
+            role = "PRIMARY"
         }
     }
-    "vpc-lab-dev-000__snet-lab-dev-000-public-b" = {
+    "vpc_01__public_subnet_01__ALT" = {
         inject_igw = true
+        inject_nat = false
         tags = {
             RT_TAG = "yes"
+            role = "ALTERNATE"
         }
     }
-    "vpc-lab-dev-000__snet-lab-dev-000-public-c" = {
+    "vpc_01__public_subnet_02" = {
         inject_igw = true
+        inject_nat = false
         tags = {
             RT_TAG = "yes"
+            role = "PRIMARY"
         }
     }
-    # "vpc-lab-dev-000__snet-lab-dev-000-public-d" = {
-    #     inject_igw = false
-    #     tags = {
-    #         RT_TAG = "yes"
-    #     }
-    # }
-#    vpc-lab-dev-000 PRIVATE SUBNET RTs
-    # "vpc-lab-dev-000__snet-lab-dev-000-private-a" = {
-    #     inject_nat = true
-    #     tags = {
-    #         RT_TAG = "yes"
-    #     }
-    # }
-    # "vpc-lab-dev-000__snet-lab-dev-000-private-b" = {
-    #     inject_nat = true
-    #     tags = {
-    #         RT_TAG = "yes"
-    #     }
-    # }
-    # "vpc-lab-dev-000__snet-lab-dev-000-private-c" = {
-    #     inject_nat = true
-    #     tags = {
-    #         RT_TAG = "yes"
-    #     }
-    # }
-    # vpc-lab-dev-100 PUBLIC SUBNET RTs
-        # "vpc-lab-dev-100__snet-lab-dev-100-public-a" = {
-        #     inject_igw = false
-        #     tags = {
-        #         RT_TAG = "yes"
-        #     }
-        # }
-        # "vpc-lab-dev-100__snet-lab-dev-100-public-b" = {
-        #     inject_igw = false
-        #     tags = {
-        #         RT_TAG = "yes"
-        #     }
-        # }
-        # "vpc-lab-dev-100__snet-lab-dev-100-public-c" = {
-        #     inject_igw = false
-        #     tags = {
-        #         RT_TAG = "yes"
-        #     }
-        # }
-     # vpc-lab-dev-100 PRIVATE SUBNET RTs
-        # "vpc-lab-dev-100__snet-lab-dev-100-private-a" = {
-        #     inject_nat = true
-        #     tags = {
-        #         RT_TAG = "yes"
-        #     }
-        # }
-        # "vpc-lab-dev-100__snet-lab-dev-100-private-b" = {
-        #     inject_nat = true
-        #     tags = {
-        #         RT_TAG = "yes"
-        #     }
-        # }
-        # "vpc-lab-dev-100__snet-lab-dev-100-private-c" = {
-        #     inject_nat = true
-        #     tags = {
-        #         RT_TAG = "yes"
-        #     }
-        # }
-        # "vpc-lab-dev-100__snet-lab-dev-100-private-d" = {
-        #     inject_nat = true
-        #     tags = {
-        #         RT_TAG = "yes"
-        #     }
-        # }
+    "vpc_01__public_subnet_02__ALT" = {
+        inject_igw = true
+        inject_nat = false
+        tags = {
+            RT_TAG = "yes"
+            role = "ALTERNATE"
+        }
+    }
+    "vpc_01__public_subnet_03" = {
+        inject_igw = true
+        inject_nat = false
+        tags = {
+            RT_TAG = "yes"
+            role = "PRIMARY"
+        }
+    }
+    "vpc_01__public_subnet_03__ALT" = {
+        inject_igw = true
+        inject_nat = false
+        tags = {
+            RT_TAG = "yes"
+            role = "ALTERNATE"
+        }
+    }
+    "vpc_01__public_subnet_04" = {
+        inject_igw = true
+        inject_nat = false
+        tags = {
+            RT_TAG = "yes"
+            role = "PRIMARY"
+        }
+    }
+    "vpc_01__public_subnet_04__ALT" = {
+        inject_igw = true
+        inject_nat = false
+        tags = {
+            RT_TAG = "yes"
+            role = "ALTERNATE"
+        }
+    }
+    "vpc_01__private_subnet_01" = {
+        inject_igw = false
+        inject_nat = true
+        tags = {
+            RT_TAG = "yes"
+            role = "PRIMARY"
+        }
+    }
+    "vpc_01__private_subnet_01__ALT" = {
+        inject_igw = false
+        inject_nat = true
+        tags = {
+            RT_TAG = "yes"
+            role = "ALTERNATE"
+        }
+    }
+    "vpc_01__private_subnet_02" = {
+        inject_igw = false
+        inject_nat = true
+        tags = {
+            RT_TAG = "yes"
+            role = "PRIMARY"
+        }
+    }
+    "vpc_01__private_subnet_02__ALT" = {
+        inject_igw = false
+        inject_nat = true
+        tags = {
+            RT_TAG = "yes"
+            role = "ALTERNATE"
+        }
+    }
+    "vpc_01__private_subnet_03" = {
+        inject_igw = false
+        inject_nat = true
+        tags = {
+            RT_TAG = "yes"
+            role = "PRIMARY"
+        }
+    }
+    "vpc_01__private_subnet_03__ALT" = {
+        inject_igw = false
+        inject_nat = true
+        tags = {
+            RT_TAG = "yes"
+            role = "ALTERNATE"
+        }
+    }
+    "SomethingTotalNonsense" = {
+        inject_igw = true
+        inject_nat = false
+        tags = {
+            RT_TAG = "yes"
+            role = "RANDOM"
+        }
+    }
 }
 
 ec2_config_v2 = {

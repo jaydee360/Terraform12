@@ -24,6 +24,19 @@ locals {
           })
       }
   ]...)
+
+  # subnet_map_v2 = merge(
+  #   [for vpc_key, vpc_obj in var.vpc_config_v2 :
+  #     { for subnet_key, subnet_obj in vpc_obj.subnets :
+  #       "${vpc_key}__${subnet_key}" => 
+  #         merge(subnet_obj, { 
+  #           vpc_key = vpc_key, 
+  #           subnet_key = subnet_key,
+  #           az = var.az_lookup[var.aws_region][subnet_obj.az]
+  #         })
+  #     }
+  # ]...)
+
 }
 
 # IGWs
@@ -100,7 +113,7 @@ locals {
 #   - az
 # Result: A map of enriched route table objects keyed by the "vpc_key__subnet_key" (the same compound as the subnet key)
 locals {
-  route_table_map = {
+  route_table_map_old = {
     for route_table_key, route_table_object in var.route_table_config : 
     route_table_key => merge(
       route_table_object, 
@@ -111,6 +124,38 @@ locals {
       }
     ) if can(local.subnet_map[route_table_key])
   } 
+}
+
+locals {
+  # rt_root_name = {
+  #   for rt_key, rt_obj in var.route_table_config :
+  #   rt_key => 
+  #     {
+  #       rt_key_split = split("__", rt_key)
+  #       rt_key_split_length = length(split("__", rt_key))
+  #       rt_join_1 = join("__", slice(split("__", rt_key), 0, 2))
+  #       rt_join_2 = length(split("__", rt_key)) > 2 ? join("__", slice(split("__", rt_key), 0, length(split("__", rt_key)) -1 )) : rt_key
+  #     }
+  # }
+
+  rt_common_names = {
+    for rt_key, rt_obj in var.route_table_config :
+    rt_key => length(split("__", rt_key)) > 2 ? join("__", slice(split("__", rt_key), 0, length(split("__", rt_key)) -1 )) : rt_key
+  }
+
+  route_table_map = {
+    for rt_key, rt_common_name in local.rt_common_names : 
+    rt_key => merge(
+      var.route_table_config[rt_key],
+      {
+        rt_common_name  = rt_common_name
+        vpc_key         = local.subnet_map[rt_common_name].vpc_key
+        subnet_key      = local.subnet_map[rt_common_name].subnet_key
+        az              = local.subnet_map[rt_common_name].az
+      }
+    ) if can(local.subnet_map[rt_common_name]) && can(var.route_table_config[rt_key])
+  }
+
 }
 
 # IGW ROUTES

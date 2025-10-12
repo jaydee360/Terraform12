@@ -52,12 +52,41 @@ variable "vpc_config" {
     subnets = map(object({
       subnet_cidr = string
       az          = string
+      route_table = optional(object({
+        associate = optional(bool, false)
+        rt_suffix = optional(string, null)
+      }))
       associate_route_table = optional(bool, false)
       create_nat_gw  = optional(bool, false)
       tags        = optional(map(string), null)
     }))
   }))
 }
+
+# variable "vpc_config_v2" {
+#   type = map(object({
+#     vpc_cidr             = string
+#     enable_dns_support   = optional(bool, true)
+#     enable_dns_hostnames = optional(bool, false)
+#     tags                 = optional(map(string), null)
+#     igw = optional(object({
+#       create = bool
+#       attach = bool
+#       tags   = map(string)
+#     }))
+#     subnets = map(object({
+#       subnet_cidr = string
+#       az          = string
+#       route_table = optional(object({
+#         associate = optional(bool, false)
+#         rt_suffix = optional(string, null)
+#       }))
+#       associate_route_table = optional(bool, false)
+#       create_nat_gw  = optional(bool, false)
+#       tags        = optional(map(string), null)
+#     }))
+#   }))
+# }
 
 # route_table_config is a map keyed by "vpc_key__subnet_key"
 # Each entry defines:
