@@ -61,9 +61,8 @@ resource "aws_eip" "nat" {
   domain        = "vpc"
   tags = merge(
     {Name = each.key},
-    # each.value.tags,     # NOTE: EIPs are derived from ENI's so need to think about instance level tags
+    each.value.tags,     # NOTE: NATGWs & NATGW EIPs are both derived from subnets. Thus tags are inherited from SUBNET
     var.default_tags
-    
   )
 }
 
@@ -81,7 +80,7 @@ resource "aws_nat_gateway" "main" {
   allocation_id = aws_eip.nat[each.key].allocation_id
   tags = merge(
     {Name = each.key},
-    each.value.tags,
+    each.value.tags,    # NOTE: NATGWs & NATGW EIPs are both derived from subnets. Thus tags are inherited from SUBNET
     var.default_tags
   )  
 }
@@ -95,7 +94,7 @@ resource "aws_route_table" "main" {
   vpc_id   = aws_vpc.main[each.value.vpc_key].id
   tags = merge(
     { Name = each.key },
-    each.value.tags,
+    each.value.tags,    # NOTE: Route Tables are derived from subnets. Thus tags are inherited from SUBNET
     var.default_tags
   )
 }
@@ -136,7 +135,7 @@ resource "aws_route_table_association" "main" {
 } 
 
 resource "aws_network_interface" "main" {
-  for_each = local.valid_eni_map_v2
+  for_each = local.valid_eni_map
 
   subnet_id               = aws_subnet.main[each.value.subnet_id].id
   description             = each.value.description
@@ -152,19 +151,19 @@ resource "aws_network_interface" "main" {
 }
 
 resource "aws_eip" "eni" {
-  for_each = local.valid_eni_eip_map_v2
+  for_each = local.valid_eni_eip_map
 
   domain            = "vpc"
   network_interface = aws_network_interface.main[each.key].id
   tags = merge(
     {Name = each.key},
-    # each.value.tags,     # NOTE: EIPs are derived from ENI's so need to think about instance level tags
+    each.value.tags,     # NOTE: ENI EIPs are derived from EC2 ENIs. Thus tags are inherited from the EC2 ENI
     var.default_tags
   )
 } 
 
 resource "aws_instance" "main" {
-  for_each = local.valid_ec2_instance_map_v2
+  for_each = local.valid_ec2_instance_map
 
   ami           = each.value.ami
   instance_type = each.value.instance_type
@@ -186,7 +185,7 @@ resource "aws_instance" "main" {
 }
 
 resource "aws_network_interface_attachment" "main" {
-  for_each = local.valid_eni_attachments_v2
+  for_each = local.valid_eni_attachments
 
   instance_id = aws_instance.main[each.value.instance_id].id
   network_interface_id = aws_network_interface.main[each.value.network_interface_id].id
@@ -240,7 +239,7 @@ resource "aws_vpc_security_group_ingress_rule" "main" {
   cidr_ipv4                     = each.value.cidr_ipv4
   tags = merge(
     {Name = each.value.description},
-    # each.value.tags,
+    each.value.tags,
     var.default_tags
   )
 }
@@ -258,7 +257,7 @@ resource "aws_vpc_security_group_egress_rule" "main" {
   cidr_ipv4                     = each.value.cidr_ipv4
   tags = merge(
     {Name = each.value.description},
-    # each.value.tags,
+    each.value.tags,
     var.default_tags
   )
 }

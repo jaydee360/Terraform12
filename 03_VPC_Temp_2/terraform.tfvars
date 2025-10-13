@@ -7,26 +7,26 @@ vpc_config = {
         enable_dns_support = true
         enable_dns_hostnames = true
         tags = {
-            VPC_TAG = "yes"
+            TAG = "This tag is from VPC_CONFIG > VPC_000"
         }
         igw = {
             create = true
             attach = true
             tags = {
-                IGW_TAG = "yes"
+                TAG = "This tag is from VPC_CONFIG > VPC_000 > IGW"
             }
         }
         subnets = {
             "public_subnet_000" = {
                 subnet_cidr = "10.0.0.0/24"
                 az = "a"
-                create_nat_gw = false
+                create_nat_gw = true
                 routing_policy = "public"
-                associate_routing_policy = true
                 override_routing_policy = false
+                associate_routing_policy = true
                 tags = {
                     type = "public"
-                    SUBNET_TAG = "yes"
+                    TAG = "This tag is from VPC_CONFIG > VPC_000 > SUBNET > PUBLIC_SUBNET_000"
                 }
             }
             "public_subnet_010" = {
@@ -34,11 +34,11 @@ vpc_config = {
                 az = "b"
                 create_nat_gw = false
                 routing_policy = "public"
-                associate_routing_policy = true
                 override_routing_policy = false
+                associate_routing_policy = true
                 tags = {
                     type = "public"
-                    SUBNET_TAG = "yes"
+                    TAG = "This tag is from VPC_CONFIG > VPC_000 > SUBNET > PUBLIC_SUBNET_010"
                 }
             }
             "public_subnet_020" = {
@@ -46,11 +46,11 @@ vpc_config = {
                 az = "c"
                 create_nat_gw = false
                 routing_policy = "public"
-                associate_routing_policy = true
                 override_routing_policy = false
+                associate_routing_policy = true
                 tags = {
                     type = "public"
-                    SUBNET_TAG = "yes"
+                    TAG = "This tag is from VPC_CONFIG > VPC_000 > SUBNET > PUBLIC_SUBNET_020"
                 }
             }
             "private_subnet_040" = {
@@ -58,11 +58,11 @@ vpc_config = {
                 az = "a"
                 create_nat_gw = false
                 routing_policy = "private_nat"
-                associate_routing_policy = true
                 override_routing_policy = false
+                associate_routing_policy = true
                 tags = {
                     type = "private"
-                    SUBNET_TAG = "yes"
+                    TAG = "This tag is from VPC_CONFIG > VPC_000 > SUBNET > PRIVATE_SUBNET_040"
                 }
             }
             "private_subnet_050" = {
@@ -70,11 +70,11 @@ vpc_config = {
                 az = "b"
                 create_nat_gw = false
                 routing_policy = "private_nat"
-                associate_routing_policy = true
                 override_routing_policy = false
+                associate_routing_policy = true
                 tags = {
                     type = "private"
-                    SUBNET_TAG = "yes"
+                    TAG = "This tag is from VPC_CONFIG > VPC_000 > SUBNET > PRIVATE_SUBNET_050"
                 }
             }
             "private_subnet_060" = {
@@ -82,11 +82,11 @@ vpc_config = {
                 az = "c"
                 create_nat_gw = false
                 routing_policy = "private_nat"
-                associate_routing_policy = true
                 override_routing_policy = false
+                associate_routing_policy = true
                 tags = {
                     type = "private"
-                    SUBNET_TAG = "yes"
+                    TAG = "This tag is from VPC_CONFIG > VPC_000 > SUBNET > PRIVATE_SUBNET_060"
                 }
             }
         }
@@ -98,29 +98,37 @@ routing_policies = {
         inject_igw = true
         inject_nat = false
         tags = {
+            TAG = "This tag is from ROUTING_POLICIES > PUBLIC"
         }
     }
     "private_nat" = {
         inject_igw = false
         inject_nat = true
         tags = {
+            TAG = "This tag is from ROUTING_POLICIES > PRIVATE_NAT"
         }
     }
 }
 
 route_table_config = {
-    # TEMP PUBLIC SUBNET RTs
-    "vpc_000__public_subnet_000" = {
+    # TEMP PUBLIC SUBNET OVERRIDE RTs
+    "vpc_000__public_subnet_010" = {
         inject_igw = false
         inject_nat = false
         tags = {
-            RT_TAG = "yes"
-            role = "PRIMARY"
+            TAG = "This tag is from ROUTE_TABLE_CONFIG > vpc_010__PUBLIC_SUBNET_000"
+        }
+    }
+    "vpc_000__public_subnet_020" = {
+        inject_igw = false
+        inject_nat = false
+        tags = {
+            TAG = "This tag is from ROUTE_TABLE_CONFIG > vpc_020__PUBLIC_SUBNET_000"
         }
     }
 }
 
-ec2_config_v2 = {
+ec2_config = {
     "web_01" = {
         ami = "ami-0150ccaf51ab55a51"
         instance_type = "t3.micro"
@@ -128,104 +136,151 @@ ec2_config_v2 = {
         user_data_script = "server-script.sh"
         network_interfaces = {
             "nic0" = {
-                description = "jd test web_01"
+                description = "web_01 primary nic"
                 vpc = "vpc_000"
                 subnet = "public_subnet_000"
-                security_groups = ["web_01__nic0_web", "SG-FAKE"]
+                security_groups = ["webserver_frontend", "SG-FAKE"]
                 assign_eip = true
                 tags = {
-                    NIC0_TAGS = "yes"
+                    TAG = "This tag is from EC2_CONFIG > WEB_01 > NIC0"
                 }
             }
-            # "nic1" = {
-            #     description = "jd test web_01"
-            #     vpc = "vpc-lab-dev-000"
-            #     subnet = "snet-lab-dev-000-public-a"
-            #     private_ips_count = 1
-            #     security_groups = ["SG-2-WEB", "SG-FAKE"]
-            #     tags = {
-            #         NIC1_TAGS = "yes"
-            #     }
-            # }
         }
         tags = {
             Role = "frontend"
-            INST_TAGS = "yes"
+            TAG = "This tag is from EC2_CONFIG > WEB_01"
         }
     }
-    # "web_02" = {
-    #     ami = "ami-0150ccaf51ab55a51"
-    #     instance_type = "t3.micro"
-    #     key_name = "A4L"
-    #     user_data_script = "server-script.sh"
-    #     network_interfaces = {
-    #         "nic0" = {
-    #             description = "jd test web_02"
-    #             vpc = "vpc-lab-dev-000"
-    #             subnet = "snet-lab-dev-000-public-b"
-    #             security_groups = ["SG-2-WEB", "SG-FAKE"]
-    #             assign_eip = true
-    #             tags = {
-    #                 NIC0_TAGS = "yes"
-    #             }
-    #         }
-    #         "nic1" = {
-    #             description = "jd test web_02"
-    #             vpc = "vpc-lab-dev-000"
-    #             subnet = "snet-lab-dev-000-public-b"
-    #             private_ip_list_enabled = true
-    #             private_ip_list = ["10.0.1.20"]
-    #             security_groups = ["SG-2-WEB", "SG-FAKE"]
-    #             tags = {
-    #                 NIC1_TAGS = "yes"
-    #             }
-    #         }
-    #     }
-    #     tags = {
-    #         Role = "frontend"
-    #         INST_TAGS = "yes"
-    #     }
-    # }
-    # "web_03" = {
-    #     ami = "ami-0150ccaf51ab55a51"
-    #     instance_type = "t3.micro"
-    #     key_name = "A4L"
-    #     user_data_script = "server-script.sh"
-    #     network_interfaces = {
-    #         "nic0" = {
-    #             description = "jd test web_03"
-    #             vpc = "vpc-lab-dev-000"
-    #             subnet = "snet-lab-dev-000-public-c"
-    #             security_groups = ["SG-2-WEB", "SG-FAKE"]
-    #         }
-    #         "nic1" = {
-    #             description = "jd test web_03"
-    #             vpc = "vpc-lab-dev-000"
-    #             subnet = "snet-lab-dev-000-public-c"
-    #             security_groups = ["SG-2-WEB", "SG-FAKE"]
-    #         }
-    #     }
-    #     tags = {
-    #         Role = "frontend"
-    #     }
-    # }
-    # "web_04" = {
-    #     ami = "ami-0150ccaf51ab55a51"
-    #     instance_type = "t3.micro"
-    #     key_name = "A4L"
-    #     user_data_script = "server-script.sh"
-    #     network_interfaces = {
-    #         "nic0" = {
-    #             description = "jd test web_03"
-    #             vpc = "vpc-lab-dev-000"
-    #             subnet = "snet-lab-dev-000-public-c"
-    #             security_groups = ["SG-2-WEB", "SG-FAKE"]
-    #         }
-    #     }
-    #     tags = {
-    #         Role = "frontend"
-    #     }
-    # }
+    "web_02" = {
+        ami = "ami-0150ccaf51ab55a51"
+        instance_type = "t3.micro"
+        key_name = "A4L"
+        user_data_script = "server-script.sh"
+        network_interfaces = {
+            "nic0" = {
+                description = "web_02 primary nic"
+                vpc = "vpc_000"
+                subnet = "public_subnet_010"
+                security_groups = ["webserver_frontend"]
+                assign_eip = true
+                tags = {
+                    TAG = "This tag is from EC2_CONFIG > WEB_02 > NIC0"
+                }
+            }
+            "nic1" = {
+                description = "web_02 secondary nic"
+                vpc = "vpc_000"
+                subnet = "public_subnet_010"
+                # private_ip_list_enabled = true
+                # private_ip_list = ["10.0.1.20"]
+                security_groups = ["webserver_backend"]
+                tags = {
+                    TAG = "This tag is from EC2_CONFIG > WEB_02 > NIC1"
+                }
+            }
+        }
+        tags = {
+            Role = "frontend"
+            TAG = "This tag is from EC2_CONFIG > WEB_02"
+        }
+    }
+    "web_03" = {
+        ami = "ami-0150ccaf51ab55a51"
+        instance_type = "t3.micro"
+        key_name = "A4L"
+        user_data_script = "server-script.sh"
+        network_interfaces = {
+            "nic0" = {
+                description = "web_03 primary nic"
+                vpc = "vpc_000"
+                subnet = "public_subnet_020"
+                security_groups = ["webserver_frontend"]
+                assign_eip = true
+                tags = {
+                    TAG = "This tag is from EC2_CONFIG > WEB_03 > NIC0"
+                }
+            }
+            "nic1" = {
+                description = "web_03 secondary nic"
+                vpc = "vpc_000"
+                subnet = "public_subnet_020"
+                security_groups = ["webserver_backend"]
+                tags = {
+                    TAG = "This tag is from EC2_CONFIG > WEB_03 > NIC1"
+                }
+            }
+        }
+        tags = {
+            Role = "frontend"
+            TAG = "This tag is from EC2_CONFIG > WEB_03"
+        }
+    }
+    "db_01" = {
+        ami = "ami-0150ccaf51ab55a51"
+        instance_type = "t3.micro"
+        key_name = "A4L"
+        # user_data_script = "server-script.sh"
+        network_interfaces = {
+            "nic0" = {
+                description = "db_01 primary nic"
+                vpc = "vpc_000"
+                subnet = "private_subnet_040"
+                security_groups = ["db_server"]
+                assign_eip = false
+                tags = {
+                    TAG = "This tag is from EC2_CONFIG > DB_01 > NIC0"
+                }
+            }
+        }
+        tags = {
+            Role = "db"
+            TAG = "This tag is from EC2_CONFIG > DB_01"
+        }
+    }
+    "db_02" = {
+        ami = "ami-0150ccaf51ab55a51"
+        instance_type = "t3.micro"
+        key_name = "A4L"
+        # user_data_script = "server-script.sh"
+        network_interfaces = {
+            "nic0" = {
+                description = "db_02 primary nic"
+                vpc = "vpc_000"
+                subnet = "private_subnet_050"
+                security_groups = ["db_server", "SG-FAKE"]
+                assign_eip = false
+                tags = {
+                    TAG = "This tag is from EC2_CONFIG > DB_02 > NIC0"
+                }
+            }
+        }
+        tags = {
+            Role = "db"
+            TAG = "This tag is from EC2_CONFIG > DB_02"
+        }
+    }
+    "db_03" = {
+        ami = "ami-0150ccaf51ab55a51"
+        instance_type = "t3.micro"
+        key_name = "A4L"
+        # user_data_script = "server-script.sh"
+        network_interfaces = {
+            "nic0" = {
+                description = "db_03 primary nic"
+                vpc = "vpc_000"
+                subnet = "private_subnet_060"
+                security_groups = ["db_server"]
+                assign_eip = false
+                tags = {
+                    TAG = "This tag is from EC2_CONFIG > DB_03 > NIC0"
+                }
+            }
+        }
+        tags = {
+            Role = "db"
+            TAG = "This tag is from EC2_CONFIG > DB_03"
+        }
+    }
 }
 
 prefix_list_config = {
@@ -237,87 +292,16 @@ prefix_list_config = {
             { cidr = "212.56.102.213/32", description = "JD Home Lab Internet IP" }
         ]
         tags = {
-            PL_TAGS = "yes"            
+            TAG = "This tag is from PREFIX_LIST_CONFIG > JD-HOME-LAB"   
         }
     }
-    # PREFIX-LIST-TEST = {
-    #     name           = "PREFIX-LIST-TEST"
-    #     address_family = "IPv4"
-    #     max_entries    = 5
-    #     entries = [
-    #         { cidr = "192.168.100.0/24", description = "Partner A" },
-    #         { cidr = "192.168.101.0/24", description = "Partner B" }
-    #     ]
-    #     tags = {
-    #         PL_TAGS = "yes"            
-    #     }
-    # }
 }
 
 security_group_config = {
-    # "web_01__nic0" = {
-    #     vpc_id      = "vpc-lab-dev-000"
-    #     description = "SG-2-WEB with inline rules"
-    #     # ingress_ref = "DB-RULES"
-    #     ingress = [
-    #         {
-    #             description = "80-IN"
-    #             from_port = 80
-    #             to_port = 80
-    #             protocol = "tcp"
-    #             prefix_list_id = "JD-HOME-LAB"
-    #             cidr_ipv4 =  "0.0.0.0/0" 
-    #         },
-    #         {
-    #             description = "443-IN"
-    #             from_port = 443
-    #             to_port = 443
-    #             protocol = "tcp"
-    #             prefix_list_id = "JD-HOME-LAB"
-    #             cidr_ipv4 =  "0.0.0.0/0"
-    #         },
-    #         {
-    #             description = "22-IN"
-    #             from_port = 22
-    #             to_port = 22
-    #             protocol = "tcp"
-    #             prefix_list_id = "JD-HOME-LAB"
-    #             cidr_ipv4 =  "0.0.0.0/0" 
-    #         },
-    #         {
-    #             description = "3389-IN"
-    #             from_port = 3389
-    #             to_port = 3389
-    #             protocol = "tcp"
-    #             prefix_list_id = "JD-HOME-LAB"
-    #             cidr_ipv4 =  "0.0.0.0/0"
-    #         },
-    #         {
-    #             description = "DB-IN-TEST"
-    #             from_port = 8080
-    #             to_port = 8080
-    #             protocol = "tcp"
-    #             # referenced_security_group_id = "SG-1-DB"
-    #             prefix_list_id = "JD-HOME-LAB"
-    #             cidr_ipv4 =  "0.0.0.0/0"
-    #         }
-    #     ]
-    #     # egress_ref = "DB-RULES"
-    #     egress = [
-    #         {
-    #             description = "ANY-ANY-OUT"
-    #             protocol = "-1"
-    #             cidr_ipv4 =  "0.0.0.0/0" 
-    #         }
-    #     ]
-    #     tags = {
-    #         SG_TAGS = "yes"
-    #     }
-    # }
-    "web_01__nic0_web" = {
+    "webserver_frontend" = {
         vpc_id      = "vpc_000"
-        description = "SG-2-WEB with inline rules"
-        ingress_ref = "WEB-TRAFFIC-IN"
+        description = "webserver_frontend SG with inline rules"
+        ingress_ref = "WEB-FRONTEND-IN"
         ingress = [
             {
                 description = "80-IN"
@@ -325,7 +309,10 @@ security_group_config = {
                 to_port = 80
                 protocol = "tcp"
                 prefix_list_id = "JD-HOME-LAB"
-                cidr_ipv4 =  "0.0.0.0/0" 
+                cidr_ipv4 =  "0.0.0.0/0"
+                tags = {
+                    TAG = "INLINE: This tag is from SECURITY_GROUP_CONFIG >  webserver_frontend > INGRESS > 80-IN"
+                }
             },
             {
                 description = "443-IN"
@@ -334,6 +321,9 @@ security_group_config = {
                 protocol = "tcp"
                 prefix_list_id = "JD-HOME-LAB"
                 cidr_ipv4 =  "0.0.0.0/0"
+                tags = {
+                    TAG = "INLINE: This tag is from SECURITY_GROUP_CONFIG >  webserver_frontend > INGRESS > 443-IN"
+                }
             }
         ]
         egress_ref = "ANY-OUT"
@@ -341,83 +331,57 @@ security_group_config = {
             {
                 description = "ANY-ANY-OUT"
                 protocol = "-1"
-                cidr_ipv4 =  "0.0.0.0/0" 
+                cidr_ipv4 =  "0.0.0.0/0"
+                tags = {
+                    TAG = "INLINE: This tag is from SECURITY_GROUP_CONFIG >  WEB_01__NIC0_WEB > EGRESS > ANY-ANY-OUT"
+                }
             }
         ]
         tags = {
-            SG_TAGS = "yes"
+            TAG = "This tag is SECURITY_GROUP_CONFIG > webserver_frontend"
         }
     }
-    # "SG-1-DB" = {
-    #     vpc_id      = "vpc-lab-dev-000"
-    #     description = "SG-1-DB referencing DB-RULES"
-    #     ingress_ref = "DB-RULES"
-    #     ingress = [
-    #         {
-    #             description = "1433-IN"
-    #             from_port = 1433
-    #             to_port = 1433
-    #             protocol = "tcp"
-    #             cidr_ipv4 =  "10.0.0.0/16" 
-    #         },
-    #         {
-    #             description = "1433-IN"
-    #             from_port = 1433
-    #             to_port = 1433
-    #             protocol = "tcp"
-    #             cidr_ipv4 =  "10.0.0.0/16" 
-    #         },
-    #         {
-    #             description = "3389-IN"
-    #             from_port = 3389
-    #             to_port = 3389
-    #             protocol = "tcp"
-    #             cidr_ipv4 =  "10.0.0.0/16" 
-    #         }
-    #     ]
-    #     # egress_ref = "DB-RULES"
-    #     egress = [
-    #         {
-    #             description = "ANY-ANY-OUT"
-    #             protocol = "-1"
-    #             referenced_security_group_id = "SG-2-WEB"
-    #             prefix_list_id = "JD-HOME-LAB"
-    #             cidr_ipv4 =  "0.0.0.0/0" 
-    #         }
-    #     ]
-    #     tags = {
-    #         SG_TAGS = "yes"
-    #     }
-    # }
-    # "SG-1-APP" = {
-    #    vpc_id      = "vpc-lab-dev-001"
-    #    description = "SG-1-APP currently inert"
-    #    # ingress_ref = "APP-RULES"
-    #    # ingress = []
-    #    # egress = []
-    # }
+    "webserver_backend" = {
+        vpc_id      = "vpc_000"
+        description = "webserver_backend SG with shared rules"
+        ingress_ref = "WEB-BACKEND-IN"
+        tags = {
+            TAG = "This tag is SECURITY_GROUP_CONFIG > webserver_frontend"
+        }
+    }
+    "db_server" = {
+        vpc_id      = "vpc_000"
+        description = "db_server SG with shared rules"
+        ingress_ref = "DB-IN"
+        egress_ref  = "ANY-OUT"
+        tags = {
+            TAG = "This tag is SECURITY_GROUP_CONFIG > db_server"
+        }
+    }
 }
 
 shared_security_group_rules = {
-    "WEB-TRAFFIC-IN" = {
+    "WEB-FRONTEND-IN" = {
         ingress = [
             {
-                # cidr_ipv4 = "value"
                 description = "SHARED-80-IN"
                 from_port = 80
                 to_port = 80
                 prefix_list_id = "JD-HOME-LAB"
                 protocol = "tcp"
-                # referenced_security_group_id = ""
+                tags = {
+                    TAG = "This tag is from SHARED_SECURITY_GROUP_RULES > WEB-FRONTEND-IN > INGRESS > SHARED-80-IN"
+                }
             },
             {
-                # cidr_ipv4 = "value"
                 description = "SHARED-443-IN"
                 from_port = 443
                 to_port = 443
                 prefix_list_id = "JD-HOME-LAB"
                 protocol = "tcp"
-                # referenced_security_group_id = ""
+                tags = {
+                    TAG = "This tag is from SHARED_SECURITY_GROUP_RULES > WEB-FRONTEND-IN > INGRESS > SHARED-443-IN"
+                }
             }
         ]
         egress = []
@@ -426,67 +390,57 @@ shared_security_group_rules = {
         ingress = []
         egress = [
             {
-            description = "SHARED-ANY-OUT"
-            protocol = "-1"
-            cidr_ipv4 = "0.0.0.0/0"
+                description = "SHARED-ANY-OUT"
+                protocol = "-1"
+                cidr_ipv4 = "0.0.0.0/0"
+                tags = {
+                    TAG = "This tag is from SHARED_SECURITY_GROUP_RULES > ANY-OUT > EGRESS > SHARED-ANY-OUT"
+                }
             }
         ]
     }
-    # "DB-RULES" = {
-    #     ingress = [
-    #         {
-    #             description = "123-IN-NEW"
-    #             from_port = 123
-    #             to_port = 123
-    #             protocol = "tcp"
-    #             prefix_list_id = "JD-HOME-LAB"
-    #             cidr_ipv4 =  "10.0.0.0/16" 
-    #         },
-    #         {
-    #             description = "456-IN"
-    #             from_port = 456
-    #             to_port = 456
-    #             protocol = "tcp"
-    #             cidr_ipv4 =  "10.0.0.0/16" 
-    #         },
-    #         {
-    #             description = "789-IN"
-    #             from_port = 789
-    #             to_port = 789
-    #             protocol = "tcp"
-    #             referenced_security_group_id = "SG-2-WEB"
-    #             cidr_ipv4 =  "10.0.0.0/16" 
-    #         },
-    #         {
-    #             description = "789-IN"
-    #             from_port = 789
-    #             to_port = 789
-    #             protocol = "tcp"
-    #             cidr_ipv4 =  "10.0.0.0/16" 
-    #         }
-    #     ]
-    #     egress = [
-    #         {
-    #             description = "987-OUT"
-    #             from_port = 987
-    #             to_port = 987
-    #             protocol = "tcp"
-    #             referenced_security_group_id = "SG-2-WEB"
-    #             cidr_ipv4 =  "10.0.0.0/16" 
-    #         },
-    #         {
-    #             description = "654-IN"
-    #             from_port = 654
-    #             to_port = 654
-    #             protocol = "tcp"
-    #             prefix_list_id = "JD-HOME-LAB"
-    #             cidr_ipv4 =  "10.0.0.0/16" 
-    #         }
-    #     ]
-    # }
-    # "APP-RULES" = {
-    #     ingress = []
-    #     egress = []
-    # }
+    "WEB-BACKEND-IN" = {
+        ingress = [
+            {
+                description = "SHARED-8080-IN"
+                from_port = 8080
+                to_port = 8080
+                protocol = "tcp"
+                # prefix_list_id = "JD-HOME-LAB"
+                referenced_security_group_id = "db_server"
+                cidr_ipv4 =  "10.0.0.0/16"
+                tags = {
+                    TAG = "This tag is from SHARED_SECURITY_GROUP_RULES > WEB-BACKEND-IN > INGRESS > SHARED-8080-IN"
+                }
+            },
+            {
+                description = "SHARED-4567-IN"
+                from_port = 4567
+                to_port = 4567
+                protocol = "tcp"
+                referenced_security_group_id = "db_server"
+                cidr_ipv4 =  "10.0.0.0/16"
+                tags = {
+                    TAG = "This tag is from SHARED_SECURITY_GROUP_RULES > WEB-BACKEND-IN > INGRESS > SHARED-4567-IN"
+                }
+            }
+        ]
+        egress = []
+    }
+    "DB-IN" = {
+        ingress = [
+            {
+                description = "SHARED-1433-IN"
+                from_port = 1433
+                to_port = 1433
+                protocol = "tcp"
+                cidr_ipv4 =  "10.0.0.0/16"
+                tags = {
+                    TAG = "This tag is from SHARED_SECURITY_GROUP_RULES > DB-IN > INGRESS > SHARED-1433-IN"
+                }
+            },
+        ]
+        egress = []
+    }
 }
 

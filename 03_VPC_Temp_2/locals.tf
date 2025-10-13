@@ -3,13 +3,14 @@
 locals {
   subnet_map = merge(
     [for vpc_key, vpc_obj in var.vpc_config :
-      { for subnet_key, subnet_obj in vpc_obj.subnets :
-        "${vpc_key}__${subnet_key}" => 
-          merge(subnet_obj, { 
+      {for subnet_key, subnet_obj in vpc_obj.subnets :
+        "${vpc_key}__${subnet_key}" => merge(
+          subnet_obj, { 
             vpc_key = vpc_key, 
             subnet_key = subnet_key,
             az = var.az_lookup[var.aws_region][subnet_obj.az]
-          })
+          }
+        )
       }
   ]...)
 }
@@ -173,41 +174,58 @@ locals {
   }
 }
 
-/* locals {
-  # FOR DIAGNOSTICS
-  # VARIETY OF SCENARIOS
+locals {
+  # DEBUGS // DIAGNOSTICS
+  # ---------------------
 
-  subnets_without_matching_route_tables = [
-    for subnet_key, subnet in local.subnet_map : 
-    subnet_key if subnet.associate_route_table && !can(local.route_table_map[subnet_key])
-  ]
-
-  unused_route_tables_without_matching_subnet = [
-    for route_table_key, route_table_object in var.route_table_config : 
-    route_table_key if !can(local.subnet_map[route_table_key])
-  ]
-
-  nat_gw_route_plans_without_viable_nat_gw_target = [
-    for route_table_key, route_table_object in local.route_table_map : 
-    route_table_key if route_table_object.inject_nat && !can(local.nat_gw_by_vpc[route_table_object.vpc_key][0])
-  ]
-
-  igw_route_plans_without_viable_igw_target = [
-    for route_table_key, route_table_object in local.route_table_map : 
-    route_table_key if route_table_object.inject_igw && !can(local.vpc_to_igw_lookup_map[route_table_object.vpc_key])
-  ]
-
-  nat_gw_subnets_without_igw = [
+  nat_gw_subnets_without_igw_route = [
     for subnet_key, subnet in local.subnet_map :
     subnet_key if subnet.create_nat_gw && !can(local.subnet_has_igw_route[subnet_key])
   ]
+
+  igw_route_plans_without_viable_igw_target = [
+    for rti_key, rti_obj in local.route_table_intent_map : 
+    "VPC: ${rti_obj.vpc_key} > SUBNET: ${rti_obj.subnet_key} > ROUTING_POLICY: ${rti_obj.routing_policy_name}" 
+    if rti_obj.routing_policy.inject_igw && !can(local.vpc_to_igw_lookup_map[rti_obj.vpc_key])
+  ]
+
+  nat_gw_route_plans_without_viable_nat_gw_target = [
+    for rti_key, rti_obj in local.route_table_intent_map :
+    "VPC: ${rti_obj.vpc_key} > SUBNET: ${rti_obj.subnet_key} > ROUTING_POLICY: ${rti_obj.routing_policy_name}" 
+    if rti_obj.routing_policy.inject_nat && !can(local.nat_gw_by_vpc[rti_obj.vpc_key][0])
+  ]
+
+  subnets_with_routing_policy_override_success = [
+    for rt_key, rt_obj in local.route_table_map :
+    "${rt_key}: > Override Lookup OK" if rt_obj.override_routing_policy && contains(keys(var.route_table_config), rt_obj.subnet_map_key)
+  ]
+
+  subnets_with_routing_policy_override_failure = [
+    for rt_key, rt_obj in local.route_table_map : 
+    "${rt_key}: > Override lookup FAILED. Check: 'var.route_table_config'" if rt_obj.override_routing_policy && !contains(keys(var.route_table_config), rt_obj.subnet_map_key)
+  ]
+
+  disassociated_route_tables = [
+    for rt_key, rt_obj in local.route_table_map : 
+    "${rt_key}: > associate_routing_policy = FALSE" if !rt_obj.associate_routing_policy
+  ]
+
+  subnets_not_in_subnet_route_table_association = [
+    for subnet in keys(local.subnet_map) : subnet 
+    if !contains([for associated in local.subnet_route_table_associations : associated.subnet_id], subnet)
+  ]
+
+  eni_eips_without_igw_route = [
+    for eip_map_key, eip_map_obj in local.valid_eni_map : eip_map_key 
+    if eip_map_obj.assign_eip && !lookup(local.subnet_has_igw_route, eip_map_obj.subnet_id, false)
+  ]
 }
- */
+
 # EC2 instances
 # -------------
 locals {
-  valid_ec2_instance_map_v2 = {
-    for ec2_key, ec2_obj in var.ec2_config_v2 : ec2_key => ec2_obj if (
+  valid_ec2_instance_map = {
+    for ec2_key, ec2_obj in var.ec2_config : ec2_key => ec2_obj if (
       # contains(keys(ec2_obj.network_interfaces), "nic0") &&
       # length(distinct([for eni_key, eni_obj in ec2_obj.network_interfaces : eni_obj.vpc])) == 1 &&
       alltrue([for eni_key, eni_obj in ec2_obj.network_interfaces : contains(keys(var.vpc_config), eni_obj.vpc)]) &&
@@ -216,30 +234,15 @@ locals {
   }
 }
 
-# ENI ATTACHMENTS
-# ---------------
-locals {
-  valid_eni_attachments_v2 = {
-    for eni_map_key, eni_map_obj in local.valid_eni_map_v2 : eni_map_key => {
-        instance_id           = eni_map_obj.ec2_key
-        network_interface_id  = eni_map_key
-        device_index          = eni_map_obj.index
-      }
-    if eni_map_obj.index > 0
-  } 
-} 
-
-
-
 # ELASTIC NETWORK INTERFACES (ENIs)
 # ---------------------------------
 locals {
-  valid_eni_map_v2 = merge([ 
-    for ec2_key, ec2_obj in local.valid_ec2_instance_map_v2 : {for eni_key, eni_obj in ec2_obj.network_interfaces : "${ec2_key}__${eni_key}" => merge(
+  valid_eni_map = merge([ 
+    for ec2_key, ec2_obj in local.valid_ec2_instance_map : {for eni_key, eni_obj in ec2_obj.network_interfaces : "${ec2_key}__${eni_key}" => merge(
     eni_obj, {
       subnet_id       = "${eni_obj.vpc}__${eni_obj.subnet}"
       ec2_key         = ec2_key
-      ec2_nic_ref     = eni_key
+      ec2_nic_key     = eni_key
       index           = tonumber(substr(eni_key, length(eni_key) - 1, 1))
       security_groups = [for sg in coalesce(eni_obj.security_groups, []) : sg if contains(keys(local.valid_security_group_map), sg)]
     },
@@ -264,27 +267,47 @@ locals {
   ]...)
 } 
 
+# ENI ELASTIC IPs
+# ---------------
 locals {
-  valid_eni_eip_map_v2 = {
-    for eip_map_key, eip_map_obj in local.valid_eni_map_v2 : eip_map_key => {
+  valid_eni_eip_map = {
+    for eip_map_key, eip_map_obj in local.valid_eni_map : eip_map_key => {
       assign_eip            = eip_map_obj.assign_eip
       subnet_id             = eip_map_obj.subnet_id
       subnet_has_igw_route  = lookup(local.subnet_has_igw_route, eip_map_obj.subnet_id, false)
+      tags                  = eip_map_obj.tags
     } if eip_map_obj.assign_eip && lookup(local.subnet_has_igw_route, eip_map_obj.subnet_id, false)
   }
 } 
 
-
 locals {
   primary_nic_name = "nic0"
+}
 
+# Reverse lookup map of ENI keys by EC2 instances
+# -----------------------------------------------
+locals {
   ec2_eni_lookup_map = {
-    for ec2_key, ec2_obj in local.valid_ec2_instance_map_v2 : ec2_key => {
-      for eni_map_key, eni_map_obj in local.valid_eni_map_v2 : eni_map_obj.ec2_nic_ref => eni_map_key
+    for ec2_key, ec2_obj in local.valid_ec2_instance_map : ec2_key => {
+      for eni_map_key, eni_map_obj in local.valid_eni_map : eni_map_obj.ec2_nic_key => eni_map_key
       if eni_map_obj.ec2_key == ec2_key
     }
   }
 }
+
+# ENI ATTACHMENTS
+# ---------------
+locals {
+  valid_eni_attachments = {
+    for eni_map_key, eni_map_obj in local.valid_eni_map : eni_map_key => {
+        instance_id           = eni_map_obj.ec2_key
+        network_interface_id  = eni_map_key
+        device_index          = eni_map_obj.index
+      }
+    if eni_map_obj.index > 0
+  } 
+} 
+
 
 #
 # Prefix Lists

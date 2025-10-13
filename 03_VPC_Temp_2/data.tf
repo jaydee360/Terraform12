@@ -20,13 +20,13 @@ data "aws_route_table" "default" {
   }
 }
 
-data "aws_route_tables" "all" {
-  for_each = aws_vpc.main
-  filter {
-    name = "vpc-id"
-    values = [each.value.id]
-  }
-}
+# data "aws_route_tables" "all" {
+#   for_each = aws_vpc.main
+#   filter {
+#     name = "vpc-id"
+#     values = [each.value.id]
+#   }
+# }
 
 # data "aws_route_table" "each" {
 #   for_each = toset(data.aws_route_tables.all["vpc-lab-dev-000"].ids)

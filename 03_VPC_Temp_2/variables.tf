@@ -92,7 +92,7 @@ variable "route_table_config" {
   }
 }
 
-variable "ec2_config_v2" {
+variable "ec2_config" {
   type = map(object({
     ami = string,
     instance_type = string,
@@ -113,18 +113,18 @@ variable "ec2_config_v2" {
   }))
   validation {
     condition = alltrue([
-      for ec2_obj in var.ec2_config_v2 : contains(keys(ec2_obj.network_interfaces), "nic0")
+      for ec2_obj in var.ec2_config : contains(keys(ec2_obj.network_interfaces), "nic0")
     ])
     error_message = "Each EC2 instance must define 'nic0' (primary network interface)"
   }
   validation {
     condition = alltrue([
-      for ec2_obj in var.ec2_config_v2 : length(distinct([for eni_key, eni_obj in ec2_obj.network_interfaces : eni_obj.vpc])) == 1])
+      for ec2_obj in var.ec2_config : length(distinct([for eni_key, eni_obj in ec2_obj.network_interfaces : eni_obj.vpc])) == 1])
     error_message = "Each EC2 instance must have all its network interfaces in the same VPC"
   }
   validation {
     condition = alltrue([
-      for ec2_obj in var.ec2_config_v2 : 
+      for ec2_obj in var.ec2_config : 
       alltrue([
         for eni_key, eni_obj in ec2_obj.network_interfaces : 
         contains(keys(local.subnet_map), "${eni_obj.vpc}__${eni_obj.subnet}")
@@ -140,7 +140,7 @@ variable "ec2_config_v2" {
   }
   validation {
     condition = alltrue(flatten([
-      for ec2_obj in var.ec2_config_v2 : [for eni_key in keys(ec2_obj.network_interfaces) :
+      for ec2_obj in var.ec2_config : [for eni_key in keys(ec2_obj.network_interfaces) :
         can(regex("^nic[0-9]$", eni_key))
       ]
     ]))
@@ -154,7 +154,7 @@ variable "ec2_config_v2" {
   /*   
     validation {
       condition = alltrue([
-        for ec2_obj in var.ec2_config_v2 : (
+        for ec2_obj in var.ec2_config : (
           alltrue([for eni_key, eni_obj in ec2_obj.network_interfaces : contains(keys(var.vpc_config), eni_obj.vpc)]) &&
           alltrue([for eni_key, eni_obj in ec2_obj.network_interfaces : contains(keys(local.subnet_map), "${eni_obj.vpc}__${eni_obj.subnet}")])
         )])
@@ -190,6 +190,7 @@ variable "security_group_config" {
       referenced_security_group_id = optional(string)
       prefix_list_id = optional(string)
       cidr_ipv4 = optional(string)
+      tags = optional(map(string), null)
     })))
     egress_ref = optional(string)
     egress = optional(list(object({
@@ -200,6 +201,7 @@ variable "security_group_config" {
       referenced_security_group_id = optional(string)
       prefix_list_id = optional(string)
       cidr_ipv4 = optional(string)
+      tags = optional(map(string), null)
     })))
     tags = optional(map(string), null)
   }))
@@ -215,6 +217,7 @@ variable "shared_security_group_rules" {
       referenced_security_group_id = optional(string)
       prefix_list_id = optional(string)
       cidr_ipv4 = optional(string)
+      tags = optional(map(string), null)
     }))
     egress = list(object({
       description = string
@@ -224,6 +227,7 @@ variable "shared_security_group_rules" {
       referenced_security_group_id = optional(string)
       prefix_list_id = optional(string)
       cidr_ipv4 = optional(string)
+      tags = optional(map(string), null)
     }))
   }))
 }
