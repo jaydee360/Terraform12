@@ -14,6 +14,55 @@ locals {
       }
   ]...)
 }
+/* 
+locals {
+  subnets_by_pattern = {
+    for pattern in ["public", "private"] : pattern => [
+      for subnet_key in sort([
+        for k, v in local.subnet_map : k
+        if lookup(v.tags, "type", "") == pattern
+      ]) : subnet_key
+    ]
+  }
+
+  subnets_by_pattern_2 = {
+    for grp_key in ["public", "private"] : grp_key => [
+      for subnet_key in [
+        for sn_key, sn_obj in local.subnet_map : sn_key
+        if lookup(sn_obj.tags, "type", "") == grp_key
+      ] : subnet_key
+    ]
+  }
+
+  subnets_by_pattern_3 = {
+    for grp_key in ["public", "private"] : grp_key => [
+      for subnet_key, subnet_obj in local.subnet_map : subnet_key
+        if lookup(subnet_obj.tags, "type", "") == grp_key
+    ]
+  }
+
+  subnets_by_pattern_4 = {
+    for grp_key in ["public", "private"] : grp_key => {
+      for subnet_key, subnet_obj in local.subnet_map : subnet_key =>
+      {
+        az = subnet_obj.az
+      }
+        if lookup(subnet_obj.tags, "type", "") == grp_key
+    }
+  }
+
+  subnets_by_pattern_5 = {
+    for grp_key in ["public", "private"] : grp_key => [
+      for subnet_key, subnet_obj in local.subnet_map : 
+      {
+        key = subnet_key
+        az = subnet_obj.az
+      }
+        if lookup(subnet_obj.tags, "type", "") == grp_key
+    ]
+  }
+} */
+
 
 # IGWs
 # ----

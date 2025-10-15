@@ -48,8 +48,6 @@
    <br>   
    <br>   
 
-
-
 # Step-by-Step Challenge Part 2: EC2 Placement and Network Alignment
 ## Step 6: Define EC2 Instance Configuration
 Create a new input variable to define EC2 instances:
