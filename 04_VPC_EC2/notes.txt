@@ -1,0 +1,154 @@
+
+# {X = [derive X] : 
+#   X => {Y = [derive Y if Y = X (1 parent)] :
+#     Y => {Z = [derive Z if Z = X && Z = Y (2 parents)] : 
+#       Z => [derive item if Z = Z && Z = Y && Z = X (3 parents)]
+#     }
+#   }
+# }
+
+# Reads narrationally:
+# - Level 1 (X): You derive a distinct set of X keys from your source list.
+# - Level 2 (Y): For each X, you derive a distinct set of Y keys that are children of X.
+# - Level 3 (Z): For each Y (within X), you derive a distinct set of Z keys that are children of both X and Y.
+# - Final items: For each Z (within Y and X), you collect the items that match all three parent keys.
+
+# This mirrors the logic of:
+# - routing_policy_name → vpc_key → az → [subnet_key]
+# - or more generally: L1 → L2 → L3 → [items]
+
+# to derive each of X, Y and Z we do this@
+# - X: distinct([for rti_element in local.minimal_rti_list : rti_element.routing_policy_name])
+# - Y: distinct([for rti_element in local.minimal_rti_list : rti_element.vpc_key])
+# - Z: distinct([for rti_element in local.minimal_rti_list : rti_element.az])
+
+
+/*   
+    ONE_LEVEL_GROUPING_by_ROUTING_POLICY_NAME = {
+        for L1_KEY in distinct([for rti_element in local.minimal_rti_list : rti_element.routing_policy_name]) : # get L1_KEY
+        L1_KEY => [for rti_element in local.minimal_rti_list : rti_element.subnet_key if rti_element.routing_policy_name == L1_KEY]
+    } 
+*/
+
+/*
+    TWO_LEVEL_GROUPING_by_ROUTING_POLICY_NAME_and_VPC_KEY = {
+        for L1_KEY in distinct([for rti_element in local.minimal_rti_list : rti_element.routing_policy_name]) : # get L1_KEY
+        L1_KEY => {for L2_KEY in distinct([for rti_element in local.minimal_rti_list : rti_element.vpc_key if rti_element.routing_policy_name == L1_KEY]) :
+            L2_KEY => [for rti_element in local.minimal_rti_list : rti_element.subnet_key if rti_element.routing_policy_name == L1_KEY && rti_element.vpc_key == L2_KEY]
+        }
+    } 
+*/
+
+/*   
+    THREE_LEVEL_GROUPING_by_ROUTING_POLICY_NAME_and_VPC_KEY_and_AZ = {
+        for L1_KEY in distinct([for rti_element in local.minimal_rti_list : rti_element.routing_policy_name]) : # get L1_KEY
+        L1_KEY => {for L2_KEY in distinct([for rti_element in local.minimal_rti_list : rti_element.vpc_key if rti_element.routing_policy_name == L1_KEY]) : 
+            L2_KEY => {for L3_KEY in distinct([for rti_element in local.minimal_rti_list : rti_element.az if rti_element.routing_policy_name == L1_KEY && rti_element.vpc_key == L2_KEY]) :
+                L3_KEY => [for rti_element in local.minimal_rti_list : rti_element.subnet_key if rti_element.routing_policy_name == L1_KEY && rti_element.vpc_key == L2_KEY && rti_element.az == L3_KEY]
+            }
+        }
+    } 
+*/
+
+
+
+
+# # EC2 instances
+# # -------------
+# locals {
+#   valid_ec2_instance_map = {
+#     for ec2_key, ec2_obj in var.ec2_config : ec2_key => ec2_obj if (
+#       # contains(keys(ec2_obj.network_interfaces), "nic0") &&
+#       # length(distinct([for eni_key, eni_obj in ec2_obj.network_interfaces : eni_obj.vpc])) == 1 &&
+#       alltrue([for eni_key, eni_obj in ec2_obj.network_interfaces : contains(keys(var.vpc_config), eni_obj.vpc)]) &&
+#       alltrue([for eni_key, eni_obj in ec2_obj.network_interfaces : contains(keys(local.subnet_map), "${local.subnet_prefix}${eni_obj.vpc}__${eni_obj.subnet}")])
+#     )
+#   }
+
+# #   ec2_inst_map = {for key, obj in var.ec2_instances : key => obj}
+# # }
+# # {for key, obj in var.ec2_instances : key => obj}
+# # {for key, obj in var.ec2_instances : key => merge(var.ec2_profiles[obj.ec2_profile], obj)}
+
+# # {for key, obj in var.ec2_instances : key => merge(
+# #   var.ec2_profiles[obj.ec2_profile], 
+# #   obj, {
+# #     network_interfaces = merge(
+# #       var.ec2_profiles[obj.ec2_profile].network_interfaces.nic0,
+# #       obj.network_interfaces.nic0
+# #     )
+# #   }
+# # )}
+
+# # {for inst_key, inst_obj in var.ec2_instances : inst_key => merge(
+# #   var.ec2_profiles[inst_obj.ec2_profile], 
+# #   inst_obj, {
+# #     network_interfaces = {for nic_key, nic_obj in inst_obj.network_interfaces : nic_key => merge(
+# #       var.ec2_profiles[inst_obj.ec2_profile].network_interfaces[nic_key],
+# #       inst_obj.network_interfaces[nic_key]
+# #     )}
+# #   }
+# # )}
+
+#   merged_ec2_instance_map = {
+#     for inst_key, inst_obj in var.ec2_instances : inst_key => merge(
+#       var.ec2_profiles[inst_obj.ec2_profile], 
+#       inst_obj, {
+#         network_interfaces = tomap({for nic_key, nic_obj in inst_obj.network_interfaces : nic_key => merge(
+#           try(var.ec2_profiles[inst_obj.ec2_profile].network_interfaces[nic_key], {}),
+#           nic_obj
+#         )})
+#       }
+#     )
+#   }
+
+#   merged_ec2_instance_map_2 = {
+#     for inst_key, inst_obj in var.ec2_instances : inst_key => merge(
+#       var.ec2_profiles[inst_obj.ec2_profile], 
+#       inst_obj, {
+#         network_interfaces = tomap({for nic_key, nic_obj in inst_obj.network_interfaces : nic_key => merge(
+#           try(var.ec2_profiles[inst_obj.ec2_profile].network_interfaces[nic_key], {}),
+#           {
+#             for key, value in nic_obj : key => value if !(value == null || (key == "assign_eip" && value == false))
+#           }
+#         )})
+#       }
+#     )
+#   }
+
+#   merged_ec2_instance_map_3 = {
+#   for inst_key, inst_obj in var.ec2_instances : inst_key => merge(
+#     var.ec2_profiles[inst_obj.ec2_profile],
+#     inst_obj,
+#     {
+#       network_interfaces = {for nic_key in distinct(concat(
+#           keys(try(var.ec2_profiles[inst_obj.ec2_profile].network_interfaces, {})),
+#           keys(inst_obj.network_interfaces)
+#         )) : nic_key => merge(
+#           try(var.ec2_profiles[inst_obj.ec2_profile].network_interfaces[nic_key], {}),
+#           {
+#             for key, value in try(inst_obj.network_interfaces[nic_key], {}) : key => value if value != null
+#           }
+#         )
+#       }
+#     }
+#   )
+# }
+
+#   merged_ec2_instance_map_4 = {
+#     for inst_key, inst_obj in var.ec2_instances : inst_key => merge(
+#       var.ec2_profiles[inst_obj.ec2_profile], 
+#       inst_obj, {
+#         network_interfaces = {for nic_key, nic_obj in inst_obj.network_interfaces : nic_key => merge(
+#           try(var.ec2_profiles[inst_obj.ec2_profile].network_interfaces[nic_key], {}),
+#           {
+#             for key, value in nic_obj : key => value if value != null 
+#           }
+#         )}
+#       }
+#     )
+#   }
+
+# }
+
+
