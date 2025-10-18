@@ -556,3 +556,73 @@ shared_security_group_rules = {
     }
 }
 
+security_groups = {
+    "webserver_frontend" = {
+        vpc_id      = "vpc_000"
+        description = "webserver_frontend SG"
+        ingress_ref = ["WEB_FRONTEND_IN", "ADMIN_IN"]
+        egress_ref = ["ANY_OUT"]
+        tags = {
+            TAG = "SECURITY_GROUPS > WEBSERVER_FRONTEND"
+        }
+    }
+}
+
+security_group_rule_sets = {
+    "WEB_FRONTEND_IN" = [
+        {
+            description = "SHARED-80-IN"
+            from_port = 80
+            to_port = 80
+            cidr_ipv4 =  "0.0.0.0/0"
+            ip_protocol = "tcp"
+            tags = {
+                TAG = "SECURITY_GROUP_RULES > WEB-FRONTEND-IN > SHARED-80-IN"
+            }
+        },
+        {
+            description = "SHARED-443-IN"
+            from_port = 443
+            to_port = 443
+            cidr_ipv4 =  "0.0.0.0/0"
+            ip_protocol = "tcp"
+            tags = {
+                TAG = "SECURITY_GROUP_RULES > WEB-FRONTEND-IN > SHARED-443-IN"
+            }
+        }
+    ]
+    "ADMIN_IN" = [
+        {
+            description = "SHARED-SSH-IN"
+            from_port = 22
+            to_port = 22
+            referenced_security_group_id = "JDTEST"
+            prefix_list_id = "JD-HOME-LAB"
+            ip_protocol = "tcp"
+            tags = {
+                TAG = "SECURITY_GROUP_RULES > ADMIN-IN > SHARED-SSH-IN"
+            }
+        },
+        {
+            description = "SHARED-RDP-IN"
+            from_port = 3389
+            to_port = 3389
+            referenced_security_group_id = "JDTEST"
+            prefix_list_id = "JD-HOME-LAB"
+            ip_protocol = "tcp"
+            tags = {
+                TAG = "SECURITY_GROUP_RULES > ADMIN-IN > SHARED-RDP-IN"
+            }
+        }
+    ]
+    "ANY_OUT" = [
+        {
+            description = "ANY-OUT"
+            ip_protocol = "-1"
+            cidr_ipv4 = "0.0.0.0/0"
+            tags = {
+                TAG = "SECURITY_GROUP_RULES > ANY-OUT > SHARED-ANY-OUT"
+            }
+        }
+    ]
+}

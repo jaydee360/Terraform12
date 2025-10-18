@@ -100,16 +100,16 @@ variable "ec2_profiles" {
     ]))
     error_message = "Network interface keys in ec2_profiles must follow the 'nicN' naming convention (e.g., 'nic0', 'nic1')."
   }
-  validation {
-    condition = alltrue([
-      for ec2_obj in var.ec2_profiles : alltrue([
-        for eni_key, eni_obj in ec2_obj.network_interfaces :
-        eni_obj.security_groups == null ? true :
-        alltrue([for sg in eni_obj.security_groups : contains(keys(var.security_group_config), sg)])
-      ])
-    ])
-    error_message = "One or more EC2 network interfaces reference unknown security groups. Check var.security_group_config."
-  }
+  # validation {
+  #   condition = alltrue([
+  #     for ec2_obj in var.ec2_profiles : alltrue([
+  #       for eni_key, eni_obj in ec2_obj.network_interfaces :
+  #       eni_obj.security_groups == null ? true :
+  #       alltrue([for sg in eni_obj.security_groups : contains(keys(var.security_group_config), sg)])
+  #     ])
+  #   ])
+  #   error_message = "One or more EC2 network interfaces reference unknown security groups. Check var.security_group_config."
+  # }
 
 }
 
@@ -228,8 +228,6 @@ variable "ec2_config" {
   */
 }
 
-
-
 variable "prefix_list_config" {
   type = map(object({
     name = string
@@ -299,7 +297,28 @@ variable "shared_security_group_rules" {
   }))
 }
 
+variable "security_groups" {
+  type = map(object({
+    description = optional(string)
+    vpc_id = string
+    ingress_ref = list(string)
+    egress_ref = list(string)
+    tags = optional(map(string), null)
+  }))
+}
 
+variable "security_group_rule_sets" {
+  type = map(list(object({
+    description = optional(string)
+    from_port = optional(number)
+    to_port = optional(number)
+    ip_protocol = string
+    referenced_security_group_id = optional(string)
+    prefix_list_id = optional(string)
+    cidr_ipv4 = optional(string)
+    tags = optional(map(string), null)
+  })))
+}
 
 
 

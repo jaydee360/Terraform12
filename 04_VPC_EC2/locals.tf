@@ -15,54 +15,6 @@ locals {
       }
   ]...)
 }
-/* 
-locals {
-  subnets_by_pattern = {
-    for pattern in ["public", "private"] : pattern => [
-      for subnet_key in sort([
-        for k, v in local.subnet_map : k
-        if lookup(v.tags, "type", "") == pattern
-      ]) : subnet_key
-    ]
-  }
-
-  subnets_by_pattern_2 = {
-    for grp_key in ["public", "private"] : grp_key => [
-      for subnet_key in [
-        for sn_key, sn_obj in local.subnet_map : sn_key
-        if lookup(sn_obj.tags, "type", "") == grp_key
-      ] : subnet_key
-    ]
-  }
-
-  subnets_by_pattern_3 = {
-    for grp_key in ["public", "private"] : grp_key => [
-      for subnet_key, subnet_obj in local.subnet_map : subnet_key
-        if lookup(subnet_obj.tags, "type", "") == grp_key
-    ]
-  }
-
-  subnets_by_pattern_4 = {
-    for grp_key in ["public", "private"] : grp_key => {
-      for subnet_key, subnet_obj in local.subnet_map : subnet_key =>
-      {
-        az = subnet_obj.az
-      }
-        if lookup(subnet_obj.tags, "type", "") == grp_key
-    }
-  }
-
-  subnets_by_pattern_5 = {
-    for grp_key in ["public", "private"] : grp_key => [
-      for subnet_key, subnet_obj in local.subnet_map : 
-      {
-        key = subnet_key
-        az = subnet_obj.az
-      }
-        if lookup(subnet_obj.tags, "type", "") == grp_key
-    ]
-  }
-} */
 
 # IGWs
 # ----
@@ -125,8 +77,9 @@ locals {
   }
 }
 
+# REVERSE LOOKUP / SUBNET BY ROUTING POLICY > VPC > AZ
+# ----------------------------------------------------
 locals {
-
   minimal_rti_list = [
     for rti_key, rti_obj in local.route_table_intent_map : {
       routing_policy_name = rti_obj.routing_policy_name
@@ -136,18 +89,6 @@ locals {
     }
   ]
 
-  subnet_lookup_by_routing_policy_vpc = {
-    for rp_grp_key in distinct([
-      for rti_key, rti_obj in local.route_table_intent_map : rti_obj.routing_policy_name
-    ]) : rp_grp_key => {
-      for vpc_grp_key in distinct([
-        for rti_key2, rti_obj2 in local.route_table_intent_map : rti_obj2.vpc_key if rti_obj2.routing_policy_name == rp_grp_key
-      ]) : vpc_grp_key => [
-        for rti_key3, rti_obj3 in local.route_table_intent_map : rti_obj3.subnet_key if rti_obj3.vpc_key == vpc_grp_key && rti_obj3.routing_policy_name == rp_grp_key
-      ]
-    }
-  }
-
   subnet_lookup_by_routing_policy_vpc_az = {
     for rp_grp in distinct([for rti_element in local.minimal_rti_list : rti_element.routing_policy_name]) :
     rp_grp => {for vpc_grp in distinct([for rti_element in local.minimal_rti_list : rti_element.vpc_key if rti_element.routing_policy_name == rp_grp]) : 
@@ -156,7 +97,6 @@ locals {
       } 
     }
   }
-
 }
 
 # IGW ROUTES
@@ -187,6 +127,7 @@ locals {
 # NAT-GW ROUTES
 # -------------
 # PRIMARY LOOKUP MAP
+# ------------------
 locals {
   natgw_lookup_map_by_vpc_az = {
     for vpc_grp_key in distinct([
@@ -204,6 +145,7 @@ locals {
 }
 
 # SECONDARY LOOKUP MAP
+# --------------------
 locals {
   natgw_lookup_map_by_vpc = {
     for vpc_grp_key in distinct([for nat_gw_key, nat_gw_obj in local.nat_gw_map : nat_gw_obj.vpc_key]) :
@@ -212,6 +154,7 @@ locals {
 }
 
 # NAT Gateway route plan (AZ-aware with fallback)
+# ----------------------------------------------0
 locals {
   nat_gw_route_prefix = "NATGW:"
   
@@ -240,8 +183,8 @@ locals {
 }
 
 locals {
-#   # DEBUGS // DIAGNOSTICS
-#   # ---------------------
+# DEBUGS // DIAGNOSTICS
+# ---------------------
 
   nat_gw_subnets_without_igw_route = [
     for subnet_key, subnet in local.subnet_map :
@@ -275,14 +218,14 @@ locals {
 # EC2 instances
 # -------------
 locals {
-  valid_ec2_instance_map_OLD = {
-    for ec2_key, ec2_obj in var.ec2_config : ec2_key => ec2_obj if (
-      # contains(keys(ec2_obj.network_interfaces), "nic0") &&
-      # length(distinct([for eni_key, eni_obj in ec2_obj.network_interfaces : eni_obj.vpc])) == 1 &&
-      alltrue([for eni_key, eni_obj in ec2_obj.network_interfaces : contains(keys(var.vpc_config), eni_obj.vpc)]) &&
-      alltrue([for eni_key, eni_obj in ec2_obj.network_interfaces : contains(keys(local.subnet_map), "${local.subnet_prefix}${eni_obj.vpc}__${eni_obj.subnet}")])
-    )
-  }
+  # valid_ec2_instance_map_OLD = {
+  #   for ec2_key, ec2_obj in var.ec2_config : ec2_key => ec2_obj if (
+  #     # contains(keys(ec2_obj.network_interfaces), "nic0") &&
+  #     # length(distinct([for eni_key, eni_obj in ec2_obj.network_interfaces : eni_obj.vpc])) == 1 &&
+  #     alltrue([for eni_key, eni_obj in ec2_obj.network_interfaces : contains(keys(var.vpc_config), eni_obj.vpc)]) &&
+  #     alltrue([for eni_key, eni_obj in ec2_obj.network_interfaces : contains(keys(local.subnet_map), "${local.subnet_prefix}${eni_obj.vpc}__${eni_obj.subnet}")])
+  #   )
+  # }
 
   merged_ec2_instance_map = {
     for inst_key, inst_obj in var.ec2_instances : inst_key => merge(
@@ -332,38 +275,38 @@ locals {
 }
 
 
-# # ELASTIC NETWORK INTERFACES (ENIs)
-# # ---------------------------------
-# locals {
-#   valid_eni_map = merge([ 
-#     for ec2_key, ec2_obj in local.valid_ec2_instance_map : {for eni_key, eni_obj in ec2_obj.network_interfaces : "${ec2_key}__${eni_key}" => merge(
-#     eni_obj, {
-#       subnet_id       = "${eni_obj.vpc}__${eni_obj.subnet}"
-#       ec2_key         = ec2_key
-#       ec2_nic_key     = eni_key
-#       index           = tonumber(substr(eni_key, length(eni_key) - 1, 1))
-#       security_groups = [for sg in coalesce(eni_obj.security_groups, []) : sg if contains(keys(local.valid_security_group_map), sg)]
-#     },
-#     eni_obj.private_ip_list_enabled == true && eni_obj.private_ip_list != null && length(eni_obj.private_ip_list) > 0 ? 
-#       {
-#         private_ip_list_enabled = eni_obj.private_ip_list_enabled
-#         private_ip_list         = eni_obj.private_ip_list
-#         private_ips_count       = null
-#       } : 
-#     eni_obj.private_ips_count != null && eni_obj.private_ips_count > 0 ? 
-#       {
-#         private_ip_list_enabled = null
-#         private_ip_list         = null
-#         private_ips_count       = eni_obj.private_ips_count
-#       } : 
-#       {
-#         private_ip_list_enabled = null
-#         private_ip_list         = null
-#         private_ips_count       = null
-#       }
-#     )}
-#   ]...)
-# } 
+# ELASTIC NETWORK INTERFACES (ENIs)
+# ---------------------------------
+locals {
+  # valid_eni_map = merge([ 
+  #   for ec2_key, ec2_obj in local.valid_ec2_instance_map : {for eni_key, eni_obj in ec2_obj.network_interfaces : "${ec2_key}__${eni_key}" => merge(
+  #   eni_obj, {
+  #     subnet_id       = "${eni_obj.vpc}__${eni_obj.subnet}"
+  #     ec2_key         = ec2_key
+  #     ec2_nic_key     = eni_key
+  #     index           = tonumber(substr(eni_key, length(eni_key) - 1, 1))
+  #     security_groups = [for sg in coalesce(eni_obj.security_groups, []) : sg if contains(keys(local.valid_security_group_map), sg)]
+  #   },
+  #   eni_obj.private_ip_list_enabled == true && eni_obj.private_ip_list != null && length(eni_obj.private_ip_list) > 0 ? 
+  #     {
+  #       private_ip_list_enabled = eni_obj.private_ip_list_enabled
+  #       private_ip_list         = eni_obj.private_ip_list
+  #       private_ips_count       = null
+  #     } : 
+  #   eni_obj.private_ips_count != null && eni_obj.private_ips_count > 0 ? 
+  #     {
+  #       private_ip_list_enabled = null
+  #       private_ip_list         = null
+  #       private_ips_count       = eni_obj.private_ips_count
+  #     } : 
+  #     {
+  #       private_ip_list_enabled = null
+  #       private_ip_list         = null
+  #       private_ips_count       = null
+  #     }
+  #   )}
+  # ]...)
+} 
 
 # # ENI ELASTIC IPs
 # # ---------------
@@ -407,14 +350,14 @@ locals {
 # } 
 
 
-# #
-# # Prefix Lists
-# # ------------
-# locals {
-#   prefix_list_map = {
-#     for pl_key, pl_obj in var.prefix_list_config : pl_key => pl_obj 
-#   }
-# }
+#
+# Prefix Lists
+# ------------
+locals {
+  prefix_list_map = {
+    for pl_key, pl_obj in var.prefix_list_config : pl_key => pl_obj 
+  }
+}
 
 # # SECURITY GROUP - VALIDATION
 # # ---------------------------
@@ -425,6 +368,9 @@ locals {
 locals {
   valid_security_group_map = {
     for sg_key, sg_obj in var.security_group_config : sg_key => sg_obj if contains(keys(var.vpc_config), sg_obj.vpc_id)
+  }
+  valid_security_group_map_v2 = {
+    for sg_key, sg_obj in var.security_groups : sg_key => sg_obj if contains(keys(var.vpc_config), sg_obj.vpc_id)
   }
 }
 
@@ -458,8 +404,8 @@ locals {
 # # - Deduplication integrity across inline and shared rules
 # # - Clean, deterministic resource creation
 
-# locals {
-#   hash_exclusions = ["description", "ref", "tags"]
+locals {
+  hash_exclusions = ["description", "rule_set_ref", "tags"]
 
 #   # NORMALISATION & ENRICHMENT (INLINE RULES - INGRESS)
 #   # ---------------------------------------------------
@@ -489,33 +435,56 @@ locals {
 #     ] : []
 #   ])
 
-#   # NORMALISATION & ENRICHMENT (REFERENCED RULES - INGRESS)
-#   # -------------------------------------------------------
-#   normalised_referenced_ingress_rules = flatten([
-#     for sg_key, sg_obj in local.valid_security_group_map : (sg_obj.ingress_ref != null && can(var.shared_security_group_rules[sg_obj.ingress_ref].ingress)) ?
-#     [for rule in var.shared_security_group_rules[sg_obj.ingress_ref].ingress : merge(rule, (
-#       (rule.referenced_security_group_id != null && contains(keys(local.valid_security_group_map), rule.referenced_security_group_id)) ? {
-#         # does not cuurent check the validity
-#         referenced_security_group_id  = rule.referenced_security_group_id
-#         prefix_list_id                = null
-#         cidr_ipv4                     = null
-#       } : 
-#       rule.prefix_list_id != null && contains(keys(local.prefix_list_map), rule.prefix_list_id) ? {
-#         referenced_security_group_id  = null
-#         # does not cuurent check the validity
-#         prefix_list_id                = rule.prefix_list_id
-#         cidr_ipv4                     = null
-#       } : {
-#         referenced_security_group_id  = null
-#         prefix_list_id                = null
-#         cidr_ipv4                     = rule.cidr_ipv4        
-#       }), 
-#       {
-#         sg_key  = sg_key
-#         ref     = true      
-#       })
-#     ] : []
-#   ])
+  # NORMALISATION & ENRICHMENT (REFERENCED RULES - INGRESS)
+  # -------------------------------------------------------
+  normalised_referenced_ingress_rules = flatten([
+    for sg_key, sg_obj in local.valid_security_group_map : (sg_obj.ingress_ref != null && can(var.shared_security_group_rules[sg_obj.ingress_ref].ingress)) ?
+    [for rule in var.shared_security_group_rules[sg_obj.ingress_ref].ingress : merge(rule, (
+      (rule.referenced_security_group_id != null && contains(keys(local.valid_security_group_map), rule.referenced_security_group_id)) ? {
+        # does not cuurent check the validity
+        referenced_security_group_id  = rule.referenced_security_group_id
+        prefix_list_id                = null
+        cidr_ipv4                     = null
+      } : 
+      rule.prefix_list_id != null && contains(keys(local.prefix_list_map), rule.prefix_list_id) ? {
+        referenced_security_group_id  = null
+        # does not cuurent check the validity
+        prefix_list_id                = rule.prefix_list_id
+        cidr_ipv4                     = null
+      } : {
+        referenced_security_group_id  = null
+        prefix_list_id                = null
+        cidr_ipv4                     = rule.cidr_ipv4        
+      }), 
+      {
+        sg_key  = sg_key
+        ref     = true      
+      })
+    ] : []
+  ])
+
+  normalised_ingress_ref_rules = flatten([
+    for sg_key, sg_obj in local.valid_security_group_map_v2 : [for rule_set in sg_obj.ingress_ref : [for rule in var.security_group_rule_sets[rule_set] : merge(
+      rule,
+      (rule.referenced_security_group_id != null) ? {
+        referenced_security_group_id  = rule.referenced_security_group_id
+        prefix_list_id                = null
+        cidr_ipv4                     = null
+      } : (rule.prefix_list_id != null) ? {
+        referenced_security_group_id  = null
+        prefix_list_id                = rule.prefix_list_id
+        cidr_ipv4                     = null
+      } : {
+        referenced_security_group_id  = null
+        prefix_list_id                = null
+        cidr_ipv4                     = rule.cidr_ipv4
+      },
+      {
+        sg_key  = sg_key,
+        rule_set_ref = rule_set
+      }
+    )] if length(sg_obj.ingress_ref) > 0]
+  ])
 
 #   # HASHING (INGRESS)
 #   # -----------------
@@ -525,11 +494,23 @@ locals {
 #     })
 #   ])
 
-#   hashed_referenced_ingress_rules = flatten([
-#     for rule in local.normalised_referenced_ingress_rules : merge(rule, {
-#       rule_hash = md5(jsonencode({for key, value in rule : key => value if !contains(local.hash_exclusions, key)}))
-#     })
-#   ])
+  # hashed_referenced_ingress_rules = flatten([
+  #   for rule in local.normalised_referenced_ingress_rules : merge(rule, {
+  #     rule_hash = md5(jsonencode({for key, value in rule : key => value if !contains(local.hash_exclusions, key)}))
+  #   })
+  # ])
+
+  hashed_ingress_ref_rules = flatten([
+    for rule_obj in local.normalised_ingress_ref_rules : 
+    merge(
+      rule_obj, 
+      {
+        rule_hash = md5(jsonencode(
+          {for key, value in rule_obj : key => value if !contains(local.hash_exclusions, key)}
+        ))
+      }
+    )
+  ])
 
 #   # AGGREGATION (INGRESS)
 #   # ---------------------
@@ -540,11 +521,17 @@ locals {
 #   # Build a map of unique ingress rules keyed by rule_hash
 #   # - Ensures deduplication and traceability
 #   # This map is used to create the actual 'aws_vpc_security_group_ingress_rule' resource
-#   ingress_rules_map = {
-#     for rule in distinct(local.all_ingress_rules) :
-#     rule.rule_hash => rule
-#   }
-# }
+  # ingress_rules_map = {
+  #   for rule in distinct(local.all_ingress_rules) :
+  #   rule.rule_hash => rule
+  # }
+
+  ingress_rules_map_v2 = {
+    for rule in distinct(local.hashed_ingress_ref_rules) :
+    rule.rule_hash => rule
+  }
+
+}
 
 # # SG EGRESS RULE AGGREGATION
 # # ---------------------------
