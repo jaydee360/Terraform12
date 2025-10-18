@@ -152,3 +152,44 @@
 # }
 
 
+# first loop through the SGs and make sure we can output the length
+[for sg_key, sg_obj in local.valid_security_group_map : length(sg_obj.ingress_ref) ]
+
+# outline logic for what happens base on the length, because this is the first thing we will check
+[for sg_key, sg_obj in local.valid_security_group_map : length(sg_obj.ingress_ref) == 0 ? true :
+    [INNER LOOP TO CHECK OF EACH REF] 
+]
+
+# inner logic to loop through each rule_set and check each is in keys of var.security_group_rule_sets
+# this fails with Error: Inconsistent conditional result types. The true and false result expressions must have consistent types. 
+# The 'true' value is bool, but the 'false' value is tuple.
+[for sg_key, sg_obj in local.valid_security_group_map : length(sg_obj.ingress_ref) == 0 ? true :
+    alltrue([for rule_set in sg_obj.ingress_ref : contains(keys(var.security_group_rule_sets), rule_set) ])
+]
+
+# if i want to see the results then i need to remove the ternary logic to prevent the inconsistent result types
+[for sg_key, sg_obj in local.valid_security_group_map : 
+    [for rule_set in sg_obj.ingress_ref : contains(keys(var.security_group_rule_sets), rule_set) ]
+]
+
+# if i want more diagnostic detail, use nested maps instead of nested lists
+{for sg_key, sg_obj in local.valid_security_group_map : sg_key => 
+    {for rule_set in sg_obj.ingress_ref : rule_set => contains(keys(var.security_group_rule_sets), rule_set) }
+}
+
+# if i want more diagnostic detail, use nested maps instead of nested lists
+merge(flatten([for sg_key, sg_obj in local.valid_security_group_map : 
+    {for rule_set in sg_obj.ingress_ref : "Security Group: >> ${sg_key} >> Invalid ingress rule set" => "${rule_set}" if !contains(keys(var.security_group_rule_sets), rule_set)}
+])...)
+
+# wrap the inner logic in an alltrue() to return a single bool rather than multiple bools for each iteration.
+# this avoids the error
+[for sg_key, sg_obj in local.valid_security_group_map : length(sg_obj.ingress_ref) == 0 ? true :
+    alltrue([for rule_set in sg_obj.ingress_ref : contains(keys(var.security_group_rule_sets), rule_set) ])
+]
+
+# wrap the whole expression in an alltrue() to meet the requirement of a validation rule
+alltrue([for sg_key, sg_obj in local.valid_security_group_map : length(sg_obj.ingress_ref) == 0 ? true :
+    alltrue([for rule_set in sg_obj.ingress_ref : contains(keys(var.security_group_rule_sets), rule_set) ])
+])
+

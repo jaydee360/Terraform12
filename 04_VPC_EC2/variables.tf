@@ -242,61 +242,6 @@ variable "prefix_list_config" {
   }))
 }
 
-variable "security_group_config" {
-  type = map(object({
-    description = string
-    vpc_id = string
-    ingress_ref = optional(string)
-    ingress = optional(list(object({
-      description = string
-      from_port = number
-      to_port = number
-      protocol = string
-      referenced_security_group_id = optional(string)
-      prefix_list_id = optional(string)
-      cidr_ipv4 = optional(string)
-      tags = optional(map(string), null)
-    })))
-    egress_ref = optional(string)
-    egress = optional(list(object({
-      description = string
-      from_port = optional(number)
-      to_port = optional(number)
-      protocol = string
-      referenced_security_group_id = optional(string)
-      prefix_list_id = optional(string)
-      cidr_ipv4 = optional(string)
-      tags = optional(map(string), null)
-    })))
-    tags = optional(map(string), null)
-  }))
-}
-
-variable "shared_security_group_rules" {
-  type = map(object({
-    ingress = list(object({
-      description = string
-      from_port = number
-      to_port = number
-      protocol = string
-      referenced_security_group_id = optional(string)
-      prefix_list_id = optional(string)
-      cidr_ipv4 = optional(string)
-      tags = optional(map(string), null)
-    }))
-    egress = list(object({
-      description = string
-      from_port = optional(number)
-      to_port = optional(number)
-      protocol = string
-      referenced_security_group_id = optional(string)
-      prefix_list_id = optional(string)
-      cidr_ipv4 = optional(string)
-      tags = optional(map(string), null)
-    }))
-  }))
-}
-
 variable "security_groups" {
   type = map(object({
     description = optional(string)
@@ -305,6 +250,24 @@ variable "security_groups" {
     egress_ref = list(string)
     tags = optional(map(string), null)
   }))
+  validation {
+    condition = alltrue([
+      for sg_key, sg_obj in var.security_groups : length(sg_obj.ingress_ref) == 0 ? true :
+      alltrue([
+        for rule_set in sg_obj.ingress_ref : contains(keys(var.security_group_rule_sets), rule_set)
+      ])
+    ])
+    error_message = "One or more security groups reference undefined INGRESS rule sets. All values in ingress_ref must match keys in var.security_group_rule_sets."
+  }
+  validation {
+    condition = alltrue([
+      for sg_key, sg_obj in var.security_groups : length(sg_obj.egress_ref) == 0 ? true :
+      alltrue([
+        for rule_set in sg_obj.egress_ref : contains(keys(var.security_group_rule_sets), rule_set)
+      ])
+    ])
+    error_message = "One or more security groups reference undefined EGRESS rule sets. All values in egress_ref must match keys in var.security_group_rule_sets."
+  }
 }
 
 variable "security_group_rule_sets" {

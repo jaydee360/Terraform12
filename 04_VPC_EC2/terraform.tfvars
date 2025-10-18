@@ -409,153 +409,6 @@ prefix_list_config = {
     }
 }
 
-security_group_config = {
-    "webserver_frontend" = {
-        vpc_id      = "vpc_000"
-        description = "webserver_frontend SG with inline rules"
-        ingress_ref = "WEB-FRONTEND-IN"
-        ingress = [
-            {
-                description = "80-IN"
-                from_port = 80
-                to_port = 80
-                protocol = "tcp"
-                prefix_list_id = "JD-HOME-LAB"
-                cidr_ipv4 =  "0.0.0.0/0"
-                tags = {
-                    TAG = "INLINE: This tag is from SECURITY_GROUP_CONFIG >  webserver_frontend > INGRESS > 80-IN"
-                }
-            },
-            {
-                description = "443-IN"
-                from_port = 443
-                to_port = 443
-                protocol = "tcp"
-                prefix_list_id = "JD-HOME-LAB"
-                cidr_ipv4 =  "0.0.0.0/0"
-                tags = {
-                    TAG = "INLINE: This tag is from SECURITY_GROUP_CONFIG >  webserver_frontend > INGRESS > 443-IN"
-                }
-            }
-        ]
-        egress_ref = "ANY-OUT"
-        egress = [
-            {
-                description = "ANY-ANY-OUT"
-                protocol = "-1"
-                cidr_ipv4 =  "0.0.0.0/0"
-                tags = {
-                    TAG = "INLINE: This tag is from SECURITY_GROUP_CONFIG >  WEB_01__NIC0_WEB > EGRESS > ANY-ANY-OUT"
-                }
-            }
-        ]
-        tags = {
-            TAG = "This tag is SECURITY_GROUP_CONFIG > webserver_frontend"
-        }
-    }
-    "webserver_backend" = {
-        vpc_id      = "vpc_000"
-        description = "webserver_backend SG with shared rules"
-        ingress_ref = "WEB-BACKEND-IN"
-        tags = {
-            TAG = "This tag is SECURITY_GROUP_CONFIG > webserver_frontend"
-        }
-    }
-    "db_server" = {
-        vpc_id      = "vpc_000"
-        description = "db_server SG with shared rules"
-        ingress_ref = "DB-IN"
-        egress_ref  = "ANY-OUT"
-        tags = {
-            TAG = "This tag is SECURITY_GROUP_CONFIG > db_server"
-        }
-    }
-}
-
-shared_security_group_rules = {
-    "WEB-FRONTEND-IN" = {
-        ingress = [
-            {
-                description = "SHARED-80-IN"
-                from_port = 80
-                to_port = 80
-                prefix_list_id = "JD-HOME-LAB"
-                protocol = "tcp"
-                tags = {
-                    TAG = "This tag is from SHARED_SECURITY_GROUP_RULES > WEB-FRONTEND-IN > INGRESS > SHARED-80-IN"
-                }
-            },
-            {
-                description = "SHARED-443-IN"
-                from_port = 443
-                to_port = 443
-                prefix_list_id = "JD-HOME-LAB"
-                protocol = "tcp"
-                tags = {
-                    TAG = "This tag is from SHARED_SECURITY_GROUP_RULES > WEB-FRONTEND-IN > INGRESS > SHARED-443-IN"
-                }
-            }
-        ]
-        egress = []
-    }
-    "ANY-OUT" = {
-        ingress = []
-        egress = [
-            {
-                description = "SHARED-ANY-OUT"
-                protocol = "-1"
-                cidr_ipv4 = "0.0.0.0/0"
-                tags = {
-                    TAG = "This tag is from SHARED_SECURITY_GROUP_RULES > ANY-OUT > EGRESS > SHARED-ANY-OUT"
-                }
-            }
-        ]
-    }
-    "WEB-BACKEND-IN" = {
-        ingress = [
-            {
-                description = "SHARED-8080-IN"
-                from_port = 8080
-                to_port = 8080
-                protocol = "tcp"
-                # prefix_list_id = "JD-HOME-LAB"
-                referenced_security_group_id = "db_server"
-                cidr_ipv4 =  "10.0.0.0/16"
-                tags = {
-                    TAG = "This tag is from SHARED_SECURITY_GROUP_RULES > WEB-BACKEND-IN > INGRESS > SHARED-8080-IN"
-                }
-            },
-            {
-                description = "SHARED-4567-IN"
-                from_port = 4567
-                to_port = 4567
-                protocol = "tcp"
-                referenced_security_group_id = "db_server"
-                cidr_ipv4 =  "10.0.0.0/16"
-                tags = {
-                    TAG = "This tag is from SHARED_SECURITY_GROUP_RULES > WEB-BACKEND-IN > INGRESS > SHARED-4567-IN"
-                }
-            }
-        ]
-        egress = []
-    }
-    "DB-IN" = {
-        ingress = [
-            {
-                description = "SHARED-1433-IN"
-                from_port = 1433
-                to_port = 1433
-                protocol = "tcp"
-                cidr_ipv4 =  "10.0.0.0/16"
-                tags = {
-                    TAG = "This tag is from SHARED_SECURITY_GROUP_RULES > DB-IN > INGRESS > SHARED-1433-IN"
-                }
-            },
-        ]
-        egress = []
-    }
-}
-
 security_groups = {
     "webserver_frontend" = {
         vpc_id      = "vpc_000"
@@ -566,7 +419,17 @@ security_groups = {
             TAG = "SECURITY_GROUPS > WEBSERVER_FRONTEND"
         }
     }
+    "database" = {
+        vpc_id      = "vpc_000"
+        description = "database SG"
+        ingress_ref = ["DB_MYSQL_INTERNAL", "DB_MYSQL_ADMIN", "DB_POSTGRES_INTERNAL"]
+        egress_ref = ["ANY_OUT"]
+        tags = {
+            TAG = "SECURITY_GROUPS > DATABASE"
+        }
+    }
 }
+
 
 security_group_rule_sets = {
     "WEB_FRONTEND_IN" = [
@@ -596,7 +459,7 @@ security_group_rule_sets = {
             description = "SHARED-SSH-IN"
             from_port = 22
             to_port = 22
-            referenced_security_group_id = "JDTEST"
+            #referenced_security_group_id = "JDTEST"
             prefix_list_id = "JD-HOME-LAB"
             ip_protocol = "tcp"
             tags = {
@@ -607,7 +470,7 @@ security_group_rule_sets = {
             description = "SHARED-RDP-IN"
             from_port = 3389
             to_port = 3389
-            referenced_security_group_id = "JDTEST"
+            #referenced_security_group_id = "JDTEST"
             prefix_list_id = "JD-HOME-LAB"
             ip_protocol = "tcp"
             tags = {
@@ -623,6 +486,33 @@ security_group_rule_sets = {
             tags = {
                 TAG = "SECURITY_GROUP_RULES > ANY-OUT > SHARED-ANY-OUT"
             }
+        }
+    ]
+    DB_MYSQL_INTERNAL = [
+        {
+            description                  = "Allow MySQL from webserver_frontend SG"
+            referenced_security_group_id = "webserver_frontend"
+            ip_protocol                     = "tcp"
+            from_port                    = 3306
+            to_port                      = 3306
+        }
+    ]
+    DB_MYSQL_ADMIN = [
+        {
+            description  = "Allow MySQL from admin IP range"
+            cidr_ipv4    = "203.0.113.0/24"
+            ip_protocol     = "tcp"
+            from_port    = 3306
+            to_port      = 3306
+        }
+    ]
+    DB_POSTGRES_INTERNAL = [
+        {
+            description                  = "Allow PostgreSQL from app SG"
+            referenced_security_group_id = "webserver_frontend"
+            ip_protocol                     = "tcp"
+            from_port                    = 5432
+            to_port                      = 5432
         }
     ]
 }
