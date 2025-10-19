@@ -193,3 +193,47 @@ alltrue([for sg_key, sg_obj in local.valid_security_group_map : length(sg_obj.in
     alltrue([for rule_set in sg_obj.ingress_ref : contains(keys(var.security_group_rule_sets), rule_set) ])
 ])
 
+
+
+
+# iterate through each rule set (list of rules), and each rule object in each list
+# return the referenced_security_group_id from each rule object
+[for rule_set_key, rule_set_list in var.security_group_rule_sets : [for rule_set_obj in rule_set_list : rule_set_obj.referenced_security_group_id ] ]
+
+# same as above, but ignore nulls
+[for rule_set_key, rule_set_list in var.security_group_rule_sets : [for rule_set_obj in rule_set_list : rule_set_obj.referenced_security_group_id if rule_set_obj.referenced_security_group_id != null ] ]
+
+# framework for ternary that does true if null, and false if != null
+# this is the logic we will need. nulls are allowed, bevcuase referenced_security_group_id is optional
+[for rule_set_key, rule_set_list in var.security_group_rule_sets : [for rule_set_obj in rule_set_list : rule_set_obj.referenced_security_group_id == null ? true : false] ]
+
+# change the 'if false' expression to try a lookup referenced_security_group_id in var.security_groups
+[for rule_set_key, rule_set_list in var.security_group_rule_sets : [for rule_set_obj in rule_set_list : rule_set_obj.referenced_security_group_id == null ? true : contains(keys(var.security_groups), rule_set_obj.referenced_security_group_id)] ]
+
+# wrap the inner list comprehension in an alltrue, to aggregate the result of checking each rule_set_object a single boolean result 
+[for rule_set_key, rule_set_list in var.security_group_rule_sets : alltrue([for rule_set_obj in rule_set_list : rule_set_obj.referenced_security_group_id == null ? true : contains(keys(var.security_groups), rule_set_obj.referenced_security_group_id)]) ]
+
+# wrap the whole expression in an alltrue aggregate the result of checking each set, each rule_set, each list into a single boolean result 
+alltrue([
+  for rule_set_key, rule_set_list in var.security_group_rule_sets : 
+  alltrue([
+    for rule_set_obj in rule_set_list : rule_set_obj.referenced_security_group_id == null ? true : 
+    contains(keys(var.security_groups), rule_set_obj.referenced_security_group_id)
+  ])  
+])
+
+merge(flatten([for rule_set_key, rule_set_list in var.security_group_rule_sets : {
+    for rule_set_obj in rule_set_list : "Security Group Rule Set: >> ${rule_set_key} >> Rule: >> ${rule_set_obj.description} >> contains invalid referenced_security_group_id" => "${rule_set_obj.referenced_security_group_id}" if rule_set_obj.referenced_security_group_id != null && !contains(keys(var.security_groups), rule_set_obj.referenced_security_group_id)
+}])...)
+
+merge([for rule_set_key, rule_set_list in var.security_group_rule_sets : {
+    for rule_set_obj in rule_set_list : rule_set_key => contains(keys(var.security_groups), rule_set_obj.referenced_security_group_id) if rule_set_obj.referenced_security_group_id != null
+}]...)
+
+merge(flatten([for rule_set_key, rule_set_list in var.security_group_rule_sets : {
+    for rule_set_obj in rule_set_list : "${rule_set_key} >> ${rule_set_obj.description}" => "${rule_set_obj.referenced_security_group_id}" if rule_set_obj.referenced_security_group_id != null && !contains(keys(var.security_groups), rule_set_obj.referenced_security_group_id)
+}])...)
+
+merge([for rule_set_key, rule_set_list in var.security_group_rule_sets : {
+    for rule_set_obj in rule_set_list : rule_set_key => contains(keys(var.security_groups), rule_set_obj.referenced_security_group_id) if rule_set_obj.referenced_security_group_id != null && !contains(keys(var.security_groups), rule_set_obj.referenced_security_group_id)
+}]...)

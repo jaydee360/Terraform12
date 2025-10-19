@@ -135,63 +135,63 @@ resource "aws_route_table_association" "main" {
 } 
 
 
-# resource "aws_network_interface" "main" {
-#   for_each = local.valid_eni_map
+resource "aws_network_interface" "main" {
+  for_each = local.valid_eni_map
 
-#   subnet_id               = aws_subnet.main[each.value.subnet_id].id
-#   description             = each.value.description
-#   private_ip_list_enabled = each.value.private_ip_list_enabled
-#   private_ip_list         = each.value.private_ip_list
-#   private_ips_count       = each.value.private_ips_count
-#   security_groups         = length(each.value.security_groups) > 0 ? [for sg in each.value.security_groups : aws_security_group.main[sg].id] : [data.aws_security_group.default[each.value.vpc].id]
-#   tags = merge(
-#     {Name = each.key},
-#     each.value.tags,
-#     var.default_tags
-#   )
-# }
+  subnet_id               = aws_subnet.main[each.value.subnet_id].id
+  description             = "${each.key}__${each.value.subnet_id}"
+  # private_ip_list_enabled = each.value.private_ip_list_enabled
+  # private_ip_list         = each.value.private_ip_list
+  # private_ips_count       = each.value.private_ips_count
+  security_groups         = length(each.value.security_groups) > 0 ? [for sg in each.value.security_groups : aws_security_group.main[sg].id] : [data.aws_security_group.default[each.value.vpc].id]
+  tags = merge(
+    {Name = each.key},
+    each.value.tags,
+    var.default_tags
+  )
+}
 
-# resource "aws_eip" "eni" {
-#   for_each = local.valid_eni_eip_map
+resource "aws_eip" "eni" {
+  for_each = local.valid_eni_eip_map
 
-#   domain            = "vpc"
-#   network_interface = aws_network_interface.main[each.key].id
-#   tags = merge(
-#     {Name = each.key},
-#     each.value.tags,     # NOTE: ENI EIPs are derived from EC2 ENIs. Thus tags are inherited from the EC2 ENI
-#     var.default_tags
-#   )
-# } 
+  domain            = "vpc"
+  network_interface = aws_network_interface.main[each.key].id
+  tags = merge(
+    {Name = each.key},
+    each.value.tags,     # NOTE: ENI EIPs are derived from EC2 ENIs. Thus tags are inherited from the EC2 ENI
+    var.default_tags
+  )
+} 
 
-# resource "aws_instance" "main" {
-#   for_each = local.valid_ec2_instance_map
+resource "aws_instance" "main" {
+  for_each = local.valid_ec2_instance_map
 
-#   ami           = each.value.ami
-#   instance_type = each.value.instance_type
-#   key_name      = each.value.key_name
-#   user_data     = each.value.user_data_script != null ? try(file("${path.module}/${each.value.user_data_script}"), null) : null
-#   tags = merge(
-#     {Name = each.key},
-#     each.value.tags,
-#     var.default_tags
-#   )
+  ami           = each.value.ami
+  instance_type = each.value.instance_type
+  key_name      = each.value.key_name
+  user_data     = each.value.user_data_script != null ? try(file("${path.module}/${each.value.user_data_script}"), null) : null
+  tags = merge(
+    {Name = each.key},
+    each.value.tags,
+    var.default_tags
+  )
 
-#   primary_network_interface  {
-#     network_interface_id = aws_network_interface.main[local.ec2_eni_lookup_map[each.key][local.primary_nic_name]].id
-#   }
+  primary_network_interface  {
+    network_interface_id = aws_network_interface.main[local.ec2_eni_lookup_map[each.key][local.primary_nic_name]].id
+  }
 
-#   lifecycle {
-#     create_before_destroy = true
-#   }
-# }
+  lifecycle {
+    create_before_destroy = true
+  }
+}
 
-# resource "aws_network_interface_attachment" "main" {
-#   for_each = local.valid_eni_attachments
+resource "aws_network_interface_attachment" "main" {
+  for_each = local.valid_eni_attachments
 
-#   instance_id = aws_instance.main[each.value.instance_id].id
-#   network_interface_id = aws_network_interface.main[each.value.network_interface_id].id
-#   device_index = each.value.device_index
-# }
+  instance_id = aws_instance.main[each.value.instance_id].id
+  network_interface_id = aws_network_interface.main[each.value.network_interface_id].id
+  device_index = each.value.device_index
+}
 
 resource "aws_ec2_managed_prefix_list" "main" {
   for_each        = local.prefix_list_map
@@ -243,6 +243,18 @@ resource "aws_vpc_security_group_ingress_rule" "main" {
     each.value.tags,
     var.default_tags
   )
+  lifecycle {
+    precondition {
+      condition = (
+        // SG reference is either null or valid
+        (each.value.referenced_security_group_id == null || contains(keys(var.security_groups), each.value.referenced_security_group_id))
+        &&
+        // Prefix list reference is either null or valid
+        (each.value.prefix_list_id == null || contains(keys(var.prefix_list_config), each.value.prefix_list_id))
+      )
+      error_message = "Security Group: '${each.value.sg_key}', Ingress Rule: '${each.value.rule_set_ref}', has an invalid reference in either: 'referenced_security_group_id' = '${coalesce(each.value.referenced_security_group_id, "null")}', or 'prefix_list' = '${coalesce(each.value.prefix_list_id, "null")}'"
+    }
+  }
 }
 
 resource "aws_vpc_security_group_egress_rule" "main" {
@@ -261,5 +273,17 @@ resource "aws_vpc_security_group_egress_rule" "main" {
     each.value.tags,
     var.default_tags
   )
+  lifecycle {
+    precondition {
+      condition = (
+        // SG reference is either null or valid
+        (each.value.referenced_security_group_id == null || contains(keys(var.security_groups), each.value.referenced_security_group_id))
+        &&
+        // Prefix list reference is either null or valid
+        (each.value.prefix_list_id == null || contains(keys(var.prefix_list_config), each.value.prefix_list_id))
+      )
+      error_message = "Security Group: '${each.value.sg_key}', Egress Rule Set: '${each.value.rule_set_ref}', has an invalid reference in either: 'referenced_security_group_id' = '${coalesce(each.value.referenced_security_group_id, "null")}', or 'prefix_list' = '${coalesce(each.value.prefix_list_id, "null")}'"
+    }
+  }
 }
 

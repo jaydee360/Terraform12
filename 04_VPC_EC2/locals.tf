@@ -208,25 +208,16 @@ locals {
     if !contains([for ass in local.subnet_route_table_associations : ass.subnet_id], sn)
   ]
 
-#   eni_eips_without_igw_route = [
-#     for eip_map_key, eip_map_obj in local.valid_eni_map : eip_map_key 
-#     if eip_map_obj.assign_eip && !lookup(local.subnet_has_igw_route, eip_map_obj.subnet_id, false)
-#   ]
+  eni_eips_without_igw_route = [
+    for eip_map_key, eip_map_obj in local.valid_eni_map : eip_map_key 
+    if eip_map_obj.assign_eip && !lookup(local.subnet_has_igw_route, eip_map_obj.subnet_id, false)
+  ]
 
 }
 
 # EC2 instances
 # -------------
 locals {
-  # valid_ec2_instance_map_OLD = {
-  #   for ec2_key, ec2_obj in var.ec2_config : ec2_key => ec2_obj if (
-  #     # contains(keys(ec2_obj.network_interfaces), "nic0") &&
-  #     # length(distinct([for eni_key, eni_obj in ec2_obj.network_interfaces : eni_obj.vpc])) == 1 &&
-  #     alltrue([for eni_key, eni_obj in ec2_obj.network_interfaces : contains(keys(var.vpc_config), eni_obj.vpc)]) &&
-  #     alltrue([for eni_key, eni_obj in ec2_obj.network_interfaces : contains(keys(local.subnet_map), "${local.subnet_prefix}${eni_obj.vpc}__${eni_obj.subnet}")])
-  #   )
-  # }
-
   merged_ec2_instance_map = {
     for inst_key, inst_obj in var.ec2_instances : inst_key => merge(
       var.ec2_profiles[inst_obj.ec2_profile],
@@ -271,83 +262,67 @@ locals {
       alltrue([for eni_key, eni_obj in ec2_obj.network_interfaces : can(contains(keys(local.subnet_map), eni_obj.subnet_id))])
     )
   }
-
 }
 
 
 # ELASTIC NETWORK INTERFACES (ENIs)
 # ---------------------------------
 locals {
-  # valid_eni_map = merge([ 
-  #   for ec2_key, ec2_obj in local.valid_ec2_instance_map : {for eni_key, eni_obj in ec2_obj.network_interfaces : "${ec2_key}__${eni_key}" => merge(
-  #   eni_obj, {
-  #     subnet_id       = "${eni_obj.vpc}__${eni_obj.subnet}"
-  #     ec2_key         = ec2_key
-  #     ec2_nic_key     = eni_key
-  #     index           = tonumber(substr(eni_key, length(eni_key) - 1, 1))
-  #     security_groups = [for sg in coalesce(eni_obj.security_groups, []) : sg if contains(keys(local.valid_security_group_map), sg)]
-  #   },
-  #   eni_obj.private_ip_list_enabled == true && eni_obj.private_ip_list != null && length(eni_obj.private_ip_list) > 0 ? 
-  #     {
-  #       private_ip_list_enabled = eni_obj.private_ip_list_enabled
-  #       private_ip_list         = eni_obj.private_ip_list
-  #       private_ips_count       = null
-  #     } : 
-  #   eni_obj.private_ips_count != null && eni_obj.private_ips_count > 0 ? 
-  #     {
-  #       private_ip_list_enabled = null
-  #       private_ip_list         = null
-  #       private_ips_count       = eni_obj.private_ips_count
-  #     } : 
-  #     {
-  #       private_ip_list_enabled = null
-  #       private_ip_list         = null
-  #       private_ips_count       = null
-  #     }
-  #   )}
-  # ]...)
+  valid_eni_map = merge([ 
+    for ec2_key, ec2_obj in local.valid_ec2_instance_map : {for eni_key, eni_obj in ec2_obj.network_interfaces : "${ec2_key}__${eni_key}" => merge(
+      eni_obj, {
+        # subnet_id       = "${eni_obj.vpc}__${eni_obj.subnet}"
+        ec2_key         = ec2_key
+        ec2_nic_key     = eni_key
+        index           = tonumber(substr(eni_key, length(eni_key) - 1, 1))
+        security_groups = [for sg in coalesce(eni_obj.security_groups, []) : sg if contains(keys(local.valid_security_group_map), sg)]
+        tags            = ec2_obj.tags
+      }
+    )}
+  ]...)
 } 
 
-# # ENI ELASTIC IPs
-# # ---------------
-# locals {
-#   valid_eni_eip_map = {
-#     for eip_map_key, eip_map_obj in local.valid_eni_map : eip_map_key => {
-#       assign_eip            = eip_map_obj.assign_eip
-#       subnet_id             = eip_map_obj.subnet_id
-#       subnet_has_igw_route  = lookup(local.subnet_has_igw_route, eip_map_obj.subnet_id, false)
-#       tags                  = eip_map_obj.tags
-#     } if eip_map_obj.assign_eip && lookup(local.subnet_has_igw_route, eip_map_obj.subnet_id, false)
-#   }
-# } 
+# ENI ELASTIC IPs
+# ---------------
+locals {
+  valid_eni_eip_map = {
+    for eip_map_key, eip_map_obj in local.valid_eni_map : eip_map_key => {
+      assign_eip            = eip_map_obj.assign_eip
+      subnet_id             = eip_map_obj.subnet_id
+      subnet_has_igw_route  = lookup(local.subnet_has_igw_route, eip_map_obj.subnet_id, false)
+      tags                  = eip_map_obj.tags
+    } if eip_map_obj.assign_eip && lookup(local.subnet_has_igw_route, eip_map_obj.subnet_id, false)
+  }
+ 
+} 
 
-# locals {
-#   primary_nic_name = "nic0"
-# }
+locals {
+  primary_nic_name = "nic0"
+}
 
-# # Reverse lookup map of ENI keys by EC2 instances
-# # -----------------------------------------------
-# locals {
-#   ec2_eni_lookup_map = {
-#     for ec2_key, ec2_obj in local.valid_ec2_instance_map : ec2_key => {
-#       for eni_map_key, eni_map_obj in local.valid_eni_map : eni_map_obj.ec2_nic_key => eni_map_key
-#       if eni_map_obj.ec2_key == ec2_key
-#     }
-#   }
-# }
+# Reverse lookup map of ENI keys by EC2 instances
+# -----------------------------------------------
+locals {
+  ec2_eni_lookup_map = {
+    for ec2_key, ec2_obj in local.valid_ec2_instance_map : ec2_key => {
+      for eni_map_key, eni_map_obj in local.valid_eni_map : eni_map_obj.ec2_nic_key => eni_map_key
+      if eni_map_obj.ec2_key == ec2_key
+    }
+  }
+}
 
-# # ENI ATTACHMENTS
-# # ---------------
-# locals {
-#   valid_eni_attachments = {
-#     for eni_map_key, eni_map_obj in local.valid_eni_map : eni_map_key => {
-#         instance_id           = eni_map_obj.ec2_key
-#         network_interface_id  = eni_map_key
-#         device_index          = eni_map_obj.index
-#       }
-#     if eni_map_obj.index > 0
-#   } 
-# } 
+# ENI ATTACHMENTS
+# ---------------
+locals {
+  valid_eni_attachments = {
+    for eni_map_key, eni_map_obj in local.valid_eni_map : eni_map_key => {
+        instance_id           = eni_map_obj.ec2_key
+        network_interface_id  = eni_map_key
+        device_index          = eni_map_obj.index
+      }
+    if eni_map_obj.index > 0
+  } 
+} 
 
 
 # Prefix Lists
@@ -477,7 +452,7 @@ locals {
 }
 
 locals {
-    # FOR SG RULE DIAGNOSTICS
+    # SG RULE DIAGNOSTICS
     sg_in_rules_list_flat = sort([for element in local.ingress_rules_map : "${element.sg_key}-${element.description}-${element.rule_hash}"])
 
     sg_eg_rules_list_flat = sort([for element in local.egress_rules_map : "${element.sg_key}-${element.description}-${element.rule_hash}"])
@@ -496,5 +471,4 @@ locals {
       ]
     }
 }
-
 

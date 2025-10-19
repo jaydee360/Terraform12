@@ -156,61 +156,6 @@ variable "ec2_instances" {
   }
 }
 
-
-variable "ec2_config" {
-  type = map(object({
-    ami = string,
-    instance_type = string,
-    key_name = string
-    user_data_script = optional(string, null)
-    tags = optional(map(string), null)
-    network_interfaces = map(object({
-      vpc = string
-      subnet = string
-      description = optional(string, null)
-      private_ip_list_enabled = optional(bool, false)
-      private_ip_list = optional(set(string), null)
-      private_ips_count = optional(number, null)
-      security_groups = optional(set(string), null)
-      assign_eip = optional(bool, false)
-      tags = optional(map(string), null)
-    }))
-  }))
-  validation {
-    condition = alltrue([
-      for ec2_obj in var.ec2_config : contains(keys(ec2_obj.network_interfaces), "nic0")
-    ])
-    error_message = "Each EC2 instance must define 'nic0' (primary network interface)"
-  }
-  validation {
-    condition = alltrue([
-      for ec2_obj in var.ec2_config : length(distinct([for eni_key, eni_obj in ec2_obj.network_interfaces : eni_obj.vpc])) == 1])
-    error_message = "Each EC2 instance must have all its network interfaces in the same VPC"
-  }
-  validation {
-    condition = alltrue([
-      for ec2_obj in var.ec2_config : 
-      alltrue([
-        for eni_key, eni_obj in ec2_obj.network_interfaces : 
-        contains(keys(local.subnet_map), "${eni_obj.vpc}__${eni_obj.subnet}")
-      ]) 
-      ? 
-      (length(distinct([
-        for eni_key, eni_obj in ec2_obj.network_interfaces : 
-        local.subnet_map["${eni_obj.vpc}__${eni_obj.subnet}"].az
-      ])) == 1)
-      : true
-    ])
-    error_message = "Each EC2 instance must have all network interfaces in the same AZ"
-  }
-  validation {
-    condition = alltrue(flatten([
-      for ec2_obj in var.ec2_config : [for eni_key in keys(ec2_obj.network_interfaces) :
-        can(regex("^nic[0-9]$", eni_key))
-      ]
-    ]))
-    error_message = "Network interface keys must follow the naming convention 'nicN', where N is a single digit number (e.g., 'nic0', 'nic1', 'nic2')"
-  }
   # Valid VPC / Subnet references are a dependency of EC2 Instance validation
   # EC2 instances with invalid VPC / Subnet references on NICs are not created. 
   # If an existing EC2 instance VPC / Subnet references become invald, the instance will be destroyed. This is the dafult behaviour. 
@@ -226,7 +171,6 @@ variable "ec2_config" {
       error_message = "Each EC2 instance must have valid VPC and Subnet references on allnetwork interfaces"
     } 
   */
-}
 
 variable "prefix_list_config" {
   type = map(object({
@@ -281,7 +225,6 @@ variable "security_group_rule_sets" {
     cidr_ipv4 = optional(string)
     tags = optional(map(string), null)
   })))
+  # validation is done using lifecycle precondition in the resource block
 }
-
-
 

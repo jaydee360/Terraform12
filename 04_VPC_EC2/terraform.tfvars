@@ -55,7 +55,7 @@ vpc_config = {
                 subnet_cidr = "10.0.5.0/24"
                 az = "b"
                 create_natgw = false
-                #routing_policy = "private_nat"
+                routing_policy = "private_nat"
                 tags = {
                     type = "private"
                     TAG = "This tag is from VPC_CONFIG > VPC_000 > SUBNET > PRIVATE_SUBNET_050"
@@ -65,7 +65,7 @@ vpc_config = {
                 subnet_cidr = "10.0.6.0/24"
                 az = "c"
                 create_natgw = false
-                #routing_policy = "private_nat"
+                routing_policy = "private_nat"
                 tags = {
                     type = "private"
                     TAG = "This tag is from VPC_CONFIG > VPC_000 > SUBNET > PRIVATE_SUBNET_060"
@@ -238,161 +238,6 @@ ec2_instances = {
             }
         }
     }
-}
-
-ec2_config = {
-    "web_01" = {
-        ami = "ami-0150ccaf51ab55a51"
-        instance_type = "t3.micro"
-        key_name = "A4L"
-        user_data_script = "server-script.sh"
-        network_interfaces = {
-            "nic0" = {
-                description = "web_01 primary nic"
-                vpc = "vpc_000"
-                subnet = "public_subnet_000"
-                security_groups = ["webserver_frontend", "SG-FAKE"]
-                assign_eip = true
-                tags = {
-                    TAG = "This tag is from EC2_CONFIG > WEB_01 > NIC0"
-                }
-            }
-        }
-        tags = {
-            Role = "frontend"
-            TAG = "This tag is from EC2_CONFIG > WEB_01"
-        }
-    }
-    "web_02" = {
-        ami = "ami-0150ccaf51ab55a51"
-        instance_type = "t3.micro"
-        key_name = "A4L"
-        user_data_script = "server-script.sh"
-        network_interfaces = {
-            "nic0" = {
-                description = "web_02 primary nic"
-                vpc = "vpc_000"
-                subnet = "public_subnet_010"
-                security_groups = ["webserver_frontend"]
-                assign_eip = true
-                tags = {
-                    TAG = "This tag is from EC2_CONFIG > WEB_02 > NIC0"
-                }
-            }
-            "nic1" = {
-                description = "web_02 secondary nic"
-                vpc = "vpc_000"
-                subnet = "public_subnet_010"
-                # private_ip_list_enabled = true
-                # private_ip_list = ["10.0.1.20"]
-                security_groups = ["webserver_backend"]
-                tags = {
-                    TAG = "This tag is from EC2_CONFIG > WEB_02 > NIC1"
-                }
-            }
-        }
-        tags = {
-            Role = "frontend"
-            TAG = "This tag is from EC2_CONFIG > WEB_02"
-        }
-    }
-    # "web_03" = {
-    #     ami = "ami-0150ccaf51ab55a51"
-    #     instance_type = "t3.micro"
-    #     key_name = "A4L"
-    #     user_data_script = "server-script.sh"
-    #     network_interfaces = {
-    #         "nic0" = {
-    #             description = "web_03 primary nic"
-    #             vpc = "vpc_000"
-    #             subnet = "public_subnet_020"
-    #             security_groups = ["webserver_frontend"]
-    #             assign_eip = true
-    #             tags = {
-    #                 TAG = "This tag is from EC2_CONFIG > WEB_03 > NIC0"
-    #             }
-    #         }
-    #         "nic1" = {
-    #             description = "web_03 secondary nic"
-    #             vpc = "vpc_000"
-    #             subnet = "public_subnet_020"
-    #             security_groups = ["webserver_backend"]
-    #             tags = {
-    #                 TAG = "This tag is from EC2_CONFIG > WEB_03 > NIC1"
-    #             }
-    #         }
-    #     }
-    #     tags = {
-    #         Role = "frontend"
-    #         TAG = "This tag is from EC2_CONFIG > WEB_03"
-    #     }
-    # }
-    # "db_01" = {
-    #     ami = "ami-0150ccaf51ab55a51"
-    #     instance_type = "t3.micro"
-    #     key_name = "A4L"
-    #     # user_data_script = "server-script.sh"
-    #     network_interfaces = {
-    #         "nic0" = {
-    #             description = "db_01 primary nic"
-    #             vpc = "vpc_000"
-    #             subnet = "private_subnet_040"
-    #             security_groups = ["db_server"]
-    #             assign_eip = false
-    #             tags = {
-    #                 TAG = "This tag is from EC2_CONFIG > DB_01 > NIC0"
-    #             }
-    #         }
-    #     }
-    #     tags = {
-    #         Role = "db"
-    #         TAG = "This tag is from EC2_CONFIG > DB_01"
-    #     }
-    # }
-    # "db_02" = {
-    #     ami = "ami-0150ccaf51ab55a51"
-    #     instance_type = "t3.micro"
-    #     key_name = "A4L"
-    #     # user_data_script = "server-script.sh"
-    #     network_interfaces = {
-    #         "nic0" = {
-    #             description = "db_02 primary nic"
-    #             vpc = "vpc_000"
-    #             subnet = "private_subnet_050"
-    #             security_groups = ["db_server", "SG-FAKE"]
-    #             assign_eip = false
-    #             tags = {
-    #                 TAG = "This tag is from EC2_CONFIG > DB_02 > NIC0"
-    #             }
-    #         }
-    #     }
-    #     tags = {
-    #         Role = "db"
-    #         TAG = "This tag is from EC2_CONFIG > DB_02"
-    #     }
-    # }
-    # "db_03" = {
-    #     ami = "ami-0150ccaf51ab55a51"
-    #     instance_type = "t3.micro"
-    #     key_name = "A4L"
-    #     # user_data_script = "server-script.sh"
-    #     network_interfaces = {
-    #         "nic0" = {
-    #             description = "db_03 primary nic"
-    #             vpc = "vpc_000"
-    #             subnet = "private_subnet_060"
-    #             security_groups = ["db_server"]
-    #             assign_eip = false
-    #             tags = {
-    #                 TAG = "This tag is from EC2_CONFIG > DB_03 > NIC0"
-    #             }
-    #         }
-    #     }
-    #     tags = {
-    #         Role = "db"
-    #         TAG = "This tag is from EC2_CONFIG > DB_03"
-    #     }
-    # }
 }
 
 prefix_list_config = {
