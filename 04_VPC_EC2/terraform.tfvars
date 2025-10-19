@@ -188,11 +188,15 @@ ec2_profiles = {
         key_name = "A4L"
         network_interfaces = {
             "nic0" = {
-                routing_policy = "private-nat"
+                routing_policy = "private_nat"
                 security_groups = ["database_backend"]
                 assign_eip = false
             }
-        }     
+        }
+        tags = {
+            Role = "database"
+            Source  = "webserver_profile"
+        } 
     }
 }
 
@@ -238,6 +242,33 @@ ec2_instances = {
             }
         }
     }
+    database_00 = {
+        ec2_profile = "database"
+        network_interfaces = {
+            "nic0" = {
+                vpc = "vpc_000"
+                az = "a"
+            }
+        }
+    }
+    database_01 = {
+        ec2_profile = "database"
+        network_interfaces = {
+            "nic0" = {
+                vpc = "vpc_000"
+                az = "b"
+            }
+        }
+    }
+    database_02 = {
+        ec2_profile = "database"
+        network_interfaces = {
+            "nic0" = {
+                vpc = "vpc_000"
+                az = "c"
+            }
+        }
+    }
 }
 
 prefix_list_config = {
@@ -274,7 +305,6 @@ security_groups = {
         }
     }
 }
-
 
 security_group_rule_sets = {
     "WEB_FRONTEND_IN" = [
