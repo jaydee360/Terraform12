@@ -1,0 +1,239 @@
+
+# {X = [derive X] : 
+#   X => {Y = [derive Y if Y = X (1 parent)] :
+#     Y => {Z = [derive Z if Z = X && Z = Y (2 parents)] : 
+#       Z => [derive item if Z = Z && Z = Y && Z = X (3 parents)]
+#     }
+#   }
+# }
+
+# Reads narrationally:
+# - Level 1 (X): You derive a distinct set of X keys from your source list.
+# - Level 2 (Y): For each X, you derive a distinct set of Y keys that are children of X.
+# - Level 3 (Z): For each Y (within X), you derive a distinct set of Z keys that are children of both X and Y.
+# - Final items: For each Z (within Y and X), you collect the items that match all three parent keys.
+
+# This mirrors the logic of:
+# - routing_policy_name → vpc_key → az → [subnet_key]
+# - or more generally: L1 → L2 → L3 → [items]
+
+# to derive each of X, Y and Z we do this@
+# - X: distinct([for rti_element in local.minimal_rti_list : rti_element.routing_policy_name])
+# - Y: distinct([for rti_element in local.minimal_rti_list : rti_element.vpc_key])
+# - Z: distinct([for rti_element in local.minimal_rti_list : rti_element.az])
+
+
+/*   
+    ONE_LEVEL_GROUPING_by_ROUTING_POLICY_NAME = {
+        for L1_KEY in distinct([for rti_element in local.minimal_rti_list : rti_element.routing_policy_name]) : # get L1_KEY
+        L1_KEY => [for rti_element in local.minimal_rti_list : rti_element.subnet_key if rti_element.routing_policy_name == L1_KEY]
+    } 
+*/
+
+/*
+    TWO_LEVEL_GROUPING_by_ROUTING_POLICY_NAME_and_VPC_KEY = {
+        for L1_KEY in distinct([for rti_element in local.minimal_rti_list : rti_element.routing_policy_name]) : # get L1_KEY
+        L1_KEY => {for L2_KEY in distinct([for rti_element in local.minimal_rti_list : rti_element.vpc_key if rti_element.routing_policy_name == L1_KEY]) :
+            L2_KEY => [for rti_element in local.minimal_rti_list : rti_element.subnet_key if rti_element.routing_policy_name == L1_KEY && rti_element.vpc_key == L2_KEY]
+        }
+    } 
+*/
+
+/*   
+    THREE_LEVEL_GROUPING_by_ROUTING_POLICY_NAME_and_VPC_KEY_and_AZ = {
+        for L1_KEY in distinct([for rti_element in local.minimal_rti_list : rti_element.routing_policy_name]) : # get L1_KEY
+        L1_KEY => {for L2_KEY in distinct([for rti_element in local.minimal_rti_list : rti_element.vpc_key if rti_element.routing_policy_name == L1_KEY]) : 
+            L2_KEY => {for L3_KEY in distinct([for rti_element in local.minimal_rti_list : rti_element.az if rti_element.routing_policy_name == L1_KEY && rti_element.vpc_key == L2_KEY]) :
+                L3_KEY => [for rti_element in local.minimal_rti_list : rti_element.subnet_key if rti_element.routing_policy_name == L1_KEY && rti_element.vpc_key == L2_KEY && rti_element.az == L3_KEY]
+            }
+        }
+    } 
+*/
+
+
+
+
+# # EC2 instances
+# # -------------
+# locals {
+#   valid_ec2_instance_map = {
+#     for ec2_key, ec2_obj in var.ec2_config : ec2_key => ec2_obj if (
+#       # contains(keys(ec2_obj.network_interfaces), "nic0") &&
+#       # length(distinct([for eni_key, eni_obj in ec2_obj.network_interfaces : eni_obj.vpc])) == 1 &&
+#       alltrue([for eni_key, eni_obj in ec2_obj.network_interfaces : contains(keys(var.vpc_config), eni_obj.vpc)]) &&
+#       alltrue([for eni_key, eni_obj in ec2_obj.network_interfaces : contains(keys(local.subnet_map), "${local.subnet_prefix}${eni_obj.vpc}__${eni_obj.subnet}")])
+#     )
+#   }
+
+# #   ec2_inst_map = {for key, obj in var.ec2_instances : key => obj}
+# # }
+# # {for key, obj in var.ec2_instances : key => obj}
+# # {for key, obj in var.ec2_instances : key => merge(var.ec2_profiles[obj.ec2_profile], obj)}
+
+# # {for key, obj in var.ec2_instances : key => merge(
+# #   var.ec2_profiles[obj.ec2_profile], 
+# #   obj, {
+# #     network_interfaces = merge(
+# #       var.ec2_profiles[obj.ec2_profile].network_interfaces.nic0,
+# #       obj.network_interfaces.nic0
+# #     )
+# #   }
+# # )}
+
+# # {for inst_key, inst_obj in var.ec2_instances : inst_key => merge(
+# #   var.ec2_profiles[inst_obj.ec2_profile], 
+# #   inst_obj, {
+# #     network_interfaces = {for nic_key, nic_obj in inst_obj.network_interfaces : nic_key => merge(
+# #       var.ec2_profiles[inst_obj.ec2_profile].network_interfaces[nic_key],
+# #       inst_obj.network_interfaces[nic_key]
+# #     )}
+# #   }
+# # )}
+
+#   merged_ec2_instance_map = {
+#     for inst_key, inst_obj in var.ec2_instances : inst_key => merge(
+#       var.ec2_profiles[inst_obj.ec2_profile], 
+#       inst_obj, {
+#         network_interfaces = tomap({for nic_key, nic_obj in inst_obj.network_interfaces : nic_key => merge(
+#           try(var.ec2_profiles[inst_obj.ec2_profile].network_interfaces[nic_key], {}),
+#           nic_obj
+#         )})
+#       }
+#     )
+#   }
+
+#   merged_ec2_instance_map_2 = {
+#     for inst_key, inst_obj in var.ec2_instances : inst_key => merge(
+#       var.ec2_profiles[inst_obj.ec2_profile], 
+#       inst_obj, {
+#         network_interfaces = tomap({for nic_key, nic_obj in inst_obj.network_interfaces : nic_key => merge(
+#           try(var.ec2_profiles[inst_obj.ec2_profile].network_interfaces[nic_key], {}),
+#           {
+#             for key, value in nic_obj : key => value if !(value == null || (key == "assign_eip" && value == false))
+#           }
+#         )})
+#       }
+#     )
+#   }
+
+#   merged_ec2_instance_map_3 = {
+#   for inst_key, inst_obj in var.ec2_instances : inst_key => merge(
+#     var.ec2_profiles[inst_obj.ec2_profile],
+#     inst_obj,
+#     {
+#       network_interfaces = {for nic_key in distinct(concat(
+#           keys(try(var.ec2_profiles[inst_obj.ec2_profile].network_interfaces, {})),
+#           keys(inst_obj.network_interfaces)
+#         )) : nic_key => merge(
+#           try(var.ec2_profiles[inst_obj.ec2_profile].network_interfaces[nic_key], {}),
+#           {
+#             for key, value in try(inst_obj.network_interfaces[nic_key], {}) : key => value if value != null
+#           }
+#         )
+#       }
+#     }
+#   )
+# }
+
+#   merged_ec2_instance_map_4 = {
+#     for inst_key, inst_obj in var.ec2_instances : inst_key => merge(
+#       var.ec2_profiles[inst_obj.ec2_profile], 
+#       inst_obj, {
+#         network_interfaces = {for nic_key, nic_obj in inst_obj.network_interfaces : nic_key => merge(
+#           try(var.ec2_profiles[inst_obj.ec2_profile].network_interfaces[nic_key], {}),
+#           {
+#             for key, value in nic_obj : key => value if value != null 
+#           }
+#         )}
+#       }
+#     )
+#   }
+
+# }
+
+
+# first loop through the SGs and make sure we can output the length
+[for sg_key, sg_obj in local.valid_security_group_map : length(sg_obj.ingress_ref) ]
+
+# outline logic for what happens base on the length, because this is the first thing we will check
+[for sg_key, sg_obj in local.valid_security_group_map : length(sg_obj.ingress_ref) == 0 ? true :
+    [INNER LOOP TO CHECK OF EACH REF] 
+]
+
+# inner logic to loop through each rule_set and check each is in keys of var.security_group_rule_sets
+# this fails with Error: Inconsistent conditional result types. The true and false result expressions must have consistent types. 
+# The 'true' value is bool, but the 'false' value is tuple.
+[for sg_key, sg_obj in local.valid_security_group_map : length(sg_obj.ingress_ref) == 0 ? true :
+    alltrue([for rule_set in sg_obj.ingress_ref : contains(keys(var.security_group_rule_sets), rule_set) ])
+]
+
+# if i want to see the results then i need to remove the ternary logic to prevent the inconsistent result types
+[for sg_key, sg_obj in local.valid_security_group_map : 
+    [for rule_set in sg_obj.ingress_ref : contains(keys(var.security_group_rule_sets), rule_set) ]
+]
+
+# if i want more diagnostic detail, use nested maps instead of nested lists
+{for sg_key, sg_obj in local.valid_security_group_map : sg_key => 
+    {for rule_set in sg_obj.ingress_ref : rule_set => contains(keys(var.security_group_rule_sets), rule_set) }
+}
+
+# if i want more diagnostic detail, use nested maps instead of nested lists
+merge(flatten([for sg_key, sg_obj in local.valid_security_group_map : 
+    {for rule_set in sg_obj.ingress_ref : "Security Group: >> ${sg_key} >> Invalid ingress rule set" => "${rule_set}" if !contains(keys(var.security_group_rule_sets), rule_set)}
+])...)
+
+# wrap the inner logic in an alltrue() to return a single bool rather than multiple bools for each iteration.
+# this avoids the error
+[for sg_key, sg_obj in local.valid_security_group_map : length(sg_obj.ingress_ref) == 0 ? true :
+    alltrue([for rule_set in sg_obj.ingress_ref : contains(keys(var.security_group_rule_sets), rule_set) ])
+]
+
+# wrap the whole expression in an alltrue() to meet the requirement of a validation rule
+alltrue([for sg_key, sg_obj in local.valid_security_group_map : length(sg_obj.ingress_ref) == 0 ? true :
+    alltrue([for rule_set in sg_obj.ingress_ref : contains(keys(var.security_group_rule_sets), rule_set) ])
+])
+
+
+
+
+# iterate through each rule set (list of rules), and each rule object in each list
+# return the referenced_security_group_id from each rule object
+[for rule_set_key, rule_set_list in var.security_group_rule_sets : [for rule_set_obj in rule_set_list : rule_set_obj.referenced_security_group_id ] ]
+
+# same as above, but ignore nulls
+[for rule_set_key, rule_set_list in var.security_group_rule_sets : [for rule_set_obj in rule_set_list : rule_set_obj.referenced_security_group_id if rule_set_obj.referenced_security_group_id != null ] ]
+
+# framework for ternary that does true if null, and false if != null
+# this is the logic we will need. nulls are allowed, bevcuase referenced_security_group_id is optional
+[for rule_set_key, rule_set_list in var.security_group_rule_sets : [for rule_set_obj in rule_set_list : rule_set_obj.referenced_security_group_id == null ? true : false] ]
+
+# change the 'if false' expression to try a lookup referenced_security_group_id in var.security_groups
+[for rule_set_key, rule_set_list in var.security_group_rule_sets : [for rule_set_obj in rule_set_list : rule_set_obj.referenced_security_group_id == null ? true : contains(keys(var.security_groups), rule_set_obj.referenced_security_group_id)] ]
+
+# wrap the inner list comprehension in an alltrue, to aggregate the result of checking each rule_set_object a single boolean result 
+[for rule_set_key, rule_set_list in var.security_group_rule_sets : alltrue([for rule_set_obj in rule_set_list : rule_set_obj.referenced_security_group_id == null ? true : contains(keys(var.security_groups), rule_set_obj.referenced_security_group_id)]) ]
+
+# wrap the whole expression in an alltrue aggregate the result of checking each set, each rule_set, each list into a single boolean result 
+alltrue([
+  for rule_set_key, rule_set_list in var.security_group_rule_sets : 
+  alltrue([
+    for rule_set_obj in rule_set_list : rule_set_obj.referenced_security_group_id == null ? true : 
+    contains(keys(var.security_groups), rule_set_obj.referenced_security_group_id)
+  ])  
+])
+
+merge(flatten([for rule_set_key, rule_set_list in var.security_group_rule_sets : {
+    for rule_set_obj in rule_set_list : "Security Group Rule Set: >> ${rule_set_key} >> Rule: >> ${rule_set_obj.description} >> contains invalid referenced_security_group_id" => "${rule_set_obj.referenced_security_group_id}" if rule_set_obj.referenced_security_group_id != null && !contains(keys(var.security_groups), rule_set_obj.referenced_security_group_id)
+}])...)
+
+merge([for rule_set_key, rule_set_list in var.security_group_rule_sets : {
+    for rule_set_obj in rule_set_list : rule_set_key => contains(keys(var.security_groups), rule_set_obj.referenced_security_group_id) if rule_set_obj.referenced_security_group_id != null
+}]...)
+
+merge(flatten([for rule_set_key, rule_set_list in var.security_group_rule_sets : {
+    for rule_set_obj in rule_set_list : "${rule_set_key} >> ${rule_set_obj.description}" => "${rule_set_obj.referenced_security_group_id}" if rule_set_obj.referenced_security_group_id != null && !contains(keys(var.security_groups), rule_set_obj.referenced_security_group_id)
+}])...)
+
+merge([for rule_set_key, rule_set_list in var.security_group_rule_sets : {
+    for rule_set_obj in rule_set_list : rule_set_key => contains(keys(var.security_groups), rule_set_obj.referenced_security_group_id) if rule_set_obj.referenced_security_group_id != null && !contains(keys(var.security_groups), rule_set_obj.referenced_security_group_id)
+}]...)
