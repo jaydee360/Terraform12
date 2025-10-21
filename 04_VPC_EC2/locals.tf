@@ -1,5 +1,11 @@
-# SUBNETS
-# -------
+# 🔹subnet_map
+# ------------
+# Purpose: Enriches subnet objects with VPC key and AZ.
+
+# Used in:
+# Locals: 🔹 nat_gw_map, 🔹 route_table_map, 🔹 nat_gw_subnets_without_igw_route
+# Resources: 🔹 aws_subnet.main, 🔹 aws_nat_gateway.main, 🔹 aws_eip.nat, 🔹aws_route_table_association.main
+# Depends on: 🔹 var.vpc_config, 🔹 var.az_lookup
 locals {
   subnet_prefix = "SN:"
   subnet_map = merge(
@@ -16,8 +22,14 @@ locals {
   ]...)
 }
 
-# IGWs
-# ----
+# 🔹 igw_map, 🔹 igw_lookup_map
+# -----------------------------
+# Purpose: Maps IGWs from VPCs and enables reverse lookup of VPCs > IGWs
+
+# Used in:
+# Locals: 🔹 igw_route_map, 🔹 subnet_has_igw_route, 🔹 igw_route_plans_without_viable_igw_target
+# Resources: 🔹 aws_internet_gateway.main, 🔹 aws_internet_gateway_attachment.main, 🔹 aws_route.igw
+# Depends on: 🔹 var.vpc_config
 locals {
   igw_prefix = "IGW:"
 
@@ -31,8 +43,14 @@ locals {
   }
 }
 
-# NAT GWs & Elastic IPs
-# ---------------------
+# 🔹 nat_gw_map
+# -------------
+# Purpose: Filters subnets eligible for NAT GW creation.
+
+# Used in:
+# Locals: 🔹 natgw_lookup_map_by_vpc_az, 🔹 natgw_lookup_map_by_vpc
+# Resources: 🔹 aws_nat_gateway.main, 🔹 aws_eip.nat
+# Depends on: 🔹 subnet_map, 🔹 subnet_has_igw_route
 locals {
   nat_gw_prefix = "NATGW:"
 
@@ -45,8 +63,14 @@ locals {
   }
 }
 
-# ROUTE TABLES
-# ------------
+# 🔹 route_table_map
+# ------------------
+# Purpose: Builds route table objects for subnets with valid routing policies.
+
+# Used in:
+# Locals: 🔹 route_table_intent_map, 🔹 subnet_route_table_associations
+# Resources: 🔹 aws_route_table.main, 🔹 aws_route_table_association.main
+# Depends on: 🔹 subnet_map, 🔹 var.routing_policies
 locals {
   rt_prefix = "RT:"
 
@@ -59,8 +83,14 @@ locals {
   } 
 }
 
-# RESOLVED ROUTING INTENT
-# -----------------------
+# 🔹 route_table_intent_map
+# -------------------------
+# Purpose: Enriches route tables with routing intent / routing policy metadata.
+
+# Used in:
+# Locals: 🔹 subnet_lookup_by_routing_policy_vpc_az, 🔹 igw_route_map, 🔹 nat_gw_route_map, 🔹 subnet_has_igw_route, 🔹 diagnostics
+# Resources: 🔹 aws_route.igw, 🔹 aws_route.nat_gw
+# Depends on: 🔹 route_table_map, 🔹 var.routing_policies
 locals {
   routing_intent_prefix = "RI:"
 
@@ -77,8 +107,14 @@ locals {
   }
 }
 
-# REVERSE LOOKUP / SUBNET BY ROUTING POLICY > VPC > AZ
-# ----------------------------------------------------
+# 🔹 subnet_lookup_by_routing_policy_vpc_az
+# -----------------------------------------
+# Purpose: Enables subnet resolution (Routing Policy > VPC > AZ > Subnet) for EC2 placement.
+
+# Used in:
+# Locals: 🔹 resolved_ec2_instance_map
+# Resources: indirectly via 🔹 aws_instance.main
+# Depends on: 🔹 minimal_rti_list (minimised from 🔹 route_table_intent_map)
 locals {
   minimal_rti_list = [
     for rti_key, rti_obj in local.route_table_intent_map : {
@@ -99,8 +135,13 @@ locals {
   }
 }
 
-# IGW ROUTES
-# ----------
+# 🔹 igw_route_map
+# ----------------
+# Purpose: Plans IGW routes for route tables with IGW routing intent.
+
+# Used in:
+# Resources: 🔹 aws_route.igw
+# Depends on: 🔹 route_table_intent_map, 🔹 igw_lookup_map
 locals {
   igw_route_prefix = "IGW:"
 
@@ -114,8 +155,14 @@ locals {
   }
 }
 
-# VALIDATE SUBNET HAS IGW ROUTE
-# -----------------------------
+# 🔹 subnet_has_igw_route
+# -----------------------
+# Purpose: Flags subnets with viable IGW routing.
+
+# Used in:
+# Locals: 🔹 nat_gw_map, 🔹 valid_eni_eip_map, 🔹 diagnostics
+# Resources: indirectly via 🔹 aws_eip.nat, 🔹 aws_eip.eni
+# Depends on: 🔹 route_table_intent_map, 🔹 igw_lookup_map
 locals {
   subnet_has_igw_route = {
     for rti_key, rti_obj in local.route_table_intent_map :
@@ -124,10 +171,14 @@ locals {
   }
 }
 
-# NAT-GW ROUTES
-# -------------
-# PRIMARY LOOKUP MAP
-# ------------------
+# 🔹 natgw_lookup_map_by_vpc_az, 🔹 natgw_lookup_map_by_vpc
+# ---------------------------------------------------------
+# Purpose: Enables NAT GW targeting (VPC > AZ > NAT GW) and (VPC > NAT GW)
+
+# Used in:
+# Locals: 🔹 nat_gw_route_map, 🔹 diagnostics
+# Resources: indirectly via 🔹 aws_route.nat_gw
+# Depends on: 🔹 nat_gw_map
 locals {
   natgw_lookup_map_by_vpc_az = {
     for vpc_grp_key in distinct([
@@ -142,19 +193,20 @@ locals {
       ]
     }
   }
-}
 
-# SECONDARY LOOKUP MAP
-# --------------------
-locals {
   natgw_lookup_map_by_vpc = {
     for vpc_grp_key in distinct([for nat_gw_key, nat_gw_obj in local.nat_gw_map : nat_gw_obj.vpc_key]) :
     vpc_grp_key => [for nat_gw_key, nat_gw_obj in local.nat_gw_map : nat_gw_key if nat_gw_obj.vpc_key == vpc_grp_key]
   }
 }
 
-# NAT Gateway route plan (AZ-aware with fallback)
-# ----------------------------------------------0
+# 🔹 nat_gw_route_map
+# --------------------
+# Purpose: Plans NAT GW routes with AZ-aware fallback.
+
+# Used in:
+# Resources: 🔹 aws_route.nat_gw
+# Depends on: 🔹 route_table_intent_map, 🔹 NAT GW lookup maps
 locals {
   nat_gw_route_prefix = "NATGW:"
   
@@ -168,8 +220,13 @@ locals {
   }
 }
 
-# ROUTE TABLE ASSOCIATIONS
-# ------------------------
+# 🔹 subnet_route_table_associations
+# ----------------------------------
+# Purpose: Maps subnets to route tables for association.
+
+# Used in:
+# Resources: 🔹 aws_route_table_association.main
+# Depends on: 🔹 route_table_map
 locals {
   rt_assoc_prefix = "RTASS:"
 
@@ -183,8 +240,16 @@ locals {
 }
 
 locals {
-# DEBUGS // DIAGNOSTICS
+# 🔹 Diagnostics locals
 # ---------------------
+# Purpose: Surface misconfigurations or missing dependencies.
+# Used in: Debug output only
+# Locals:
+# 🔹 nat_gw_subnets_without_igw_route
+# 🔹 igw_route_plans_without_viable_igw_target
+# 🔹 nat_gw_route_plans_without_viable_nat_gw_target
+# 🔹 subnets_not_in_subnet_route_table_association
+# 🔹 eni_eips_without_igw_route
 
   nat_gw_subnets_without_igw_route = [
     for subnet_key, subnet in local.subnet_map :
@@ -212,11 +277,16 @@ locals {
     for eip_map_key, eip_map_obj in local.valid_eni_map : eip_map_key 
     if eip_map_obj.assign_eip && !lookup(local.subnet_has_igw_route, eip_map_obj.subnet_id, false)
   ]
-
 }
 
-# EC2 instances
-# -------------
+# 🔹 merged_ec2_instance_map, 🔹 resolved_ec2_instance_map, 🔹 valid_ec2_instance_map
+# ------------------------------------------------------------------------------------
+# Purpose: Merges EC2 instances from profiles, resolves target subnets, filters valid EC2 instances.
+
+# Used in:
+# Locals: 🔹 valid_eni_map, 🔹 ec2_eni_lookup_map
+# Resources: 🔹 aws_instance.main, 🔹 aws_network_interface_attachment.main
+# Depends on: 🔹 var.ec2_instances, 🔹 var.ec2_profiles, 🔹 subnet_lookup_by_routing_policy_vpc_az, 🔹 subnet_map
 locals {
   merged_ec2_instance_map = {
     for inst_key, inst_obj in var.ec2_instances : inst_key => merge(
@@ -265,8 +335,14 @@ locals {
 }
 
 
-# ELASTIC NETWORK INTERFACES (ENIs)
-# ---------------------------------
+# 🔹 valid_eni_map
+# ----------------
+# Purpose: Builds enriched ENI objects from valid EC2 instances.
+
+# Used in:
+# Locals: 🔹 valid_eni_eip_map, 🔹 valid_eni_attachments, 🔹 ec2_eni_lookup_map, 🔹 diagnostics
+# Resources: 🔹 aws_network_interface.main
+# Depends on: 🔹 valid_ec2_instance_map, 🔹 valid_security_group_map
 locals {
   valid_eni_map = merge([ 
     for ec2_key, ec2_obj in local.valid_ec2_instance_map : {for eni_key, eni_obj in ec2_obj.network_interfaces : "${ec2_key}__${eni_key}" => merge(
@@ -275,15 +351,34 @@ locals {
         ec2_key         = ec2_key
         ec2_nic_key     = eni_key
         index           = tonumber(substr(eni_key, length(eni_key) - 1, 1))
-        security_groups = [for sg in coalesce(eni_obj.security_groups, []) : sg if contains(keys(local.valid_security_group_map), sg)]
+        security_groups = [for security_group  in coalesce(eni_obj.security_groups, []) : security_group  if contains(keys(local.valid_security_group_map), security_group)]
         tags            = ec2_obj.tags
       }
     )}
   ]...)
+
+enis_with_invalid_sgs = merge([
+  for ec2_key, ec2_obj in local.valid_ec2_instance_map : {
+    for eni_key, eni_obj in ec2_obj.network_interfaces : 
+    "${ec2_key}__${eni_key}" => setsubtract(
+      eni_obj.security_groups, ([
+        for security_group  in coalesce(eni_obj.security_groups, []) : security_group if contains(keys(local.valid_security_group_map), security_group)
+      ])
+    ) if length(setsubtract(
+      eni_obj.security_groups, ([for security_group  in coalesce(eni_obj.security_groups, []) : security_group if contains(keys(local.valid_security_group_map), security_group)])
+    )) > 0
+  }
+]...)
+
 } 
 
-# ENI ELASTIC IPs
-# ---------------
+# 🔹 valid_eni_eip_map
+# --------------------
+# Purpose: Filters ENIs eligible for Elastic IPs.
+
+# Used in:
+# Resources: 🔹 aws_eip.eni
+# Depends on: 🔹 valid_eni_map, 🔹 subnet_has_igw_route
 locals {
   valid_eni_eip_map = {
     for eip_map_key, eip_map_obj in local.valid_eni_map : eip_map_key => {
@@ -293,16 +388,18 @@ locals {
       tags                  = eip_map_obj.tags
     } if eip_map_obj.assign_eip && lookup(local.subnet_has_igw_route, eip_map_obj.subnet_id, false)
   }
- 
 } 
 
+# 🔹 ec2_eni_lookup_map
+# ---------------------
+# Purpose: Reverse lookup of ENI keys by EC2 instance primary NIC.
+
+# Used in:
+# Resources: 🔹 aws_instance.main
+# Depends on: 🔹 valid_eni_map, 🔹 valid_ec2_instance_map
 locals {
   primary_nic_name = "nic0"
-}
 
-# Reverse lookup map of ENI keys by EC2 instances
-# -----------------------------------------------
-locals {
   ec2_eni_lookup_map = {
     for ec2_key, ec2_obj in local.valid_ec2_instance_map : ec2_key => {
       for eni_map_key, eni_map_obj in local.valid_eni_map : eni_map_obj.ec2_nic_key => eni_map_key
@@ -311,8 +408,13 @@ locals {
   }
 }
 
-# ENI ATTACHMENTS
-# ---------------
+# 🔹 valid_eni_attachments
+# ------------------------
+# Purpose: Maps secondary ENIs to EC2 instances for attachment.
+
+# Used in:
+# Resources: 🔹 aws_network_interface_attachment.main
+# Depends on: 🔹 valid_eni_map
 locals {
   valid_eni_attachments = {
     for eni_map_key, eni_map_obj in local.valid_eni_map : eni_map_key => {
@@ -325,27 +427,41 @@ locals {
 } 
 
 
-# Prefix Lists
-# ------------
+# 🔹 prefix_list_map
+# -------------------
+# Purpose: Direct mapping of prefix list config.
+
+# Used in:
+# Resources: 🔹 aws_ec2_managed_prefix_list.main, 🔹 SG rule resolution
+# Depends on: 🔹 var.prefix_list_config
 locals {
   prefix_list_map = {
     for pl_key, pl_obj in var.prefix_list_config : pl_key => pl_obj 
   }
 }
 
-# SECURITY GROUP - VALIDATION
+# 🔹 valid_security_group_map
 # ---------------------------
-# create a new map of VALID security groups from the var.security_group_config map
-# Validity is determined by checking the VPC_ID of the security group against keys in VPC_CONFIG data
-# - This validated map of security groups is used in all downstream locals
+# Purpose: Filters SGs with valid VPC references.
+
+# Used in:
+# Locals: 🔹 normalised_ingress_ref_rules, 🔹 normalised_egress_ref_rules
+# Resources: 🔹 aws_security_group.main
+# Depends on: 🔹 var.security_groups, 🔹 var.vpc_config
 locals {
   valid_security_group_map = {
     for sg_key, sg_obj in var.security_groups : sg_key => sg_obj if contains(keys(var.vpc_config), sg_obj.vpc_id)
   }
 }
 
-# SECURITY GROUP RULE AGGREGATION — INGRESS 
-# -----------------------------------------
+# 🔹 normalised_ingress_ref_rules, hashed_ingress_rules, ingress_rules_map
+# ------------------------------------------------------------------------
+# Purpose: Normalize, hash, deduplicate and map ingress rules.
+
+# Used in:
+# Locals: 🔹 hashed_ingress_rules, 🔹 ingress_rules_map
+# Resources: 🔹 aws_vpc_security_group_ingress_rule.main
+# Depends on: 🔹 valid_security_group_map, var.security_group_rule_sets, 🔹 local.hash_exclusions
 locals {
   
   hash_exclusions = ["description", "rule_set_ref", "tags"]
@@ -400,8 +516,15 @@ locals {
   }
 }
 
-# SG EGRESS RULE AGGREGATION
-# ---------------------------
+# 🔹 normalised_egress_ref_rules, hashed_egress_rules, egress_rules_map
+# ---------------------------------------------------------------------
+# Purpose: Normalize, hash, deduplicate and map egress rules.
+
+# Used in:
+# Locals: 🔹 hashed_egress_rules, 🔹 egress_rules_map
+# Resources: 🔹 aws_vpc_security_group_egress_rule.main
+# Depends on: 🔹 valid_security_group_map, var.security_group_rule_sets, 🔹 local.hash_exclusions
+
 locals {
 
   # NORMALISATION & ENRICHMENT (REFERENCED RULES - EGRESS)
@@ -452,23 +575,37 @@ locals {
 }
 
 locals {
-    # SG RULE DIAGNOSTICS
-    sg_in_rules_list_flat = sort([for element in local.ingress_rules_map : "${element.sg_key}-${element.description}-${element.rule_hash}"])
+# 🔹 Diagnostics locals
+# ---------------------
+# Purpose: Flatten and group ingress/egress rules for traceability and diagnostics.
+# Used in: Debug output only
+# Locals:
+# 🔹 sg_in_rules_list_flat
+# 🔹 sg_eg_rules_list_flat
+# 🔹 sg_in_rules_by_sg
+# 🔹 sg_eg_rules_by_sg
+# Depends on: 🔹 ingress_rules_map, 🔹 egress_rules_map, 🔹 valid_security_group_map
 
-    sg_eg_rules_list_flat = sort([for element in local.egress_rules_map : "${element.sg_key}-${element.description}-${element.rule_hash}"])
+  sg_in_rules_list_flat = sort(
+    [for element in local.ingress_rules_map : "${element.sg_key}-${element.description}-${element.rule_hash}"]
+  )
 
-    sg_in_rules_by_sg = {
-      for sg_key in keys(local.valid_security_group_map) :
-      sg_key => [
-        for rule in local.ingress_rules_map : "${rule.rule_hash}-DESC:${rule.description}-REF:${rule.rule_set_ref}" if rule.sg_key == sg_key
-      ]
-    }
+  sg_eg_rules_list_flat = sort(
+    [for element in local.egress_rules_map : "${element.sg_key}-${element.description}-${element.rule_hash}"]
+  )
 
-    sg_eg_rules_by_sg = {
-      for sg_key in keys(local.valid_security_group_map) :
-      sg_key => [
-        for rule in local.egress_rules_map : "${rule.rule_hash}-DESC:${rule.description}-REF:${rule.rule_set_ref}" if rule.sg_key == sg_key
-      ]
-    }
+  sg_in_rules_by_sg = {
+    for sg_key in keys(local.valid_security_group_map) :
+    sg_key => [
+      for rule in local.ingress_rules_map : "${rule.rule_hash}-DESC:${rule.description}-REF:${rule.rule_set_ref}" if rule.sg_key == sg_key
+    ]
+  }
+
+  sg_eg_rules_by_sg = {
+    for sg_key in keys(local.valid_security_group_map) :
+    sg_key => [
+      for rule in local.egress_rules_map : "${rule.rule_hash}-DESC:${rule.description}-REF:${rule.rule_set_ref}" if rule.sg_key == sg_key
+    ]
+  }
 }
 

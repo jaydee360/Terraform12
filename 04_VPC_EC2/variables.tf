@@ -88,7 +88,7 @@ variable "ec2_profiles" {
   }
   validation {
     condition = alltrue([
-      for ec2_obj in var.ec2_profiles : alltrue([for eni_key, eni_obj in ec2_obj.network_interfaces : eni_obj.routing_policy == null ? true : can(contains(keys(var.routing_policies), eni_obj.routing_policy))])
+      for ec2_obj in var.ec2_profiles : alltrue([for eni_key, eni_obj in ec2_obj.network_interfaces : eni_obj.routing_policy == null ? true : contains(keys(var.routing_policies), eni_obj.routing_policy)])
     ])
     error_message = "Invalid Routing Policy: Network interfaces on ec2_profiles must reference a routing policy defined in var.routing_policies."
   }
@@ -128,7 +128,7 @@ variable "ec2_instances" {
     condition = alltrue([
       for ec2_obj in var.ec2_instances : contains(keys(ec2_obj.network_interfaces), "nic0")
     ])
-    error_message = "Each EC2 instance must define 'nic0' (primary network interface)"
+    error_message = "Each EC2 instance must define 'nic0' (primary network interface) for placement (VPC & AZ)"
   }
   validation {
     condition = alltrue([
@@ -142,7 +142,7 @@ variable "ec2_instances" {
   }
   validation {
     condition = alltrue([
-      for ec2_obj in var.ec2_instances : alltrue([for eni_key, eni_obj in ec2_obj.network_interfaces : eni_obj.routing_policy == null ? true : can(contains(keys(var.routing_policies), eni_obj.routing_policy))])
+      for ec2_obj in var.ec2_instances : alltrue([for eni_key, eni_obj in ec2_obj.network_interfaces : eni_obj.routing_policy == null ? true : contains(keys(var.routing_policies), eni_obj.routing_policy)])
     ])
     error_message = "Invalid Routing Policy: Network interfaces on ec2_instances must specify a valid routing policy (var.routing_policy)"
   }
