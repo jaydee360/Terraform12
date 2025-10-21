@@ -1,8 +1,13 @@
 aws_region = "us-east-1"
 aws_profile = "terraform"
 
+vpc_connections = [ 
+    {a = "hub_vpc_000", b = "shared_vpc_100"},
+    {a = "hub_vpc_000", b = "app_vpc_200"}
+]
+
 vpc_config = {
-    vpc_000 = {
+    hub_vpc_000 = {
         vpc_cidr = "10.0.0.0/16"
         enable_dns_support = true
         enable_dns_hostnames = true
@@ -24,7 +29,7 @@ vpc_config = {
             "public_subnet_010" = {
                 subnet_cidr = "10.0.1.0/24"
                 az = "b"
-                create_natgw = true
+                create_natgw = false
                 routing_policy = "public"
                 tags = {
                     type = "public"
@@ -34,7 +39,7 @@ vpc_config = {
             "public_subnet_020" = {
                 subnet_cidr = "10.0.2.0/24"
                 az = "c"
-                create_natgw = true
+                create_natgw = false
                 routing_policy = "public"
                 tags = {
                     type = "public"
@@ -73,7 +78,7 @@ vpc_config = {
             }
         }
     }
-    vpc_100 = {
+    shared_vpc_100 = {
         vpc_cidr = "10.1.0.0/16"
         enable_dns_support = true
         enable_dns_hostnames = true
@@ -144,6 +149,47 @@ vpc_config = {
             }
         }
     }
+    app_vpc_200 = {
+        vpc_cidr = "10.2.0.0/16"
+        enable_dns_support = true
+        enable_dns_hostnames = true
+        create_igw = false
+        tags = {
+            TAG = "This tag is from VPC_CONFIG > VPC_200"
+        }
+        subnets = {
+            "private_subnet_240" = {
+                subnet_cidr = "10.2.4.0/24"
+                az = "a"
+                create_natgw = false
+                routing_policy = "private_nat"
+                tags = {
+                    type = "private"
+                    TAG = "This tag is from VPC_CONFIG > VPC_200 > SUBNET > PRIVATE_SUBNET_240"
+                }
+            }
+            "private_subnet_250" = {
+                subnet_cidr = "10.2.5.0/24"
+                az = "b"
+                create_natgw = false
+                routing_policy = "private_nat"
+                tags = {
+                    type = "private"
+                    TAG = "This tag is from VPC_CONFIG > VPC_200 > SUBNET > PRIVATE_SUBNET_250"
+                }
+            }
+            "private_subnet_260" = {
+                subnet_cidr = "10.2.6.0/24"
+                az = "c"
+                create_natgw = false
+                routing_policy = "private_nat"
+                tags = {
+                    type = "private"
+                    TAG = "This tag is from VPC_CONFIG > VPC_200 > SUBNET > PRIVATE_SUBNET_260"
+                }
+            }
+        }
+    }
 }
 
 routing_policies = {
@@ -189,7 +235,7 @@ ec2_profiles = {
         network_interfaces = {
             "nic0" = {
                 routing_policy = "private_nat"
-                security_groups = ["database_backend"]
+                security_groups = ["database"]
                 assign_eip = false
             }
         }
@@ -205,23 +251,16 @@ ec2_instances = {
         ec2_profile = "webserver"
         network_interfaces = {
             "nic0" = {
-                vpc = "vpc_000"
+                vpc = "hub_vpc_000"
                 az = "a"
             }
-            # "nic1" = {
-            #     routing_policy = "public"
-            #     security_groups = ["webserver_frontend"]
-            #     assign_eip = false
-            #     vpc = "vpc_000"
-            #     az = "a"
-            # }
         }
     }
     web_01 = {
         ec2_profile = "webserver"
         network_interfaces = {
             "nic0" = {
-                vpc = "vpc_000"
+                vpc = "hub_vpc_000"
                 az = "b"
             }
         }
@@ -230,14 +269,14 @@ ec2_instances = {
         ec2_profile = "webserver"
         network_interfaces = {
             "nic0" = {
-                vpc = "vpc_000"
+                vpc = "hub_vpc_000"
                 az = "c"
             }
             "nic1" = {
                 routing_policy = "public"
                 security_groups = ["webserver_frontend"]
                 assign_eip = false
-                vpc = "vpc_000"
+                vpc = "hub_vpc_000"
                 az = "c"
             }
         }
@@ -246,7 +285,7 @@ ec2_instances = {
         ec2_profile = "database"
         network_interfaces = {
             "nic0" = {
-                vpc = "vpc_000"
+                vpc = "hub_vpc_000"
                 az = "a"
             }
         }
@@ -255,7 +294,7 @@ ec2_instances = {
         ec2_profile = "database"
         network_interfaces = {
             "nic0" = {
-                vpc = "vpc_000"
+                vpc = "hub_vpc_000"
                 az = "b"
             }
         }
@@ -264,7 +303,7 @@ ec2_instances = {
         ec2_profile = "database"
         network_interfaces = {
             "nic0" = {
-                vpc = "vpc_000"
+                vpc = "hub_vpc_000"
                 az = "c"
             }
         }
@@ -287,7 +326,7 @@ prefix_list_config = {
 
 security_groups = {
     "webserver_frontend" = {
-        vpc_id      = "vpc_000"
+        vpc_id      = "hub_vpc_000"
         description = "webserver_frontend SG"
         ingress_ref = ["WEB_FRONTEND_IN", "ADMIN_IN"]
         egress_ref = ["ANY_OUT"]
@@ -296,7 +335,7 @@ security_groups = {
         }
     }
     "database" = {
-        vpc_id      = "vpc_000"
+        vpc_id      = "hub_vpc_000"
         description = "database SG"
         ingress_ref = ["DB_MYSQL_INTERNAL", "DB_MYSQL_ADMIN", "DB_POSTGRES_INTERNAL"]
         egress_ref = ["ANY_OUT"]

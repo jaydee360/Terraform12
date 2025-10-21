@@ -228,3 +228,9 @@ variable "security_group_rule_sets" {
   # validation is done using lifecycle precondition in the resource block
 }
 
+variable "vpc_connections" {
+  type = list(object({
+    a = string
+    b = string 
+  }))
+}
