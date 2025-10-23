@@ -31,6 +31,24 @@ variable "az_lookup" {
   }
 }
 
+variable "vpc_connections" {
+  type = list(object({
+    a = string
+    b = string 
+  }))
+}
+
+variable "vpc_peerings" {
+  type = list(object({
+    requester = string
+    accepter = string
+    requester_auto = optional(bool, false)
+    accepter_auto = optional(bool, true)
+    requester_allow_dns = optional(bool, true)
+    accepter_allow_dns = optional(bool, true)
+  }))  
+}
+
 variable "vpc_config" {
   type = map(object({
     vpc_cidr             = string
@@ -228,9 +246,3 @@ variable "security_group_rule_sets" {
   # validation is done using lifecycle precondition in the resource block
 }
 
-variable "vpc_connections" {
-  type = list(object({
-    a = string
-    b = string 
-  }))
-}

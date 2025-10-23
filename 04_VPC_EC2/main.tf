@@ -287,3 +287,41 @@ resource "aws_vpc_security_group_egress_rule" "main" {
   }
 }
 
+resource "aws_vpc_peering_connection" "requester" {
+  for_each    = local.vpc_peering_map
+
+  vpc_id      = aws_vpc.main[each.value.requester].id
+  peer_vpc_id = aws_vpc.main[each.value.accepter].id
+  auto_accept = each.value.requester_auto
+}
+
+resource "aws_vpc_peering_connection_accepter" "accepter" {
+  for_each = local.vpc_peering_map
+
+  vpc_peering_connection_id = aws_vpc_peering_connection.requester[each.key].id
+  auto_accept = each.value.accepter_auto
+}
+
+resource "aws_vpc_peering_connection_options" "requester" {
+  for_each = local.vpc_peering_map
+
+  vpc_peering_connection_id = aws_vpc_peering_connection.requester[each.key].id
+
+  requester {
+    allow_remote_vpc_dns_resolution = each.value.requester_allow_dns
+  }
+
+  depends_on = [aws_vpc_peering_connection_accepter.accepter]
+}
+
+resource "aws_vpc_peering_connection_options" "accepter" {
+  for_each = local.vpc_peering_map
+  
+  vpc_peering_connection_id = aws_vpc_peering_connection.requester[each.key].id
+  accepter {
+    allow_remote_vpc_dns_resolution = each.value.accepter_allow_dns
+  }
+  
+  depends_on = [aws_vpc_peering_connection_accepter.accepter]
+}
+

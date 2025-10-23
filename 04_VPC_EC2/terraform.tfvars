@@ -6,6 +6,11 @@ vpc_connections = [
     {a = "hub_vpc_000", b = "app_vpc_200"}
 ]
 
+vpc_peerings = [ 
+    {requester = "hub_vpc_000", accepter = "shared_vpc_100"},
+    {requester = "hub_vpc_000", accepter = "app_vpc_200"}
+]
+
 vpc_config = {
     hub_vpc_000 = {
         vpc_cidr = "10.0.0.0/16"
@@ -19,7 +24,7 @@ vpc_config = {
             "public_subnet_000" = {
                 subnet_cidr = "10.0.0.0/24"
                 az = "a"
-                create_natgw = true
+                create_natgw = false
                 routing_policy = "public"
                 tags = {
                     type = "public"
@@ -90,7 +95,7 @@ vpc_config = {
             "public_subnet_100" = {
                 subnet_cidr = "10.1.0.0/24"
                 az = "a"
-                create_natgw = true
+                create_natgw = false
                 routing_policy = "public"
                 tags = {
                     type = "public"
@@ -247,67 +252,67 @@ ec2_profiles = {
 }
 
 ec2_instances = {
-    web_00 = {
-        ec2_profile = "webserver"
-        network_interfaces = {
-            "nic0" = {
-                vpc = "hub_vpc_000"
-                az = "a"
-            }
-        }
-    }
-    web_01 = {
-        ec2_profile = "webserver"
-        network_interfaces = {
-            "nic0" = {
-                vpc = "hub_vpc_000"
-                az = "b"
-            }
-        }
-    }
-    web_02 = {
-        ec2_profile = "webserver"
-        network_interfaces = {
-            "nic0" = {
-                vpc = "hub_vpc_000"
-                az = "c"
-            }
-            "nic1" = {
-                routing_policy = "public"
-                security_groups = ["webserver_frontend"]
-                assign_eip = false
-                vpc = "hub_vpc_000"
-                az = "c"
-            }
-        }
-    }
-    database_00 = {
-        ec2_profile = "database"
-        network_interfaces = {
-            "nic0" = {
-                vpc = "hub_vpc_000"
-                az = "a"
-            }
-        }
-    }
-    database_01 = {
-        ec2_profile = "database"
-        network_interfaces = {
-            "nic0" = {
-                vpc = "hub_vpc_000"
-                az = "b"
-            }
-        }
-    }
-    database_02 = {
-        ec2_profile = "database"
-        network_interfaces = {
-            "nic0" = {
-                vpc = "hub_vpc_000"
-                az = "c"
-            }
-        }
-    }
+    # web_00 = {
+    #     ec2_profile = "webserver"
+    #     network_interfaces = {
+    #         "nic0" = {
+    #             vpc = "hub_vpc_000"
+    #             az = "a"
+    #         }
+    #     }
+    # }
+    # web_01 = {
+    #     ec2_profile = "webserver"
+    #     network_interfaces = {
+    #         "nic0" = {
+    #             vpc = "hub_vpc_000"
+    #             az = "b"
+    #         }
+    #     }
+    # }
+    # web_02 = {
+    #     ec2_profile = "webserver"
+    #     network_interfaces = {
+    #         "nic0" = {
+    #             vpc = "hub_vpc_000"
+    #             az = "c"
+    #         }
+    #         "nic1" = {
+    #             routing_policy = "public"
+    #             security_groups = ["webserver_frontend"]
+    #             assign_eip = false
+    #             vpc = "hub_vpc_000"
+    #             az = "c"
+    #         }
+    #     }
+    # }
+    # database_00 = {
+    #     ec2_profile = "database"
+    #     network_interfaces = {
+    #         "nic0" = {
+    #             vpc = "hub_vpc_000"
+    #             az = "a"
+    #         }
+    #     }
+    # }
+    # database_01 = {
+    #     ec2_profile = "database"
+    #     network_interfaces = {
+    #         "nic0" = {
+    #             vpc = "hub_vpc_000"
+    #             az = "b"
+    #         }
+    #     }
+    # }
+    # database_02 = {
+    #     ec2_profile = "database"
+    #     network_interfaces = {
+    #         "nic0" = {
+    #             vpc = "hub_vpc_000"
+    #             az = "c"
+    #         }
+    #     }
+    # }
 }
 
 prefix_list_config = {
@@ -325,24 +330,24 @@ prefix_list_config = {
 }
 
 security_groups = {
-    "webserver_frontend" = {
-        vpc_id      = "hub_vpc_000"
-        description = "webserver_frontend SG"
-        ingress_ref = ["WEB_FRONTEND_IN", "ADMIN_IN"]
-        egress_ref = ["ANY_OUT"]
-        tags = {
-            TAG = "SECURITY_GROUPS > WEBSERVER_FRONTEND"
-        }
-    }
-    "database" = {
-        vpc_id      = "hub_vpc_000"
-        description = "database SG"
-        ingress_ref = ["DB_MYSQL_INTERNAL", "DB_MYSQL_ADMIN", "DB_POSTGRES_INTERNAL"]
-        egress_ref = ["ANY_OUT"]
-        tags = {
-            TAG = "SECURITY_GROUPS > DATABASE"
-        }
-    }
+    # "webserver_frontend" = {
+    #     vpc_id      = "hub_vpc_000"
+    #     description = "webserver_frontend SG"
+    #     ingress_ref = ["WEB_FRONTEND_IN", "ADMIN_IN"]
+    #     egress_ref = ["ANY_OUT"]
+    #     tags = {
+    #         TAG = "SECURITY_GROUPS > WEBSERVER_FRONTEND"
+    #     }
+    # }
+    # "database" = {
+    #     vpc_id      = "hub_vpc_000"
+    #     description = "database SG"
+    #     ingress_ref = ["DB_MYSQL_INTERNAL", "DB_MYSQL_ADMIN", "DB_POSTGRES_INTERNAL"]
+    #     egress_ref = ["ANY_OUT"]
+    #     tags = {
+    #         TAG = "SECURITY_GROUPS > DATABASE"
+    #     }
+    # }
 }
 
 security_group_rule_sets = {
