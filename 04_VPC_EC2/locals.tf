@@ -22,6 +22,49 @@ locals {
   ]...)
 }
 
+
+
+locals {
+
+  vpc_peering_map = {
+    for pcx_obj in var.vpc_peerings : "${pcx_obj.requester}__${pcx_obj.accepter}" => pcx_obj
+  }
+
+  vpc_summary_map = {
+    for vpc_key, vpc_obj in var.vpc_config : vpc_key => {
+      cidr = vpc_obj.vpc_cidr
+    }
+  }
+
+  vpc_peering_connections = [
+    for pcx_obj in var.vpc_peerings : 
+      {
+        a = pcx_obj.requester
+        b = pcx_obj.accepter
+        target_type = "peering"
+        target_key = "${pcx_obj.requester}__${pcx_obj.accepter}"
+      }
+  ]
+
+  vpc_peer_lookup_map = {
+    for vpc_key, vpc_obj in local.vpc_summary_map : vpc_key => flatten([
+      for conn in local.vpc_peering_connections : 
+      conn.a == vpc_key ? [{
+        peer_vpc = conn.b
+        target_type = conn.target_type
+        target_key = conn.target_key
+      }] :
+        conn.b == vpc_key ? [{
+        peer_vpc = conn.a 
+        target_type = conn.target_type
+        target_key = conn.target_key
+      }] : 
+      []
+    ])
+  }  
+
+}
+
 # 🔹 igw_map, 🔹 igw_lookup_map
 # -----------------------------
 # Purpose: Maps IGWs from VPCs and enables reverse lookup of VPCs > IGWs
@@ -108,6 +151,19 @@ locals {
 }
 
 locals {
+  peering_route_prefix = "PCX:"
+
+  peering_route_map = merge([
+    for rti_key, rti_obj in local.route_table_intent_map : {
+      for peer in local.vpc_peer_lookup_map[rti_obj.vpc_key] : "${local.peering_route_prefix}${rti_obj.rt_key}__${peer.peer_vpc}" => {
+        cidr_block  = local.vpc_summary_map[peer.peer_vpc].cidr
+        target_type = peer.target_type
+        target_key  = peer.target_key
+        rt_key      = rti_obj.rt_key
+      }
+    } 
+    if rti_obj.routing_policy.inject_peerings == true && length(local.vpc_peer_lookup_map[rti_obj.vpc_key]) > 0
+  ]...)
 
 # Step 2: Template stem (route_table_template_refs)
 # Sparse map: only RTIs that actually reference templates.
@@ -132,101 +188,6 @@ locals {
       )
     ]
   }
-
-    test_crt_routes_1 =  [
-      for rti_key, crt_list in local.rti_custom_route_template_expansion : [
-        for crt_idx, crt in crt_list : [
-          for my_peers in local.vpc_peer_lookup_map[crt.vpc_key] : [
-            for peer_idx, peer in my_peers : peer
-          ]
-        ]
-      ]
-    ]
-
-    test_crt_routes_2 = {
-      for rti_key, crt_list in local.rti_custom_route_template_expansion : rti_key => {
-        for crt in crt_list : crt.custom_route_template_name => {
-          for peer in local.vpc_peer_lookup_map[crt.vpc_key] : peer.peer_vpc => {
-              cidr_block = local.vpc_summary_map[peer.peer_vpc].cidr
-              target_type = peer.target_type
-              target_key = peer.target_key
-            }
-          }
-        } 
-      }
-
-    test_crt_routes_2a = {
-      for rti_key, crt_list in local.rti_custom_route_template_expansion : rti_key => {
-        for crt in crt_list : crt.custom_route_template_name => [
-          for peer in local.vpc_peer_lookup_map[crt.vpc_key] : {
-              cidr_block = local.vpc_summary_map[peer.peer_vpc].cidr
-              target_type = peer.target_type
-              target_key = peer.target_key
-            }
-          ]
-        } 
-      }
-
-    test_crt_routes_3 = {
-      for rti_key, crt_list in local.rti_custom_route_template_expansion : rti_key => {
-        for crt in crt_list : crt.custom_route_template_name => [
-          for peer in local.vpc_peer_lookup_map[crt.vpc_key] : {
-            cidr_block  = local.vpc_summary_map[peer.peer_vpc].cidr
-            target_type = peer.target_type
-            target_key  = peer.target_key
-          }
-        ]
-      }
-    }
-
-    peering_route_prefix = "PCX:"
-    test_crt_routes_4 = {
-      for rti_key, crt_list in local.rti_custom_route_template_expansion : "${rti_key}__compound" => merge(flatten([
-        for crt in crt_list : [
-          for peer in local.vpc_peer_lookup_map[crt.vpc_key] : {
-            cidr_block  = local.vpc_summary_map[peer.peer_vpc].cidr
-            target_type = peer.target_type
-            target_key  = peer.target_key
-          }
-        ]
-      ])...)
-    }
-        
-}
-
-  # route_table_custom_route_expansion = {
-  #   for rti_key, rti_obj in local.route_table_intent_map : rti_key => {
-  #     rt_key = rti_obj.rt_key
-  #     vpc_key = rti_obj.vpc_key
-  #     routing_policy = rti_obj.routing_policy
-  #   }
-  # }
-
-  # route_table_custom_route_expansion_v2 = {
-  #   for rti_key, rti_obj in local.route_table_intent_map : rti_key => {
-  #     rt_key = rti_obj.rt_key
-  #     vpc_key = rti_obj.vpc_key
-  #     routing_policy = merge(
-  #       rti_obj.routing_policy,
-  #       rti_obj.routing_policy.custom_route_templates != null ? [for crt in rti_obj.routing_policy.custom_route_templates : lookup(var.custom_route_templates, crt, null)] : [] 
-  #     )
-  #   }
-  # }
-
-  # test = {for rti_key, rti_obj in local.route_table_intent_map : rti_key => [for crt in rti_obj.routing_policy.custom_route_templates : crt] if rti_obj.routing_policy.custom_route_templates != null }
-  
-  # {
-  #   for rti_key, rti_obj in local.route_table_intent_map : 
-  #   rti_key => [
-  #     for crt in rti_obj.routing_policy.custom_route_templates : lookup(var.custom_route_templates, crt, null)
-  #   ] if rti_obj.routing_policy.custom_route_templates != null 
-  # }
-
-  #   {for rti_key, rti_obj in local.route_table_intent_map : 
-  #   rti_key => {
-  #     for crt in rti_obj.routing_policy.custom_route_templates : "custom_route_templates" => lookup(var.custom_route_templates, crt, null)
-  #    } if rti_obj.routing_policy.custom_route_templates != null 
-  #   }
 
 }
 

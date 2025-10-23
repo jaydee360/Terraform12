@@ -70,6 +70,7 @@ variable "routing_policies" {
   type = map(object({
     inject_igw    = optional(bool, false)
     inject_nat    = optional(bool, false)
+    inject_peerings = optional(bool, false)
     custom_route_templates = optional(set(string), null)
     tags          = optional(map(string), null)
   }))

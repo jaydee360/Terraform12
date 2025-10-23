@@ -122,36 +122,36 @@ vpc_config = {
             #         TAG = "This tag is from VPC_CONFIG > VPC_100 > SUBNET > PUBLIC_SUBNET_120"
             #     }
             # }
-            # "private_subnet_140" = {
-            #     subnet_cidr = "10.1.4.0/24"
-            #     az = "a"
-            #     create_natgw = false
-            #     routing_policy = "private_nat"
-            #     tags = {
-            #         type = "private"
-            #         TAG = "This tag is from VPC_CONFIG > VPC_100 > SUBNET > PRIVATE_SUBNET_140"
-            #     }
-            # }
-            # "private_subnet_150" = {
-            #     subnet_cidr = "10.1.5.0/24"
-            #     az = "b"
-            #     create_natgw = false
-            #     routing_policy = "private_nat"
-            #     tags = {
-            #         type = "private"
-            #         TAG = "This tag is from VPC_CONFIG > VPC_100 > SUBNET > PRIVATE_SUBNET_150"
-            #     }
-            # }
-            # "private_subnet_160" = {
-            #     subnet_cidr = "10.1.6.0/24"
-            #     az = "c"
-            #     create_natgw = false
-            #     routing_policy = "private_nat"
-            #     tags = {
-            #         type = "private"
-            #         TAG = "This tag is from VPC_CONFIG > VPC_100 > SUBNET > PRIVATE_SUBNET_160"
-            #     }
-            # }
+            "private_subnet_140" = {
+                subnet_cidr = "10.1.4.0/24"
+                az = "a"
+                create_natgw = false
+                routing_policy = "private_with_peering"
+                tags = {
+                    type = "private"
+                    TAG = "This tag is from VPC_CONFIG > VPC_100 > SUBNET > PRIVATE_SUBNET_140"
+                }
+            }
+            "private_subnet_150" = {
+                subnet_cidr = "10.1.5.0/24"
+                az = "b"
+                create_natgw = false
+                routing_policy = "private_with_peering"
+                tags = {
+                    type = "private"
+                    TAG = "This tag is from VPC_CONFIG > VPC_100 > SUBNET > PRIVATE_SUBNET_150"
+                }
+            }
+            "private_subnet_160" = {
+                subnet_cidr = "10.1.6.0/24"
+                az = "c"
+                create_natgw = false
+                routing_policy = "private_with_peering"
+                tags = {
+                    type = "private"
+                    TAG = "This tag is from VPC_CONFIG > VPC_100 > SUBNET > PRIVATE_SUBNET_160"
+                }
+            }
         }
     }
     app_vpc_200 = {
@@ -167,7 +167,7 @@ vpc_config = {
                 subnet_cidr = "10.2.4.0/24"
                 az = "a"
                 create_natgw = false
-                routing_policy = "private_nat"
+                routing_policy = "private_with_peering"
                 tags = {
                     type = "private"
                     TAG = "This tag is from VPC_CONFIG > VPC_200 > SUBNET > PRIVATE_SUBNET_240"
@@ -177,7 +177,7 @@ vpc_config = {
                 subnet_cidr = "10.2.5.0/24"
                 az = "b"
                 create_natgw = false
-                routing_policy = "private_nat"
+                routing_policy = "private_with_peering"
                 tags = {
                     type = "private"
                     TAG = "This tag is from VPC_CONFIG > VPC_200 > SUBNET > PRIVATE_SUBNET_250"
@@ -187,7 +187,7 @@ vpc_config = {
                 subnet_cidr = "10.2.6.0/24"
                 az = "c"
                 create_natgw = false
-                routing_policy = "private_nat"
+                routing_policy = "private_with_peering"
                 tags = {
                     type = "private"
                     TAG = "This tag is from VPC_CONFIG > VPC_200 > SUBNET > PRIVATE_SUBNET_260"
@@ -215,7 +215,8 @@ routing_policies = {
     "private_with_peering" = {
         inject_igw = false
         inject_nat = false
-        custom_route_templates = ["peering_connections"]
+        inject_peerings = true
+        # custom_route_templates = ["peering_connections"]
         tags = {
             TAG = "This tag is from ROUTING_POLICIES > PRIVATE_NAT"
         }

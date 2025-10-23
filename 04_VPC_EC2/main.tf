@@ -123,6 +123,14 @@ resource "aws_route" "nat_gw" {
   nat_gateway_id         = aws_nat_gateway.main[each.value.target_key].id
 }
 
+resource "aws_route" "peerings" {
+  for_each = local.peering_route_map
+
+  route_table_id = aws_route_table.main[each.value.rt_key].id
+  destination_cidr_block = each.value.cidr_block
+  vpc_peering_connection_id = aws_vpc_peering_connection.requester[each.value.target_key].id
+}
+
 resource "aws_route_table_association" "main" {
   # Creates a route table association between each subnet and its corresponding route table
   # Eligibility is handled in the local.subnet_route_table_associations
