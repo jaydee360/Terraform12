@@ -107,6 +107,129 @@ locals {
   }
 }
 
+locals {
+
+# Step 2: Template stem (route_table_template_refs)
+# Sparse map: only RTIs that actually reference templates.
+# Just rti_key => [template_names...].
+
+  rti_custom_route_template_refs = {
+    for rti_key, rti_obj in local.route_table_intent_map :rti_key => [
+      for crt in rti_obj.routing_policy.custom_route_templates : crt
+    ] if rti_obj.routing_policy.custom_route_templates != null 
+  }
+
+  rti_custom_route_template_expansion = {
+    for rti_key, crt_refs in local.rti_custom_route_template_refs : rti_key => [
+      for ref in crt_refs : merge(
+        lookup(var.custom_route_templates, ref, null),
+        {
+          rt_key = local.route_table_intent_map[rti_key].rt_key
+          vpc_key = local.route_table_intent_map[rti_key].vpc_key
+          routing_policy_name = local.route_table_intent_map[rti_key].routing_policy_name
+          custom_route_template_name = ref
+        }
+      )
+    ]
+  }
+
+    test_crt_routes_1 =  [
+      for rti_key, crt_list in local.rti_custom_route_template_expansion : [
+        for crt_idx, crt in crt_list : [
+          for my_peers in local.vpc_peer_lookup_map[crt.vpc_key] : [
+            for peer_idx, peer in my_peers : peer
+          ]
+        ]
+      ]
+    ]
+
+    test_crt_routes_2 = {
+      for rti_key, crt_list in local.rti_custom_route_template_expansion : rti_key => {
+        for crt in crt_list : crt.custom_route_template_name => {
+          for peer in local.vpc_peer_lookup_map[crt.vpc_key] : peer.peer_vpc => {
+              cidr_block = local.vpc_summary_map[peer.peer_vpc].cidr
+              target_type = peer.target_type
+              target_key = peer.target_key
+            }
+          }
+        } 
+      }
+
+    test_crt_routes_2a = {
+      for rti_key, crt_list in local.rti_custom_route_template_expansion : rti_key => {
+        for crt in crt_list : crt.custom_route_template_name => [
+          for peer in local.vpc_peer_lookup_map[crt.vpc_key] : {
+              cidr_block = local.vpc_summary_map[peer.peer_vpc].cidr
+              target_type = peer.target_type
+              target_key = peer.target_key
+            }
+          ]
+        } 
+      }
+
+    test_crt_routes_3 = {
+      for rti_key, crt_list in local.rti_custom_route_template_expansion : rti_key => {
+        for crt in crt_list : crt.custom_route_template_name => [
+          for peer in local.vpc_peer_lookup_map[crt.vpc_key] : {
+            cidr_block  = local.vpc_summary_map[peer.peer_vpc].cidr
+            target_type = peer.target_type
+            target_key  = peer.target_key
+          }
+        ]
+      }
+    }
+
+    peering_route_prefix = "PCX:"
+    test_crt_routes_4 = {
+      for rti_key, crt_list in local.rti_custom_route_template_expansion : "${rti_key}__compound" => merge(flatten([
+        for crt in crt_list : [
+          for peer in local.vpc_peer_lookup_map[crt.vpc_key] : {
+            cidr_block  = local.vpc_summary_map[peer.peer_vpc].cidr
+            target_type = peer.target_type
+            target_key  = peer.target_key
+          }
+        ]
+      ])...)
+    }
+        
+}
+
+  # route_table_custom_route_expansion = {
+  #   for rti_key, rti_obj in local.route_table_intent_map : rti_key => {
+  #     rt_key = rti_obj.rt_key
+  #     vpc_key = rti_obj.vpc_key
+  #     routing_policy = rti_obj.routing_policy
+  #   }
+  # }
+
+  # route_table_custom_route_expansion_v2 = {
+  #   for rti_key, rti_obj in local.route_table_intent_map : rti_key => {
+  #     rt_key = rti_obj.rt_key
+  #     vpc_key = rti_obj.vpc_key
+  #     routing_policy = merge(
+  #       rti_obj.routing_policy,
+  #       rti_obj.routing_policy.custom_route_templates != null ? [for crt in rti_obj.routing_policy.custom_route_templates : lookup(var.custom_route_templates, crt, null)] : [] 
+  #     )
+  #   }
+  # }
+
+  # test = {for rti_key, rti_obj in local.route_table_intent_map : rti_key => [for crt in rti_obj.routing_policy.custom_route_templates : crt] if rti_obj.routing_policy.custom_route_templates != null }
+  
+  # {
+  #   for rti_key, rti_obj in local.route_table_intent_map : 
+  #   rti_key => [
+  #     for crt in rti_obj.routing_policy.custom_route_templates : lookup(var.custom_route_templates, crt, null)
+  #   ] if rti_obj.routing_policy.custom_route_templates != null 
+  # }
+
+  #   {for rti_key, rti_obj in local.route_table_intent_map : 
+  #   rti_key => {
+  #     for crt in rti_obj.routing_policy.custom_route_templates : "custom_route_templates" => lookup(var.custom_route_templates, crt, null)
+  #    } if rti_obj.routing_policy.custom_route_templates != null 
+  #   }
+
+}
+
 # 🔹 subnet_lookup_by_routing_policy_vpc_az
 # -----------------------------------------
 # Purpose: Enables subnet resolution (Routing Policy > VPC > AZ > Subnet) for EC2 placement.

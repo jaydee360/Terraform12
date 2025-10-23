@@ -70,11 +70,7 @@ variable "routing_policies" {
   type = map(object({
     inject_igw    = optional(bool, false)
     inject_nat    = optional(bool, false)
-    custom_routes = optional(list(object({
-      cidr_block    = string
-      target_type   = string
-      target_key    = string
-    })))
+    custom_route_templates = optional(set(string), null)
     tags          = optional(map(string), null)
   }))
   validation {
@@ -83,6 +79,14 @@ variable "routing_policies" {
     ])
     error_message = "A route table cannot inject both IGW and NAT. Check: route_table_config."
   }
+}
+
+variable "custom_route_templates" {
+  type = map(object({
+    cidr_block    = string
+    target_type   = string
+    target_key    = string
+  }))
 }
 
 variable "ec2_profiles" {

@@ -237,3 +237,5 @@ merge(flatten([for rule_set_key, rule_set_list in var.security_group_rule_sets :
 merge([for rule_set_key, rule_set_list in var.security_group_rule_sets : {
     for rule_set_obj in rule_set_list : rule_set_key => contains(keys(var.security_groups), rule_set_obj.referenced_security_group_id) if rule_set_obj.referenced_security_group_id != null && !contains(keys(var.security_groups), rule_set_obj.referenced_security_group_id)
 }]...)
+
+terraform import aws_vpc_peering_connection.test_connection pcx-0fe03effde452120f

@@ -21,41 +21,41 @@ vpc_config = {
             TAG = "This tag is from VPC_CONFIG > VPC_000"
         }
         subnets = {
-            "public_subnet_000" = {
-                subnet_cidr = "10.0.0.0/24"
-                az = "a"
-                create_natgw = false
-                routing_policy = "public"
-                tags = {
-                    type = "public"
-                    TAG = "This tag is from VPC_CONFIG > VPC_000 > SUBNET > PUBLIC_SUBNET_000"
-                }
-            }
-            "public_subnet_010" = {
-                subnet_cidr = "10.0.1.0/24"
-                az = "b"
-                create_natgw = false
-                routing_policy = "public"
-                tags = {
-                    type = "public"
-                    TAG = "This tag is from VPC_CONFIG > VPC_000 > SUBNET > PUBLIC_SUBNET_010"
-                }
-            }
-            "public_subnet_020" = {
-                subnet_cidr = "10.0.2.0/24"
-                az = "c"
-                create_natgw = false
-                routing_policy = "public"
-                tags = {
-                    type = "public"
-                    TAG = "This tag is from VPC_CONFIG > VPC_000 > SUBNET > PUBLIC_SUBNET_020"
-                }
-            }
+            # "public_subnet_000" = {
+            #     subnet_cidr = "10.0.0.0/24"
+            #     az = "a"
+            #     create_natgw = false
+            #     routing_policy = "public"
+            #     tags = {
+            #         type = "public"
+            #         TAG = "This tag is from VPC_CONFIG > VPC_000 > SUBNET > PUBLIC_SUBNET_000"
+            #     }
+            # }
+            # "public_subnet_010" = {
+            #     subnet_cidr = "10.0.1.0/24"
+            #     az = "b"
+            #     create_natgw = false
+            #     routing_policy = "public"
+            #     tags = {
+            #         type = "public"
+            #         TAG = "This tag is from VPC_CONFIG > VPC_000 > SUBNET > PUBLIC_SUBNET_010"
+            #     }
+            # }
+            # "public_subnet_020" = {
+            #     subnet_cidr = "10.0.2.0/24"
+            #     az = "c"
+            #     create_natgw = false
+            #     routing_policy = "public"
+            #     tags = {
+            #         type = "public"
+            #         TAG = "This tag is from VPC_CONFIG > VPC_000 > SUBNET > PUBLIC_SUBNET_020"
+            #     }
+            # }
             "private_subnet_040" = {
                 subnet_cidr = "10.0.4.0/24"
                 az = "a"
                 create_natgw = false
-                routing_policy = "private_nat"
+                routing_policy = "private_with_peering"
                 tags = {
                     type = "private"
                     TAG = "This tag is from VPC_CONFIG > VPC_000 > SUBNET > PRIVATE_SUBNET_040"
@@ -65,7 +65,7 @@ vpc_config = {
                 subnet_cidr = "10.0.5.0/24"
                 az = "b"
                 create_natgw = false
-                routing_policy = "private_nat"
+                routing_policy = "private_with_peering"
                 tags = {
                     type = "private"
                     TAG = "This tag is from VPC_CONFIG > VPC_000 > SUBNET > PRIVATE_SUBNET_050"
@@ -75,7 +75,7 @@ vpc_config = {
                 subnet_cidr = "10.0.6.0/24"
                 az = "c"
                 create_natgw = false
-                routing_policy = "private_nat"
+                routing_policy = "private_with_peering"
                 tags = {
                     type = "private"
                     TAG = "This tag is from VPC_CONFIG > VPC_000 > SUBNET > PRIVATE_SUBNET_060"
@@ -92,66 +92,66 @@ vpc_config = {
             TAG = "This tag is from VPC_CONFIG > VPC_100"
         }
         subnets = {
-            "public_subnet_100" = {
-                subnet_cidr = "10.1.0.0/24"
-                az = "a"
-                create_natgw = false
-                routing_policy = "public"
-                tags = {
-                    type = "public"
-                    TAG = "This tag is from VPC_CONFIG > VPC_100 > SUBNET > PUBLIC_SUBNET_100"
-                }
-            }
-            "public_subnet_110" = {
-                subnet_cidr = "10.1.1.0/24"
-                az = "b"
-                create_natgw = false
-                routing_policy = "public"
-                tags = {
-                    type = "public"
-                    TAG = "This tag is from VPC_CONFIG > VPC_100 > SUBNET > PUBLIC_SUBNET_110"
-                }
-            }
-            "public_subnet_120" = {
-                subnet_cidr = "10.1.2.0/24"
-                az = "c"
-                create_natgw = false
-                routing_policy = "public"
-                tags = {
-                    type = "public"
-                    TAG = "This tag is from VPC_CONFIG > VPC_100 > SUBNET > PUBLIC_SUBNET_120"
-                }
-            }
-            "private_subnet_140" = {
-                subnet_cidr = "10.1.4.0/24"
-                az = "a"
-                create_natgw = false
-                routing_policy = "private_nat"
-                tags = {
-                    type = "private"
-                    TAG = "This tag is from VPC_CONFIG > VPC_100 > SUBNET > PRIVATE_SUBNET_140"
-                }
-            }
-            "private_subnet_150" = {
-                subnet_cidr = "10.1.5.0/24"
-                az = "b"
-                create_natgw = false
-                routing_policy = "private_nat"
-                tags = {
-                    type = "private"
-                    TAG = "This tag is from VPC_CONFIG > VPC_100 > SUBNET > PRIVATE_SUBNET_150"
-                }
-            }
-            "private_subnet_160" = {
-                subnet_cidr = "10.1.6.0/24"
-                az = "c"
-                create_natgw = false
-                routing_policy = "private_nat"
-                tags = {
-                    type = "private"
-                    TAG = "This tag is from VPC_CONFIG > VPC_100 > SUBNET > PRIVATE_SUBNET_160"
-                }
-            }
+            # "public_subnet_100" = {
+            #     subnet_cidr = "10.1.0.0/24"
+            #     az = "a"
+            #     create_natgw = false
+            #     routing_policy = "public"
+            #     tags = {
+            #         type = "public"
+            #         TAG = "This tag is from VPC_CONFIG > VPC_100 > SUBNET > PUBLIC_SUBNET_100"
+            #     }
+            # }
+            # "public_subnet_110" = {
+            #     subnet_cidr = "10.1.1.0/24"
+            #     az = "b"
+            #     create_natgw = false
+            #     routing_policy = "public"
+            #     tags = {
+            #         type = "public"
+            #         TAG = "This tag is from VPC_CONFIG > VPC_100 > SUBNET > PUBLIC_SUBNET_110"
+            #     }
+            # }
+            # "public_subnet_120" = {
+            #     subnet_cidr = "10.1.2.0/24"
+            #     az = "c"
+            #     create_natgw = false
+            #     routing_policy = "public"
+            #     tags = {
+            #         type = "public"
+            #         TAG = "This tag is from VPC_CONFIG > VPC_100 > SUBNET > PUBLIC_SUBNET_120"
+            #     }
+            # }
+            # "private_subnet_140" = {
+            #     subnet_cidr = "10.1.4.0/24"
+            #     az = "a"
+            #     create_natgw = false
+            #     routing_policy = "private_nat"
+            #     tags = {
+            #         type = "private"
+            #         TAG = "This tag is from VPC_CONFIG > VPC_100 > SUBNET > PRIVATE_SUBNET_140"
+            #     }
+            # }
+            # "private_subnet_150" = {
+            #     subnet_cidr = "10.1.5.0/24"
+            #     az = "b"
+            #     create_natgw = false
+            #     routing_policy = "private_nat"
+            #     tags = {
+            #         type = "private"
+            #         TAG = "This tag is from VPC_CONFIG > VPC_100 > SUBNET > PRIVATE_SUBNET_150"
+            #     }
+            # }
+            # "private_subnet_160" = {
+            #     subnet_cidr = "10.1.6.0/24"
+            #     az = "c"
+            #     create_natgw = false
+            #     routing_policy = "private_nat"
+            #     tags = {
+            #         type = "private"
+            #         TAG = "This tag is from VPC_CONFIG > VPC_100 > SUBNET > PRIVATE_SUBNET_160"
+            #     }
+            # }
         }
     }
     app_vpc_200 = {
@@ -211,6 +211,22 @@ routing_policies = {
         tags = {
             TAG = "This tag is from ROUTING_POLICIES > PRIVATE_NAT"
         }
+    }
+    "private_with_peering" = {
+        inject_igw = false
+        inject_nat = false
+        custom_route_templates = ["peering_connections"]
+        tags = {
+            TAG = "This tag is from ROUTING_POLICIES > PRIVATE_NAT"
+        }
+    }
+}
+
+custom_route_templates = {
+    "peering_connections" = {
+        cidr_block    = "peer.cidr"
+        target_type   = "peering"
+        target_key    = "peer.target_type"
     }
 }
 
