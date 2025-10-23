@@ -1,14 +1,9 @@
 aws_region = "us-east-1"
 aws_profile = "terraform"
 
-vpc_connections = [ 
-    {a = "hub_vpc_000", b = "shared_vpc_100"},
-    {a = "hub_vpc_000", b = "app_vpc_200"}
-]
-
 vpc_peerings = [ 
     {requester = "hub_vpc_000", accepter = "shared_vpc_100"},
-    {requester = "hub_vpc_000", accepter = "app_vpc_200"}
+    # {requester = "hub_vpc_000", accepter = "app_vpc_200"}
 ]
 
 vpc_config = {

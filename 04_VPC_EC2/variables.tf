@@ -31,13 +31,6 @@ variable "az_lookup" {
   }
 }
 
-variable "vpc_connections" {
-  type = list(object({
-    a = string
-    b = string 
-  }))
-}
-
 variable "vpc_peerings" {
   type = list(object({
     requester = string
@@ -46,7 +39,11 @@ variable "vpc_peerings" {
     accepter_auto = optional(bool, true)
     requester_allow_dns = optional(bool, true)
     accepter_allow_dns = optional(bool, true)
-  }))  
+  }))
+  validation {
+    condition = alltrue([for pcx_obj in var.vpc_peerings : contains(keys(var.vpc_config), pcx_obj.requester) && contains(keys(var.vpc_config), pcx_obj.accepter) ])
+    error_message = "Invalid VPC peering: Both requester and accepter must be valid VPC keys defined in var.vpc_config."
+  }
 }
 
 variable "vpc_config" {

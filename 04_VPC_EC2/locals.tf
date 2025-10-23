@@ -23,7 +23,18 @@ locals {
 }
 
 
-
+# 🔹 vpc_peering_map, 🔹 vpc_summary_map, 🔹 vpc_peering_connections, 🔹 peer_vpc_lookup_map
+# ---------------------------------------------------------------------------------
+# Purpose:
+# - Map VPC peering commections
+# - Summary map of VPCs (CIDRs only) for route expansion
+# - Build a list of A-B peering connections with target type & target keys
+# - Enable reverse lookup of a VPCs peered VPCs for route planning
+#
+# Used in:
+# Locals: 🔹 peering_route_map 🔹 diagnostics
+# Resources: 🔹 aws_vpc_peering_connection (requester, accepter and options), 🔹 aws_route.peerings (indirectly)
+# Depends on: 🔹 var.vpc_peerings 🔹 var.vpc_config
 locals {
 
   vpc_peering_map = {
@@ -46,7 +57,7 @@ locals {
       }
   ]
 
-  vpc_peer_lookup_map = {
+  peer_vpc_lookup_map = {
     for vpc_key, vpc_obj in local.vpc_summary_map : vpc_key => flatten([
       for conn in local.vpc_peering_connections : 
       conn.a == vpc_key ? [{
@@ -150,44 +161,28 @@ locals {
   }
 }
 
+
+# 🔹 igw_route_map, 🔹peering_route_prefix
+# -----------------------------------------
+# Purpose: Plan routes for route tables with the 'inject_peering' routing intent.
+
+# Used in:
+# Resources: 🔹 aws_route.peerings
+# Depends on: 🔹 local.route_table_intent_map, 🔹 local.peer_vpc_lookup_map, 🔹 local.vpc_summary_map, 
 locals {
   peering_route_prefix = "PCX:"
 
   peering_route_map = merge([
     for rti_key, rti_obj in local.route_table_intent_map : {
-      for peer in local.vpc_peer_lookup_map[rti_obj.vpc_key] : "${local.peering_route_prefix}${rti_obj.rt_key}__${peer.peer_vpc}" => {
+      for peer in local.peer_vpc_lookup_map[rti_obj.vpc_key] : "${local.peering_route_prefix}${rti_obj.rt_key}__${peer.peer_vpc}" => {
         cidr_block  = local.vpc_summary_map[peer.peer_vpc].cidr
         target_type = peer.target_type
         target_key  = peer.target_key
         rt_key      = rti_obj.rt_key
       }
     } 
-    if rti_obj.routing_policy.inject_peerings == true && length(local.vpc_peer_lookup_map[rti_obj.vpc_key]) > 0
+    if rti_obj.routing_policy.inject_peerings == true && length(local.peer_vpc_lookup_map[rti_obj.vpc_key]) > 0
   ]...)
-
-# Step 2: Template stem (route_table_template_refs)
-# Sparse map: only RTIs that actually reference templates.
-# Just rti_key => [template_names...].
-
-  rti_custom_route_template_refs = {
-    for rti_key, rti_obj in local.route_table_intent_map :rti_key => [
-      for crt in rti_obj.routing_policy.custom_route_templates : crt
-    ] if rti_obj.routing_policy.custom_route_templates != null 
-  }
-
-  rti_custom_route_template_expansion = {
-    for rti_key, crt_refs in local.rti_custom_route_template_refs : rti_key => [
-      for ref in crt_refs : merge(
-        lookup(var.custom_route_templates, ref, null),
-        {
-          rt_key = local.route_table_intent_map[rti_key].rt_key
-          vpc_key = local.route_table_intent_map[rti_key].vpc_key
-          routing_policy_name = local.route_table_intent_map[rti_key].routing_policy_name
-          custom_route_template_name = ref
-        }
-      )
-    ]
-  }
 
 }
 
@@ -332,6 +327,7 @@ locals {
 # 🔹 nat_gw_subnets_without_igw_route
 # 🔹 igw_route_plans_without_viable_igw_target
 # 🔹 nat_gw_route_plans_without_viable_nat_gw_target
+# 🔹 peering_route_plans_without_connected_peer
 # 🔹 subnets_not_in_subnet_route_table_association
 # 🔹 eni_eips_without_igw_route
 
@@ -350,6 +346,12 @@ locals {
     for rti_key, rti_obj in local.route_table_intent_map :
     "VPC: ${rti_obj.vpc_key} > SUBNET: ${rti_obj.subnet_key} > ROUTING_POLICY: ${rti_obj.routing_policy_name}" 
     if rti_obj.routing_policy.inject_nat && !can(local.natgw_lookup_map_by_vpc[rti_obj.vpc_key][0])
+  ]
+
+  peering_route_plans_without_connected_peer = [
+    for rti_key, rti_obj in local.route_table_intent_map : 
+    "VPC: ${rti_obj.vpc_key} > SUBNET: ${rti_obj.subnet_key} > ROUTING_POLICY: ${rti_obj.routing_policy_name}"
+    if rti_obj.routing_policy.inject_peerings == true && length(local.peer_vpc_lookup_map[rti_obj.vpc_key]) == 0
   ]
 
   subnets_not_in_subnet_route_table_association = [
