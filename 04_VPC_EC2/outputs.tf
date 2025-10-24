@@ -1,4 +1,3 @@
-/* 
 output "DATA_aws_security_group_default" {
   value = {for k, dsg in data.aws_security_group.default : k => dsg.id}
 }
@@ -7,43 +6,20 @@ output "DATA_aws_route_table_default" {
   value = {for k, drt in data.aws_route_table.default : k => drt.id}
 }
 
-output "DEBUG_01_IGW_route_plan__IGW_lookup_failed" {
-  value = local.igw_route_plans_without_viable_igw_target
-  description = "VPC > Subnet > Routing Polcies requesting 'inject_IGW', where IGW target lookup failed"
-}
+# ----------------------------------------------
 
-output "DEBUG_02_Subnets_requesting_NATGW_without_IGW_route" {
-   value = local.nat_gw_subnets_without_igw_route
-   description = "Subnets requesting a NAT Gateway without a viable Internet Route"
-}
-
-output "DEBUG_03_NATGW_route_plan__NATGW_lookup_failed" {
-  value = local.nat_gw_route_plans_without_viable_nat_gw_target
-  description = "VPC > Subnet > Routing Polcies requesting 'inject_NAT', where NATGW target lookup failed"
-}
-output "DEBUG_04_Subnets_with_routing_policy_override_success" {
-  value = local.subnets_with_routing_policy_override_success
-  description = "Subnets with routing policy override, and matching route_table_config"
-}
-
-output "DEBUG_05_Subnets_with_routing_policy_override_failure" {
-  value = local.subnets_with_routing_policy_override_failure
-  description = "Subnets with routing policy override, but with no matching route_table_config"
-}
-
-output "DEBUG_06_Disassociated_route_tables" {
-  value = local.disassociated_route_tables
-  description = "Policy Route Tables with associate_routing_policy == false"
-}
-
-output "DEBUG_07_Subnets_associated_with_MAIN_route_table" {
-  value = local.subnets_not_in_subnet_route_table_association
-  description = "value"
-}
-
-output "DEBUG_08_ENI_EIPs_on_subnets_with_no_igw_route" {
-  value = local.eni_eips_without_igw_route
-  description = "value"
+output "DEBUG" {
+  value = {
+    DEBUG_01_IGW_route_plan__IGW_lookup_failed = local.igw_route_plans_without_viable_igw_target
+    DEBUG_02_Subnets_requesting_NATGW_without_IGW_route = local.nat_gw_subnets_without_igw_route
+    DEBUG_03_NATGW_route_plan__NATGW_lookup_failed = local.nat_gw_route_plans_without_viable_nat_gw_target
+    DEBUG_04_peering_route_plans__no_connected_peer = local.peering_route_plans_without_connected_peer
+    DEBUG_05_Subnets_associated_with_MAIN_route_table = local.subnets_not_in_subnet_route_table_association
+    DEBUG_06_ENI_EIPs_on_subnets_with_no_igw_route = local.eni_eips_without_igw_route
+    DEBUG_07_ENIs_with_no_security_group__using_DEFAULT_sg = local.enis_with_no_sg
+    DEBUG_08_Subnet_routing_policy_assignment = local.subnet_routing_policies_by_vpc
+    DEBUG_09_Subnet_without_routing_policy_assignment = local.subnets_without_routing_policy
+  }
 }
 
 # ----------------------------------------------
@@ -51,6 +27,11 @@ output "DEBUG_08_ENI_EIPs_on_subnets_with_no_igw_route" {
 output "aws_vpc_ids" {
   value = {for k, v in aws_vpc.main : k => v.id}
   description = "VPC IDs keyed by VPC name"
+}
+
+output "aws_vpc_peering_connection_ids" {
+  value = {for k, p in aws_vpc_peering_connection.requester : k => p.id}
+  description = "VPC Peerings keyed by requester__accepter"
 }
 
 output "aws_subnet_ids_by_type" {
@@ -93,6 +74,10 @@ output "aws_route_nat_gw_ids" {
   value = {for k, r in aws_route.nat_gw : k => r.id}  
 }
 
+output "aws_route_peerings_ids" {
+  value = {for k, r in aws_route.peerings : k => r.id}
+}
+
 output "aws_route_table_association_ids" {
   value = {for k, rta in aws_route_table_association.main : k => rta.id}
   description = "Route table association IDs keyed by route table name"
@@ -131,4 +116,3 @@ output "aws_vpc_security_group_egress_rule_ids" {
   value = {for k, er in aws_vpc_security_group_egress_rule.main : k => er.id}
 }
 
- */

@@ -239,3 +239,35 @@ merge([for rule_set_key, rule_set_list in var.security_group_rule_sets : {
 }]...)
 
 terraform import aws_vpc_peering_connection.test_connection pcx-0fe03effde452120f
+
+
+
+  [for pcx_obj in var.vpc_peerings : pcx_obj]
+  [for pcx_obj in var.vpc_peerings : pcx_obj.accepter]
+  [for pcx_obj in var.vpc_peerings : pcx_obj.requester]
+
+ flatten([
+    for pcx_obj1 in var.vpc_peerings : [
+      for pcx_obj2 in var.vpc_peerings : pcx_obj2 
+      if pcx_obj2.accepter != pcx_obj1.requester && pcx_obj2.requester != pcx_obj1.accepter 
+    ]
+  ])
+
+length(flatten([
+  for pcx_obj1 in var.vpc_peerings : [
+    for pcx_obj2 in var.vpc_peerings : pcx_obj2 
+    if pcx_obj2.accepter == pcx_obj1.requester && pcx_obj2.requester == pcx_obj1.accepter 
+  ]
+])) == 0
+
+[for pcx_obj in var.vpc_peerings : merge(pcx_obj,{unique_key=join("__",sort([pcx_obj.requester, pcx_obj.accepter]))})]
+
+distinct([for pcx_obj in var.vpc_peerings : join("__",sort([pcx_obj.requester, pcx_obj.accepter]))])
+
+{for pcx_obj in var.vpc_peerings : join("__",sort([pcx_obj.requester, pcx_obj.accepter])) => pcx_obj}
+
+{for key, object in {for pcx_obj in var.vpc_peerings : join("__",sort([pcx_obj.requester, pcx_obj.accepter])) => pcx_obj...} : key => object[0]}
+
+[for key in distinct([for pcx_obj in var.vpc_peerings : join("__",sort([pcx_obj.requester, pcx_obj.accepter]))]) : [for pcx_obj in var.vpc_peerings : pcx_obj if key == join("__",sort([pcx_obj.requester, pcx_obj.accepter]))][0] ]
+
+[for key in distinct([for pcx_obj in var.vpc_peerings : join("__",sort([pcx_obj.requester, pcx_obj.accepter]))]) : one([for pcx_obj in var.vpc_peerings : pcx_obj if key == join("__",sort([pcx_obj.requester, pcx_obj.accepter]))])]

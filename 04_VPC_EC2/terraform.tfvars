@@ -3,7 +3,9 @@ aws_profile = "terraform"
 
 vpc_peerings = [ 
     {requester = "hub_vpc_000", accepter = "shared_vpc_100"},
-    # {requester = "hub_vpc_000", accepter = "app_vpc_200"}
+    #{requester = "hub_vpc_000", accepter = "shared_vpc_100"},
+    {requester = "hub_vpc_000", accepter = "app_vpc_200"},
+    #{requester = "shared_vpc_100", accepter = "hub_vpc_000"}
 ]
 
 vpc_config = {
@@ -16,41 +18,41 @@ vpc_config = {
             TAG = "This tag is from VPC_CONFIG > VPC_000"
         }
         subnets = {
-            # "public_subnet_000" = {
-            #     subnet_cidr = "10.0.0.0/24"
-            #     az = "a"
-            #     create_natgw = false
-            #     routing_policy = "public"
-            #     tags = {
-            #         type = "public"
-            #         TAG = "This tag is from VPC_CONFIG > VPC_000 > SUBNET > PUBLIC_SUBNET_000"
-            #     }
-            # }
-            # "public_subnet_010" = {
-            #     subnet_cidr = "10.0.1.0/24"
-            #     az = "b"
-            #     create_natgw = false
-            #     routing_policy = "public"
-            #     tags = {
-            #         type = "public"
-            #         TAG = "This tag is from VPC_CONFIG > VPC_000 > SUBNET > PUBLIC_SUBNET_010"
-            #     }
-            # }
-            # "public_subnet_020" = {
-            #     subnet_cidr = "10.0.2.0/24"
-            #     az = "c"
-            #     create_natgw = false
-            #     routing_policy = "public"
-            #     tags = {
-            #         type = "public"
-            #         TAG = "This tag is from VPC_CONFIG > VPC_000 > SUBNET > PUBLIC_SUBNET_020"
-            #     }
-            # }
+            "public_subnet_000" = {
+                subnet_cidr = "10.0.0.0/24"
+                az = "a"
+                create_natgw = true
+                routing_policy = "public"
+                tags = {
+                    type = "public"
+                    TAG = "This tag is from VPC_CONFIG > VPC_000 > SUBNET > PUBLIC_SUBNET_000"
+                }
+            }
+            "public_subnet_010" = {
+                subnet_cidr = "10.0.1.0/24"
+                az = "b"
+                create_natgw = false
+                routing_policy = "public"
+                tags = {
+                    type = "public"
+                    TAG = "This tag is from VPC_CONFIG > VPC_000 > SUBNET > PUBLIC_SUBNET_010"
+                }
+            }
+            "public_subnet_020" = {
+                subnet_cidr = "10.0.2.0/24"
+                az = "c"
+                create_natgw = false
+                routing_policy = "public"
+                tags = {
+                    type = "public"
+                    TAG = "This tag is from VPC_CONFIG > VPC_000 > SUBNET > PUBLIC_SUBNET_020"
+                }
+            }
             "private_subnet_040" = {
                 subnet_cidr = "10.0.4.0/24"
                 az = "a"
                 create_natgw = false
-                routing_policy = "private_with_peering"
+                routing_policy = "private_with_nat_and_peer_routes"
                 tags = {
                     type = "private"
                     TAG = "This tag is from VPC_CONFIG > VPC_000 > SUBNET > PRIVATE_SUBNET_040"
@@ -60,7 +62,7 @@ vpc_config = {
                 subnet_cidr = "10.0.5.0/24"
                 az = "b"
                 create_natgw = false
-                routing_policy = "private_with_peering"
+                routing_policy = "private_with_nat_and_peer_routes"
                 tags = {
                     type = "private"
                     TAG = "This tag is from VPC_CONFIG > VPC_000 > SUBNET > PRIVATE_SUBNET_050"
@@ -70,7 +72,7 @@ vpc_config = {
                 subnet_cidr = "10.0.6.0/24"
                 az = "c"
                 create_natgw = false
-                routing_policy = "private_with_peering"
+                routing_policy = "private_with_nat_and_peer_routes"
                 tags = {
                     type = "private"
                     TAG = "This tag is from VPC_CONFIG > VPC_000 > SUBNET > PRIVATE_SUBNET_060"
@@ -121,7 +123,7 @@ vpc_config = {
                 subnet_cidr = "10.1.4.0/24"
                 az = "a"
                 create_natgw = false
-                routing_policy = "private_with_peering"
+                routing_policy = "private_with_peer_routes"
                 tags = {
                     type = "private"
                     TAG = "This tag is from VPC_CONFIG > VPC_100 > SUBNET > PRIVATE_SUBNET_140"
@@ -131,7 +133,7 @@ vpc_config = {
                 subnet_cidr = "10.1.5.0/24"
                 az = "b"
                 create_natgw = false
-                routing_policy = "private_with_peering"
+                routing_policy = "private_with_peer_routes"
                 tags = {
                     type = "private"
                     TAG = "This tag is from VPC_CONFIG > VPC_100 > SUBNET > PRIVATE_SUBNET_150"
@@ -141,7 +143,7 @@ vpc_config = {
                 subnet_cidr = "10.1.6.0/24"
                 az = "c"
                 create_natgw = false
-                routing_policy = "private_with_peering"
+                routing_policy = "private_with_peer_routes"
                 tags = {
                     type = "private"
                     TAG = "This tag is from VPC_CONFIG > VPC_100 > SUBNET > PRIVATE_SUBNET_160"
@@ -162,7 +164,7 @@ vpc_config = {
                 subnet_cidr = "10.2.4.0/24"
                 az = "a"
                 create_natgw = false
-                routing_policy = "private_with_peering"
+                routing_policy = "private_with_peer_routes"
                 tags = {
                     type = "private"
                     TAG = "This tag is from VPC_CONFIG > VPC_200 > SUBNET > PRIVATE_SUBNET_240"
@@ -172,7 +174,7 @@ vpc_config = {
                 subnet_cidr = "10.2.5.0/24"
                 az = "b"
                 create_natgw = false
-                routing_policy = "private_with_peering"
+                routing_policy = "private_with_peer_routes"
                 tags = {
                     type = "private"
                     TAG = "This tag is from VPC_CONFIG > VPC_200 > SUBNET > PRIVATE_SUBNET_250"
@@ -182,7 +184,7 @@ vpc_config = {
                 subnet_cidr = "10.2.6.0/24"
                 az = "c"
                 create_natgw = false
-                routing_policy = "private_with_peering"
+                #routing_policy = "private_with_peer_routes"
                 tags = {
                     type = "private"
                     TAG = "This tag is from VPC_CONFIG > VPC_200 > SUBNET > PRIVATE_SUBNET_260"
@@ -200,14 +202,22 @@ routing_policies = {
             TAG = "This tag is from ROUTING_POLICIES > PUBLIC"
         }
     }
-    "private_nat" = {
+    "private_with_nat" = {
         inject_igw = false
         inject_nat = true
         tags = {
             TAG = "This tag is from ROUTING_POLICIES > PRIVATE_NAT"
         }
     }
-    "private_with_peering" = {
+    "private_with_nat_and_peer_routes" = {
+        inject_igw = false
+        inject_nat = true
+        inject_peerings = true
+        tags = {
+            TAG = "This tag is from ROUTING_POLICIES > PRIVATE_NAT"
+        }
+    }
+    "private_with_peer_routes" = {
         inject_igw = false
         inject_nat = false
         inject_peerings = true
@@ -251,7 +261,7 @@ ec2_profiles = {
         key_name = "A4L"
         network_interfaces = {
             "nic0" = {
-                routing_policy = "private_nat"
+                routing_policy = "private_with_nat_and_peer_routes"
                 security_groups = ["database"]
                 assign_eip = false
             }

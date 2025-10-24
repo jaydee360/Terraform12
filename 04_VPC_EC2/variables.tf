@@ -41,8 +41,17 @@ variable "vpc_peerings" {
     accepter_allow_dns = optional(bool, true)
   }))
   validation {
-    condition = alltrue([for pcx_obj in var.vpc_peerings : contains(keys(var.vpc_config), pcx_obj.requester) && contains(keys(var.vpc_config), pcx_obj.accepter) ])
+    condition = alltrue([
+      for pcx_obj in var.vpc_peerings : 
+      contains(keys(var.vpc_config), pcx_obj.requester) && contains(keys(var.vpc_config), pcx_obj.accepter)
+    ])
     error_message = "Invalid VPC peering: Both requester and accepter must be valid VPC keys defined in var.vpc_config."
+  }
+  validation {
+    condition = length(var.vpc_peerings) == length(
+      distinct([for pcx_obj in var.vpc_peerings : join("__",sort([pcx_obj.requester, pcx_obj.accepter]))])
+    )
+    error_message = "Duplicate or inverse VPC peering: The same VPC pair are duplicaed in var.vpc_peerings. Each requester/accepter pair must be unique."
   }
 }
 
@@ -61,6 +70,15 @@ variable "vpc_config" {
       tags            = optional(map(string), null)
     }))
   }))
+  validation {
+    condition = alltrue([
+      for vpc_key, vpc_obj in var.vpc_config : alltrue([
+        for subnet_key, subnet_obj in vpc_obj.subnets : subnet_obj.routing_policy == null ? true : 
+        contains(keys(var.routing_policies), subnet_obj.routing_policy)
+      ])
+    ])
+    error_message = "VPC_CONFIG: Invalid Routing Policy on Subnet: Routing Policy must be defined in var.routing_policies."
+  }
 }
 
 variable "routing_policies" {
@@ -110,7 +128,7 @@ variable "ec2_profiles" {
     condition = alltrue([
       for ec2_obj in var.ec2_profiles : alltrue([for eni_key, eni_obj in ec2_obj.network_interfaces : eni_obj.routing_policy == null ? true : contains(keys(var.routing_policies), eni_obj.routing_policy)])
     ])
-    error_message = "Invalid Routing Policy: Network interfaces on ec2_profiles must reference a routing policy defined in var.routing_policies."
+    error_message = "EC2_PROFILE: Invalid Routing Policy: Network interfaces on ec2_profiles must reference a routing policy defined in var.routing_policies."
   }
   validation {
     condition = alltrue(flatten([

@@ -22,7 +22,6 @@ locals {
   ]...)
 }
 
-
 # 🔹 vpc_peering_map, 🔹 vpc_summary_map, 🔹 vpc_peering_connections, 🔹 peer_vpc_lookup_map
 # ---------------------------------------------------------------------------------
 # Purpose:
@@ -36,10 +35,10 @@ locals {
 # Resources: 🔹 aws_vpc_peering_connection (requester, accepter and options), 🔹 aws_route.peerings (indirectly)
 # Depends on: 🔹 var.vpc_peerings 🔹 var.vpc_config
 locals {
-
   vpc_peering_map = {
     for pcx_obj in var.vpc_peerings : "${pcx_obj.requester}__${pcx_obj.accepter}" => pcx_obj
   }
+
 
   vpc_summary_map = {
     for vpc_key, vpc_obj in var.vpc_config : vpc_key => {
@@ -73,7 +72,6 @@ locals {
       []
     ])
   }  
-
 }
 
 # 🔹 igw_map, 🔹 igw_lookup_map
@@ -362,6 +360,26 @@ locals {
   eni_eips_without_igw_route = [
     for eip_map_key, eip_map_obj in local.valid_eni_map : eip_map_key 
     if eip_map_obj.assign_eip && !lookup(local.subnet_has_igw_route, eip_map_obj.subnet_id, false)
+  ]
+
+  enis_with_no_sg = [
+    for eni_key, eni_obj in local.valid_eni_eip_map : eni_key
+    if length(eni_obj.security_groups) == 0
+  ]
+
+  subnet_routing_policies_by_vpc = {
+    for vpc_grp_key in distinct([for rti_key, rti_obj in local.route_table_intent_map : rti_obj.vpc_key]) : 
+    vpc_grp_key => [
+      for rti_key, rti_obj in local.route_table_intent_map : 
+      " > SUBNET: ${rti_obj.subnet_key} > ROUTING_POLICY: ${rti_obj.routing_policy_name}" 
+      if rti_obj.vpc_key == vpc_grp_key
+    ]
+  }
+
+  subnets_without_routing_policy = [
+    for sn_key, sn_obj in local.subnet_map : 
+    "VPC: ${sn_obj.vpc_key} > SUBNET: ${sn_key} > ROUTING_POLICY: ${coalesce(sn_obj.routing_policy, "NULL")}" 
+    if (sn_obj.routing_policy == null || !contains(keys(var.routing_policies), sn_obj.routing_policy))
   ]
 }
 
