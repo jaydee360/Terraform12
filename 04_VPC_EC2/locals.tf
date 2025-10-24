@@ -363,8 +363,23 @@ locals {
   ]
 
   enis_with_no_sg = [
-    for eni_key, eni_obj in local.valid_eni_eip_map : eni_key
+    for eni_key, eni_obj in local.valid_eni_map : 
+    "EC2 INSTANCE: ${eni_obj.ec2_key} > NIC: ${eni_obj.ec2_nic_key}"
     if length(eni_obj.security_groups) == 0
+  ]
+
+  enis_with_invalid_sgs = flatten([
+    for ec2_key, ec2_obj in local.valid_ec2_instance_map : [
+      for eni_key, eni_obj in ec2_obj.network_interfaces : 
+      "EC2 INSTANCE: ${ec2_key} > NIC: ${eni_key} > INVALID SGs: ${join(", ",[for sg in eni_obj.security_groups : sg if !contains(keys(local.valid_security_group_map), sg)])}"
+      if eni_obj.security_groups != null && length([for sg in eni_obj.security_groups : sg if !contains(keys(local.valid_security_group_map), sg)]) > 0
+    ]
+  ])
+
+  enis_with_valid_sgs = [
+    for eni_key, eni_obj in local.valid_eni_map : 
+    "EC2 INSTANCE: ${eni_obj.ec2_key} > NIC: ${eni_obj.ec2_nic_key} > VALID SGs: ${join(", ",[for sg in eni_obj.security_groups : sg if contains(keys(local.valid_security_group_map), sg)])}" 
+    if eni_obj.security_groups != null && length([for sg in eni_obj.security_groups : sg if contains(keys(local.valid_security_group_map), sg)]) > 0
   ]
 
   subnet_routing_policies_by_vpc = {
@@ -381,6 +396,13 @@ locals {
     "VPC: ${sn_obj.vpc_key} > SUBNET: ${sn_key} > ROUTING_POLICY: ${coalesce(sn_obj.routing_policy, "NULL")}" 
     if (sn_obj.routing_policy == null || !contains(keys(var.routing_policies), sn_obj.routing_policy))
   ]
+
+  # ec2_instance_with_invalid_ec2_profile = [
+  #   for inst_key, inst_obj in var.ec2_instances : 
+  #   "EC2 INSTANCE: ${inst_key} > INVALID EC2 PROFILE: ${inst_obj.ec2_profile}" 
+  #   if !contains(keys(var.ec2_profiles), inst_obj.ec2_profile)
+  # ]
+
 }
 
 # 🔹 merged_ec2_instance_map, 🔹 resolved_ec2_instance_map, 🔹 valid_ec2_instance_map
@@ -410,7 +432,7 @@ locals {
           )
         }
       }
-    )
+    ) if contains(keys(var.ec2_profiles), inst_obj.ec2_profile)
   }
 
   resolved_ec2_instance_map = {
@@ -460,19 +482,6 @@ locals {
       }
     )}
   ]...)
-
-enis_with_invalid_sgs = merge([
-  for ec2_key, ec2_obj in local.valid_ec2_instance_map : {
-    for eni_key, eni_obj in ec2_obj.network_interfaces : 
-    "${ec2_key}__${eni_key}" => setsubtract(
-      eni_obj.security_groups, ([
-        for security_group  in coalesce(eni_obj.security_groups, []) : security_group if contains(keys(local.valid_security_group_map), security_group)
-      ])
-    ) if length(setsubtract(
-      eni_obj.security_groups, ([for security_group  in coalesce(eni_obj.security_groups, []) : security_group if contains(keys(local.valid_security_group_map), security_group)])
-    )) > 0
-  }
-]...)
 
 } 
 
@@ -681,35 +690,23 @@ locals {
 locals {
 # 🔹 Diagnostics locals
 # ---------------------
-# Purpose: Flatten and group ingress/egress rules for traceability and diagnostics.
+# Purpose:  Collect and group all ingress/egress rules by security group for traceability.
 # Used in: Debug output only
 # Locals:
-# 🔹 sg_in_rules_list_flat
-# 🔹 sg_eg_rules_list_flat
-# 🔹 sg_in_rules_by_sg
-# 🔹 sg_eg_rules_by_sg
+# 🔹 sg_rules_by_sg
 # Depends on: 🔹 ingress_rules_map, 🔹 egress_rules_map, 🔹 valid_security_group_map
 
-  sg_in_rules_list_flat = sort(
-    [for element in local.ingress_rules_map : "${element.sg_key}-${element.description}-${element.rule_hash}"]
-  )
-
-  sg_eg_rules_list_flat = sort(
-    [for element in local.egress_rules_map : "${element.sg_key}-${element.description}-${element.rule_hash}"]
-  )
-
-  sg_in_rules_by_sg = {
-    for sg_key in keys(local.valid_security_group_map) :
-    sg_key => [
-      for rule in local.ingress_rules_map : "${rule.rule_hash}-DESC:${rule.description}-REF:${rule.rule_set_ref}" if rule.sg_key == sg_key
-    ]
+  sg_rules_by_sg = {
+    for sg_key in keys(local.valid_security_group_map) : 
+    sg_key => {
+      "00_INGRESS" = [
+        for rule in local.ingress_rules_map : "HASH: ${rule.rule_hash} > RULE_SET_REF: ${rule.rule_set_ref} > RULE_SET_DESC: ${rule.description}" if rule.sg_key == sg_key
+      ]
+      "01_EGRESS" = [
+        for rule in local.egress_rules_map : "HASH: ${rule.rule_hash} > RULE_SET_REF: ${rule.rule_set_ref} > RULE_SET_DESC: ${rule.description}" if rule.sg_key == sg_key
+      ]
+    }
   }
 
-  sg_eg_rules_by_sg = {
-    for sg_key in keys(local.valid_security_group_map) :
-    sg_key => [
-      for rule in local.egress_rules_map : "${rule.rule_hash}-DESC:${rule.description}-REF:${rule.rule_set_ref}" if rule.sg_key == sg_key
-    ]
-  }
 }
 

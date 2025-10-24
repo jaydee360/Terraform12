@@ -17,8 +17,11 @@ output "DEBUG" {
     DEBUG_05_Subnets_associated_with_MAIN_route_table = local.subnets_not_in_subnet_route_table_association
     DEBUG_06_ENI_EIPs_on_subnets_with_no_igw_route = local.eni_eips_without_igw_route
     DEBUG_07_ENIs_with_no_security_group__using_DEFAULT_sg = local.enis_with_no_sg
-    DEBUG_08_Subnet_routing_policy_assignment = local.subnet_routing_policies_by_vpc
-    DEBUG_09_Subnet_without_routing_policy_assignment = local.subnets_without_routing_policy
+    DEBUG_08_ENI_with_invalid_security_groups = local.enis_with_invalid_sgs
+    DEBUG_09_ENI_with_valid_security_groups = local.enis_with_valid_sgs
+    DEBUG_10_Subnet_routing_policy_assignment = local.subnet_routing_policies_by_vpc
+    DEBUG_11_Subnet_without_routing_policy_assignment = local.subnets_without_routing_policy
+    DEBUG_12_Security_group_rules_by_security_group = local.sg_rules_by_sg
   }
 }
 

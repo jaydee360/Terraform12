@@ -22,7 +22,7 @@ vpc_config = {
                 subnet_cidr = "10.0.0.0/24"
                 az = "a"
                 create_natgw = true
-                routing_policy = "public"
+                routing_policy = "hub_public"
                 tags = {
                     type = "public"
                     TAG = "This tag is from VPC_CONFIG > VPC_000 > SUBNET > PUBLIC_SUBNET_000"
@@ -31,8 +31,8 @@ vpc_config = {
             "public_subnet_010" = {
                 subnet_cidr = "10.0.1.0/24"
                 az = "b"
-                create_natgw = false
-                routing_policy = "public"
+                create_natgw = true
+                routing_policy = "hub_public"
                 tags = {
                     type = "public"
                     TAG = "This tag is from VPC_CONFIG > VPC_000 > SUBNET > PUBLIC_SUBNET_010"
@@ -41,8 +41,8 @@ vpc_config = {
             "public_subnet_020" = {
                 subnet_cidr = "10.0.2.0/24"
                 az = "c"
-                create_natgw = false
-                routing_policy = "public"
+                create_natgw = true
+                routing_policy = "hub_public"
                 tags = {
                     type = "public"
                     TAG = "This tag is from VPC_CONFIG > VPC_000 > SUBNET > PUBLIC_SUBNET_020"
@@ -184,7 +184,7 @@ vpc_config = {
                 subnet_cidr = "10.2.6.0/24"
                 az = "c"
                 create_natgw = false
-                #routing_policy = "private_with_peer_routes"
+                routing_policy = "private_with_peer_routes"
                 tags = {
                     type = "private"
                     TAG = "This tag is from VPC_CONFIG > VPC_200 > SUBNET > PRIVATE_SUBNET_260"
@@ -195,21 +195,21 @@ vpc_config = {
 }
 
 routing_policies = {
-    "public" = {
+    hub_public = {
         inject_igw = true
         inject_nat = false
         tags = {
             TAG = "This tag is from ROUTING_POLICIES > PUBLIC"
         }
     }
-    "private_with_nat" = {
+    private_with_nat = {
         inject_igw = false
         inject_nat = true
         tags = {
             TAG = "This tag is from ROUTING_POLICIES > PRIVATE_NAT"
         }
     }
-    "private_with_nat_and_peer_routes" = {
+    private_with_nat_and_peer_routes = {
         inject_igw = false
         inject_nat = true
         inject_peerings = true
@@ -217,11 +217,10 @@ routing_policies = {
             TAG = "This tag is from ROUTING_POLICIES > PRIVATE_NAT"
         }
     }
-    "private_with_peer_routes" = {
+    private_with_peer_routes = {
         inject_igw = false
         inject_nat = false
         inject_peerings = true
-        # custom_route_templates = ["peering_connections"]
         tags = {
             TAG = "This tag is from ROUTING_POLICIES > PRIVATE_NAT"
         }
@@ -237,7 +236,7 @@ custom_route_templates = {
 }
 
 ec2_profiles = {
-    webserver = {
+    hub_webserver = {
         # most of the paramters for this server type are now set using ec2_profile templates
         ami = "ami-0150ccaf51ab55a51"
         instance_type = "t3.micro"
@@ -245,8 +244,8 @@ ec2_profiles = {
         user_data_script = "server-script.sh"
         network_interfaces = {
             "nic0" = {
-                routing_policy = "public"
-                security_groups = ["webserver_frontend"]
+                routing_policy = "hub_public"
+                security_groups = ["webserver_frontend", "fake_sg"]
                 assign_eip = true
             }
         }
@@ -274,15 +273,15 @@ ec2_profiles = {
 }
 
 ec2_instances = {
-    # web_00 = {
-    #     ec2_profile = "webserver"
-    #     network_interfaces = {
-    #         "nic0" = {
-    #             vpc = "hub_vpc_000"
-    #             az = "a"
-    #         }
-    #     }
-    # }
+    web_00 = {
+        ec2_profile = "hub_webserver"
+        network_interfaces = {
+            "nic0" = {
+                vpc = "hub_vpc_000"
+                az = "a"
+            }
+        }
+    }
     # web_01 = {
     #     ec2_profile = "webserver"
     #     network_interfaces = {
@@ -352,15 +351,15 @@ prefix_list_config = {
 }
 
 security_groups = {
-    # "webserver_frontend" = {
-    #     vpc_id      = "hub_vpc_000"
-    #     description = "webserver_frontend SG"
-    #     ingress_ref = ["WEB_FRONTEND_IN", "ADMIN_IN"]
-    #     egress_ref = ["ANY_OUT"]
-    #     tags = {
-    #         TAG = "SECURITY_GROUPS > WEBSERVER_FRONTEND"
-    #     }
-    # }
+    "webserver_frontend" = {
+        vpc_id      = "hub_vpc_000"
+        description = "webserver_frontend SG"
+        ingress_ref = ["WEB_FRONTEND_IN", "ADMIN_IN"]
+        egress_ref = ["ANY_OUT"]
+        tags = {
+            TAG = "SECURITY_GROUPS > WEBSERVER_FRONTEND"
+        }
+    }
     # "database" = {
     #     vpc_id      = "hub_vpc_000"
     #     description = "database SG"
