@@ -32,3 +32,7 @@ data "aws_route_table" "default" {
 #   for_each = toset(data.aws_route_tables.all["vpc-lab-dev-000"].ids)
 #   route_table_id = each.value
 # }
+
+data "aws_caller_identity" "me" {
+  provider = aws
+}

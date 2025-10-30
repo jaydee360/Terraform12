@@ -1,8 +1,15 @@
 aws_region = "us-east-1"
 aws_profile = "terraform"
 
+vpc_peerings = [ 
+    {requester = "hub_vpc_000", accepter = "shared_vpc_100"},
+    #{requester = "hub_vpc_000", accepter = "shared_vpc_100"},
+    {requester = "hub_vpc_000", accepter = "app_vpc_200"},
+    #{requester = "shared_vpc_100", accepter = "hub_vpc_000"}
+]
+
 vpc_config = {
-    vpc_000 = {
+    hub_vpc_000 = {
         vpc_cidr = "10.0.0.0/16"
         enable_dns_support = true
         enable_dns_hostnames = true
@@ -15,7 +22,7 @@ vpc_config = {
                 subnet_cidr = "10.0.0.0/24"
                 az = "a"
                 create_natgw = true
-                routing_policy = "public"
+                routing_policy = "hub_public"
                 tags = {
                     type = "public"
                     TAG = "This tag is from VPC_CONFIG > VPC_000 > SUBNET > PUBLIC_SUBNET_000"
@@ -25,7 +32,7 @@ vpc_config = {
                 subnet_cidr = "10.0.1.0/24"
                 az = "b"
                 create_natgw = true
-                routing_policy = "public"
+                routing_policy = "hub_public"
                 tags = {
                     type = "public"
                     TAG = "This tag is from VPC_CONFIG > VPC_000 > SUBNET > PUBLIC_SUBNET_010"
@@ -33,9 +40,9 @@ vpc_config = {
             }
             "public_subnet_020" = {
                 subnet_cidr = "10.0.2.0/24"
-                az = "c"
+                az = "b"
                 create_natgw = true
-                routing_policy = "public"
+                routing_policy = "hub_public"
                 tags = {
                     type = "public"
                     TAG = "This tag is from VPC_CONFIG > VPC_000 > SUBNET > PUBLIC_SUBNET_020"
@@ -45,7 +52,7 @@ vpc_config = {
                 subnet_cidr = "10.0.4.0/24"
                 az = "a"
                 create_natgw = false
-                routing_policy = "private_nat"
+                routing_policy = "private_with_nat_and_peer_routes"
                 tags = {
                     type = "private"
                     TAG = "This tag is from VPC_CONFIG > VPC_000 > SUBNET > PRIVATE_SUBNET_040"
@@ -55,7 +62,7 @@ vpc_config = {
                 subnet_cidr = "10.0.5.0/24"
                 az = "b"
                 create_natgw = false
-                routing_policy = "private_nat"
+                routing_policy = "private_with_nat_and_peer_routes"
                 tags = {
                     type = "private"
                     TAG = "This tag is from VPC_CONFIG > VPC_000 > SUBNET > PRIVATE_SUBNET_050"
@@ -65,7 +72,7 @@ vpc_config = {
                 subnet_cidr = "10.0.6.0/24"
                 az = "c"
                 create_natgw = false
-                routing_policy = "private_nat"
+                routing_policy = "private_with_nat_and_peer_routes"
                 tags = {
                     type = "private"
                     TAG = "This tag is from VPC_CONFIG > VPC_000 > SUBNET > PRIVATE_SUBNET_060"
@@ -73,7 +80,7 @@ vpc_config = {
             }
         }
     }
-    vpc_100 = {
+    shared_vpc_100 = {
         vpc_cidr = "10.1.0.0/16"
         enable_dns_support = true
         enable_dns_hostnames = true
@@ -82,41 +89,41 @@ vpc_config = {
             TAG = "This tag is from VPC_CONFIG > VPC_100"
         }
         subnets = {
-            "public_subnet_100" = {
-                subnet_cidr = "10.1.0.0/24"
-                az = "a"
-                create_natgw = true
-                routing_policy = "public"
-                tags = {
-                    type = "public"
-                    TAG = "This tag is from VPC_CONFIG > VPC_100 > SUBNET > PUBLIC_SUBNET_100"
-                }
-            }
-            "public_subnet_110" = {
-                subnet_cidr = "10.1.1.0/24"
-                az = "b"
-                create_natgw = false
-                routing_policy = "public"
-                tags = {
-                    type = "public"
-                    TAG = "This tag is from VPC_CONFIG > VPC_100 > SUBNET > PUBLIC_SUBNET_110"
-                }
-            }
-            "public_subnet_120" = {
-                subnet_cidr = "10.1.2.0/24"
-                az = "c"
-                create_natgw = false
-                routing_policy = "public"
-                tags = {
-                    type = "public"
-                    TAG = "This tag is from VPC_CONFIG > VPC_100 > SUBNET > PUBLIC_SUBNET_120"
-                }
-            }
+            # "public_subnet_100" = {
+            #     subnet_cidr = "10.1.0.0/24"
+            #     az = "a"
+            #     create_natgw = false
+            #     routing_policy = "public"
+            #     tags = {
+            #         type = "public"
+            #         TAG = "This tag is from VPC_CONFIG > VPC_100 > SUBNET > PUBLIC_SUBNET_100"
+            #     }
+            # }
+            # "public_subnet_110" = {
+            #     subnet_cidr = "10.1.1.0/24"
+            #     az = "b"
+            #     create_natgw = false
+            #     routing_policy = "public"
+            #     tags = {
+            #         type = "public"
+            #         TAG = "This tag is from VPC_CONFIG > VPC_100 > SUBNET > PUBLIC_SUBNET_110"
+            #     }
+            # }
+            # "public_subnet_120" = {
+            #     subnet_cidr = "10.1.2.0/24"
+            #     az = "c"
+            #     create_natgw = false
+            #     routing_policy = "public"
+            #     tags = {
+            #         type = "public"
+            #         TAG = "This tag is from VPC_CONFIG > VPC_100 > SUBNET > PUBLIC_SUBNET_120"
+            #     }
+            # }
             "private_subnet_140" = {
                 subnet_cidr = "10.1.4.0/24"
                 az = "a"
                 create_natgw = false
-                routing_policy = "private_nat"
+                routing_policy = "private_with_peer_routes"
                 tags = {
                     type = "private"
                     TAG = "This tag is from VPC_CONFIG > VPC_100 > SUBNET > PRIVATE_SUBNET_140"
@@ -126,7 +133,7 @@ vpc_config = {
                 subnet_cidr = "10.1.5.0/24"
                 az = "b"
                 create_natgw = false
-                routing_policy = "private_nat"
+                routing_policy = "private_with_peer_routes"
                 tags = {
                     type = "private"
                     TAG = "This tag is from VPC_CONFIG > VPC_100 > SUBNET > PRIVATE_SUBNET_150"
@@ -136,7 +143,7 @@ vpc_config = {
                 subnet_cidr = "10.1.6.0/24"
                 az = "c"
                 create_natgw = false
-                routing_policy = "private_nat"
+                routing_policy = "private_with_peer_routes"
                 tags = {
                     type = "private"
                     TAG = "This tag is from VPC_CONFIG > VPC_100 > SUBNET > PRIVATE_SUBNET_160"
@@ -144,27 +151,92 @@ vpc_config = {
             }
         }
     }
+    app_vpc_200 = {
+        vpc_cidr = "10.2.0.0/16"
+        enable_dns_support = true
+        enable_dns_hostnames = true
+        create_igw = false
+        tags = {
+            TAG = "This tag is from VPC_CONFIG > VPC_200"
+        }
+        subnets = {
+            "private_subnet_240" = {
+                subnet_cidr = "10.2.4.0/24"
+                az = "a"
+                create_natgw = false
+                routing_policy = "private_with_peer_routes"
+                tags = {
+                    type = "private"
+                    TAG = "This tag is from VPC_CONFIG > VPC_200 > SUBNET > PRIVATE_SUBNET_240"
+                }
+            }
+            "private_subnet_250" = {
+                subnet_cidr = "10.2.5.0/24"
+                az = "b"
+                create_natgw = false
+                routing_policy = "private_with_peer_routes"
+                tags = {
+                    type = "private"
+                    TAG = "This tag is from VPC_CONFIG > VPC_200 > SUBNET > PRIVATE_SUBNET_250"
+                }
+            }
+            "private_subnet_260" = {
+                subnet_cidr = "10.2.6.0/24"
+                az = "c"
+                create_natgw = false
+                routing_policy = "private_with_peer_routes"
+                tags = {
+                    type = "private"
+                    TAG = "This tag is from VPC_CONFIG > VPC_200 > SUBNET > PRIVATE_SUBNET_260"
+                }
+            }
+        }
+    }
 }
 
 routing_policies = {
-    "public" = {
+    hub_public = {
         inject_igw = true
         inject_nat = false
         tags = {
             TAG = "This tag is from ROUTING_POLICIES > PUBLIC"
         }
     }
-    "private_nat" = {
+    private_with_nat = {
         inject_igw = false
         inject_nat = true
         tags = {
             TAG = "This tag is from ROUTING_POLICIES > PRIVATE_NAT"
         }
     }
+    private_with_nat_and_peer_routes = {
+        inject_igw = false
+        inject_nat = true
+        inject_peerings = true
+        tags = {
+            TAG = "This tag is from ROUTING_POLICIES > PRIVATE_NAT"
+        }
+    }
+    private_with_peer_routes = {
+        inject_igw = false
+        inject_nat = false
+        inject_peerings = true
+        tags = {
+            TAG = "This tag is from ROUTING_POLICIES > PRIVATE_NAT"
+        }
+    }
+}
+
+custom_route_templates = {
+    "peering_connections" = {
+        cidr_block    = "peer.cidr"
+        target_type   = "peering"
+        target_key    = "peer.target_type"
+    }
 }
 
 ec2_profiles = {
-    webserver = {
+    hub_webserver = {
         # most of the paramters for this server type are now set using ec2_profile templates
         ami = "ami-0150ccaf51ab55a51"
         instance_type = "t3.micro"
@@ -172,8 +244,8 @@ ec2_profiles = {
         user_data_script = "server-script.sh"
         network_interfaces = {
             "nic0" = {
-                routing_policy = "public"
-                security_groups = ["webserver_frontend"]
+                routing_policy = "hub_public"
+                security_groups = ["webserver_frontend", "fake_sg", "webserver_frontend_wrong_vpc"]
                 assign_eip = true
             }
         }
@@ -188,8 +260,8 @@ ec2_profiles = {
         key_name = "A4L"
         network_interfaces = {
             "nic0" = {
-                routing_policy = "private_nat"
-                security_groups = ["database_backend"]
+                routing_policy = "private_with_nat_and_peer_routes"
+                security_groups = ["database"]
                 assign_eip = false
             }
         }
@@ -202,73 +274,66 @@ ec2_profiles = {
 
 ec2_instances = {
     web_00 = {
-        ec2_profile = "webserver"
+        ec2_profile = "hub_webserver"
         network_interfaces = {
             "nic0" = {
-                vpc = "vpc_000"
+                vpc = "hub_vpc_000"
                 az = "a"
             }
-            # "nic1" = {
-            #     routing_policy = "public"
-            #     security_groups = ["webserver_frontend"]
-            #     assign_eip = false
-            #     vpc = "vpc_000"
-            #     az = "a"
-            # }
         }
     }
     web_01 = {
-        ec2_profile = "webserver"
+        ec2_profile = "hub_webserver"
         network_interfaces = {
             "nic0" = {
-                vpc = "vpc_000"
+                vpc = "hub_vpc_000"
                 az = "b"
             }
         }
     }
     web_02 = {
-        ec2_profile = "webserver"
+        ec2_profile = "hub_webserver"
         network_interfaces = {
             "nic0" = {
-                vpc = "vpc_000"
+                vpc = "hub_vpc_000"
                 az = "c"
             }
-            "nic1" = {
-                routing_policy = "public"
-                security_groups = ["webserver_frontend"]
-                assign_eip = false
-                vpc = "vpc_000"
-                az = "c"
-            }
+            # "nic1" = {
+            #     routing_policy = "public"
+            #     security_groups = ["webserver_frontend"]
+            #     assign_eip = false
+            #     vpc = "hub_vpc_000"
+            #     az = "c"
+            # }
         }
     }
-    database_00 = {
-        ec2_profile = "database"
-        network_interfaces = {
-            "nic0" = {
-                vpc = "vpc_000"
-                az = "a"
-            }
-        }
-    }
-    database_01 = {
-        ec2_profile = "database"
-        network_interfaces = {
-            "nic0" = {
-                vpc = "vpc_000"
-                az = "b"
-            }
-        }
-    }
-    database_02 = {
-        ec2_profile = "database"
-        network_interfaces = {
-            "nic0" = {
-                vpc = "vpc_000"
-                az = "c"
-            }
-        }
-    }
+    # database_00 = {
+    #     ec2_profile = "database"
+    #     network_interfaces = {
+    #         "nic0" = {
+    #             vpc = "hub_vpc_000"
+    #             az = "a"
+    #         }
+    #     }
+    # }
+    # database_01 = {
+    #     ec2_profile = "database"
+    #     network_interfaces = {
+    #         "nic0" = {
+    #             vpc = "hub_vpc_000"
+    #             az = "b"
+    #         }
+    #     }
+    # }
+    # database_02 = {
+    #     ec2_profile = "database"
+    #     network_interfaces = {
+    #         "nic0" = {
+    #             vpc = "hub_vpc_000"
+    #             az = "c"
+    #         }
+    #     }
+    # }
 }
 
 prefix_list_config = {
@@ -287,7 +352,7 @@ prefix_list_config = {
 
 security_groups = {
     "webserver_frontend" = {
-        vpc_id      = "vpc_000"
+        vpc_id      = "hub_vpc_000"
         description = "webserver_frontend SG"
         ingress_ref = ["WEB_FRONTEND_IN", "ADMIN_IN"]
         egress_ref = ["ANY_OUT"]
@@ -295,15 +360,33 @@ security_groups = {
             TAG = "SECURITY_GROUPS > WEBSERVER_FRONTEND"
         }
     }
-    "database" = {
-        vpc_id      = "vpc_000"
-        description = "database SG"
-        ingress_ref = ["DB_MYSQL_INTERNAL", "DB_MYSQL_ADMIN", "DB_POSTGRES_INTERNAL"]
+    "test_ref_sg_id" = {
+        vpc_id      = "hub_vpc_000"
+        description = "testing correct referenced security group id in rule"
+        ingress_ref = ["WEB_FRONTEND_IN"]
         egress_ref = ["ANY_OUT"]
         tags = {
-            TAG = "SECURITY_GROUPS > DATABASE"
+            TAG = "SECURITY_GROUPS > WEBSERVER_FRONTEND"
         }
     }
+    "webserver_frontend_wrong_vpc" = {
+        vpc_id      = "app_vpc_200"
+        description = "webserver_frontend SG"
+        ingress_ref = ["WEB_FRONTEND_IN", "ADMIN_IN"]
+        egress_ref = ["ANY_OUT"]
+        tags = {
+            TAG = "SECURITY_GROUPS > WEBSERVER_FRONTEND"
+        }
+    }
+    # "database" = {
+    #     vpc_id      = "hub_vpc_000"
+    #     description = "database SG"
+    #     ingress_ref = ["DB_MYSQL_INTERNAL", "DB_MYSQL_ADMIN", "DB_POSTGRES_INTERNAL"]
+    #     egress_ref = ["ANY_OUT"]
+    #     tags = {
+    #         TAG = "SECURITY_GROUPS > DATABASE"
+    #     }
+    # }
 }
 
 security_group_rule_sets = {
@@ -334,7 +417,7 @@ security_group_rule_sets = {
             description = "SHARED-SSH-IN"
             from_port = 22
             to_port = 22
-            #referenced_security_group_id = "JDTEST"
+            referenced_security_group_id = "test_ref_sg_id"
             prefix_list_id = "JD-HOME-LAB"
             ip_protocol = "tcp"
             tags = {
@@ -345,7 +428,7 @@ security_group_rule_sets = {
             description = "SHARED-RDP-IN"
             from_port = 3389
             to_port = 3389
-            #referenced_security_group_id = "JDTEST"
+            referenced_security_group_id = "JDTEST"
             prefix_list_id = "JD-HOME-LAB"
             ip_protocol = "tcp"
             tags = {

@@ -31,6 +31,30 @@ variable "az_lookup" {
   }
 }
 
+variable "vpc_peerings" {
+  type = list(object({
+    requester = string
+    accepter = string
+    requester_auto = optional(bool, false)
+    accepter_auto = optional(bool, true)
+    requester_allow_dns = optional(bool, true)
+    accepter_allow_dns = optional(bool, true)
+  }))
+  validation {
+    condition = alltrue([
+      for pcx_obj in var.vpc_peerings : 
+      contains(keys(var.vpc_config), pcx_obj.requester) && contains(keys(var.vpc_config), pcx_obj.accepter)
+    ])
+    error_message = "Invalid VPC peering: Both requester and accepter must be valid VPC keys defined in var.vpc_config."
+  }
+  validation {
+    condition = length(var.vpc_peerings) == length(
+      distinct([for pcx_obj in var.vpc_peerings : join("__",sort([pcx_obj.requester, pcx_obj.accepter]))])
+    )
+    error_message = "Duplicate or inverse VPC peering: The same VPC pair are duplicaed in var.vpc_peerings. Each requester/accepter pair must be unique."
+  }
+}
+
 variable "vpc_config" {
   type = map(object({
     vpc_cidr             = string
@@ -46,17 +70,22 @@ variable "vpc_config" {
       tags            = optional(map(string), null)
     }))
   }))
+  validation {
+    condition = alltrue([
+      for vpc_key, vpc_obj in var.vpc_config : alltrue([
+        for subnet_key, subnet_obj in vpc_obj.subnets : subnet_obj.routing_policy == null ? true : 
+        contains(keys(var.routing_policies), subnet_obj.routing_policy)
+      ])
+    ])
+    error_message = "VPC_CONFIG: Invalid Routing Policy on Subnet: Routing Policy must be defined in var.routing_policies."
+  }
 }
 
 variable "routing_policies" {
   type = map(object({
     inject_igw    = optional(bool, false)
     inject_nat    = optional(bool, false)
-    custom_routes = optional(list(object({
-      cidr_block    = string
-      target_type   = string
-      target_key    = string
-    })))
+    inject_peerings = optional(bool, false)
     tags          = optional(map(string), null)
   }))
   validation {
@@ -65,6 +94,14 @@ variable "routing_policies" {
     ])
     error_message = "A route table cannot inject both IGW and NAT. Check: route_table_config."
   }
+}
+
+variable "custom_route_templates" {
+  type = map(object({
+    cidr_block    = string
+    target_type   = string
+    target_key    = string
+  }))
 }
 
 variable "ec2_profiles" {
@@ -90,7 +127,7 @@ variable "ec2_profiles" {
     condition = alltrue([
       for ec2_obj in var.ec2_profiles : alltrue([for eni_key, eni_obj in ec2_obj.network_interfaces : eni_obj.routing_policy == null ? true : contains(keys(var.routing_policies), eni_obj.routing_policy)])
     ])
-    error_message = "Invalid Routing Policy: Network interfaces on ec2_profiles must reference a routing policy defined in var.routing_policies."
+    error_message = "EC2_PROFILE: Invalid Routing Policy: Network interfaces on ec2_profiles must reference a routing policy defined in var.routing_policies."
   }
   validation {
     condition = alltrue(flatten([
@@ -116,14 +153,20 @@ variable "ec2_profiles" {
 variable "ec2_instances" {
   type = map(object({
     ec2_profile = string
-        network_interfaces = map(object({
-          routing_policy = optional(string, null)
-          security_groups = optional(set(string), null)
-          assign_eip = optional(bool, null)
-          vpc = string
-          az  = string
-        }))
+    network_interfaces = map(object({
+      routing_policy = optional(string, null)
+      security_groups = optional(set(string), null)
+      assign_eip = optional(bool, null)
+      vpc = string
+      az  = string
+    }))
   }))
+  validation {
+    condition = alltrue([
+      for ec2_obj in var.ec2_instances : contains(keys(var.ec2_profiles), ec2_obj.ec2_profile)
+    ])
+    error_message = "Invalid ec2_profile: One or more ec2_instances reference an invalid ec2_profile. Valid profiles are: ${join(", ", keys(var.ec2_profiles))}."
+  }
   validation {
     condition = alltrue([
       for ec2_obj in var.ec2_instances : contains(keys(ec2_obj.network_interfaces), "nic0")
