@@ -40,7 +40,7 @@ vpc_config = {
             }
             "public_subnet_020" = {
                 subnet_cidr = "10.0.2.0/24"
-                az = "c"
+                az = "b"
                 create_natgw = true
                 routing_policy = "hub_public"
                 tags = {
@@ -245,7 +245,7 @@ ec2_profiles = {
         network_interfaces = {
             "nic0" = {
                 routing_policy = "hub_public"
-                security_groups = ["webserver_frontend", "fake_sg"]
+                security_groups = ["webserver_frontend", "fake_sg", "webserver_frontend_wrong_vpc"]
                 assign_eip = true
             }
         }
@@ -282,31 +282,31 @@ ec2_instances = {
             }
         }
     }
-    # web_01 = {
-    #     ec2_profile = "webserver"
-    #     network_interfaces = {
-    #         "nic0" = {
-    #             vpc = "hub_vpc_000"
-    #             az = "b"
-    #         }
-    #     }
-    # }
-    # web_02 = {
-    #     ec2_profile = "webserver"
-    #     network_interfaces = {
-    #         "nic0" = {
-    #             vpc = "hub_vpc_000"
-    #             az = "c"
-    #         }
-    #         "nic1" = {
-    #             routing_policy = "public"
-    #             security_groups = ["webserver_frontend"]
-    #             assign_eip = false
-    #             vpc = "hub_vpc_000"
-    #             az = "c"
-    #         }
-    #     }
-    # }
+    web_01 = {
+        ec2_profile = "hub_webserver"
+        network_interfaces = {
+            "nic0" = {
+                vpc = "hub_vpc_000"
+                az = "b"
+            }
+        }
+    }
+    web_02 = {
+        ec2_profile = "hub_webserver"
+        network_interfaces = {
+            "nic0" = {
+                vpc = "hub_vpc_000"
+                az = "c"
+            }
+            # "nic1" = {
+            #     routing_policy = "public"
+            #     security_groups = ["webserver_frontend"]
+            #     assign_eip = false
+            #     vpc = "hub_vpc_000"
+            #     az = "c"
+            # }
+        }
+    }
     # database_00 = {
     #     ec2_profile = "database"
     #     network_interfaces = {
@@ -360,6 +360,24 @@ security_groups = {
             TAG = "SECURITY_GROUPS > WEBSERVER_FRONTEND"
         }
     }
+    "test_ref_sg_id" = {
+        vpc_id      = "hub_vpc_000"
+        description = "testing correct referenced security group id in rule"
+        ingress_ref = ["WEB_FRONTEND_IN"]
+        egress_ref = ["ANY_OUT"]
+        tags = {
+            TAG = "SECURITY_GROUPS > WEBSERVER_FRONTEND"
+        }
+    }
+    "webserver_frontend_wrong_vpc" = {
+        vpc_id      = "app_vpc_200"
+        description = "webserver_frontend SG"
+        ingress_ref = ["WEB_FRONTEND_IN", "ADMIN_IN"]
+        egress_ref = ["ANY_OUT"]
+        tags = {
+            TAG = "SECURITY_GROUPS > WEBSERVER_FRONTEND"
+        }
+    }
     # "database" = {
     #     vpc_id      = "hub_vpc_000"
     #     description = "database SG"
@@ -399,7 +417,7 @@ security_group_rule_sets = {
             description = "SHARED-SSH-IN"
             from_port = 22
             to_port = 22
-            #referenced_security_group_id = "JDTEST"
+            referenced_security_group_id = "test_ref_sg_id"
             prefix_list_id = "JD-HOME-LAB"
             ip_protocol = "tcp"
             tags = {
@@ -410,7 +428,7 @@ security_group_rule_sets = {
             description = "SHARED-RDP-IN"
             from_port = 3389
             to_port = 3389
-            #referenced_security_group_id = "JDTEST"
+            referenced_security_group_id = "JDTEST"
             prefix_list_id = "JD-HOME-LAB"
             ip_protocol = "tcp"
             tags = {

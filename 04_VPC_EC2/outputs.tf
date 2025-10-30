@@ -15,13 +15,19 @@ output "DEBUG" {
     DEBUG_03_NATGW_route_plan__NATGW_lookup_failed = local.nat_gw_route_plans_without_viable_nat_gw_target
     DEBUG_04_peering_route_plans__no_connected_peer = local.peering_route_plans_without_connected_peer
     DEBUG_05_Subnets_associated_with_MAIN_route_table = local.subnets_not_in_subnet_route_table_association
-    DEBUG_06_ENI_EIPs_on_subnets_with_no_igw_route = local.eni_eips_without_igw_route
-    DEBUG_07_ENIs_with_no_security_group__using_DEFAULT_sg = local.enis_with_no_sg
-    DEBUG_08_ENI_with_invalid_security_groups = local.enis_with_invalid_sgs
-    DEBUG_09_ENI_with_valid_security_groups = local.enis_with_valid_sgs
-    DEBUG_10_Subnet_routing_policy_assignment = local.subnet_routing_policies_by_vpc
-    DEBUG_11_Subnet_without_routing_policy_assignment = local.subnets_without_routing_policy
-    DEBUG_12_Security_group_rules_by_security_group = local.sg_rules_by_sg
+    DEBUG_06_Subnet_resolution_conflict_due_to_nonunique_routing_policy_vpc_az = local.subnet_lookup_conflicts
+    DEBUG_07_Dropped_EC2_instances_with_VPC_or_subnet_resolution_failure = local.invalid_ec2_instances_with_mismatched_vpcs_or_subnets
+    # --- ENI / SG diagnostics ---
+    DEBUG_08_ENI_EIPs_on_subnets_with_no_igw_route = local.eni_eips_without_igw_route
+    DEBUG_09_ENIs_with_no_security_group__using_DEFAULT_sg = local.enis_with_no_sg
+    DEBUG_10_ENIs_with_invalid_security_groups = local.enis_with_invalid_sgs
+    DEBUG_11_ENIs_with_security_group_VPC_misalignment = local.enis_with_sgs_vpc_misalignment
+    DEBUG_12_ENIs_with_valid_security_groups = local.enis_with_valid_sgs
+    # --- Subnet / SG rules diagnostics ---
+    DEBUG_13_Subnet_routing_policy_assignment = local.subnet_routing_policies_by_vpc
+    DEBUG_14_Subnet_without_routing_policy_assignment = local.subnets_without_routing_policy
+    DEBUG_15_Security_groups_with_invalid_VPC = local.invalid_security_groups
+    DEBUG_16_Security_group_rules_by_security_group = local.sg_rules_by_sg
   }
 }
 
