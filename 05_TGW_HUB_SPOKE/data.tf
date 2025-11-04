@@ -10,10 +10,7 @@ data "aws_caller_identity" "prod" {
   provider = aws.aws25_prod
 }
 
-output "callers" {
-  value = {
-    general = data.aws_caller_identity.general
-    dev = data.aws_caller_identity.dev
-    prod = data.aws_caller_identity.prod
-  }
+data "aws_availability_zones" "test" {
+  region = "us-east-2"
 }
+
