@@ -51,6 +51,7 @@ variable "tgw_config" {
         target_type                     = string
         target_key                      = string
       })))
+      tags                              = optional(map(string))
     })))
     dns_support                         = optional(string, "enable")
     auto_accept_shared_attachments      = optional(string, "disable")
@@ -60,6 +61,28 @@ variable "tgw_config" {
     transit_gateway_cidr_blocks         = optional(string)
     tags                                = optional(map(string))
   }))
+  # validation {
+  #   condition = alltrue(flatten([
+  #     for tgw_key, tgw_obj in var.tgw_config : [
+  #       for tgw_rt_obj in tgw_obj.route_tables : [
+  #         for vpc_ref in tgw_rt_obj.associations : 
+  #         can(local.tgw_att_by_tgw_vpc[tgw_key][vpc_ref])
+  #       ]
+  #     ]
+  #   ]))
+  #   error_message = "Invalid TGW Route Table Association: Associations must reference VPCs attached to the TGW"
+  # }
+  # validation {
+  #   condition = alltrue(flatten([
+  #     for tgw_key, tgw_obj in var.tgw_config : [
+  #       for tgw_rt_obj in tgw_obj.route_tables : [
+  #         for vpc_ref in tgw_rt_obj.propagations : 
+  #         can(local.tgw_att_by_tgw_vpc[tgw_key][vpc_ref])
+  #       ]
+  #     ]
+  #   ]))
+  #   error_message = "Invalid TGW Route Table Progagation: Propagations must reference VPCs attached to the TGW"
+  # }
 }
 
 variable "vpc_config" {
@@ -67,7 +90,7 @@ variable "vpc_config" {
     region               = optional(string)
     vpc_cidr             = string
     enable_dns_support   = optional(bool, true)
-    enable_dns_hostnames = optional(bool, false)
+    enable_dns_hostnames = optional(bool, true)
     tags                 = optional(map(string), {})
     create_igw           = optional(bool, false)
     subnets = map(object({
@@ -84,8 +107,15 @@ variable "routing_policies" {
   type = map(object({
     inject_igw    = optional(bool, false)
     inject_nat    = optional(bool, false)
-    inject_peerings = optional(bool, false)
-    tgw_key   = optional(string)
+    inject_tgw    = optional(bool, false)
+    tgw_key       = optional(string)
     tags          = optional(map(string), null)
   }))
+  validation {
+    condition = alltrue([
+      for tgw_target_key in [for rp_key, rp_obj in var.routing_policies : rp_obj.tgw_key if startswith(rp_key, "tgw_attach")] : 
+      can(var.tgw_config[tgw_target_key])
+    ])
+    error_message = "Invalid tgw_key in 'tgw_attach' policy. All 'tgw_attach' policies must reference a valid tgw_key"
+  }
 }

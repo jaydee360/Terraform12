@@ -1,4 +1,10 @@
 locals {
+  # Collect / assemble the attributes of the TGW_Attachment subnets.
+  # Create a nested map, grouping these TGW_Attachment subnets by TGW > VPC > SUBNET LIST
+  # Create a flat map for each 'aws_ec2_transit_gateway_vpc_attachment' 
+  # Create two additional reverse lookup maps for reference:
+  # - tgw_attachments_by_tgw_vpc (lookup TGW_Attchmnt by TGW > VPC)
+  # - tgw_attached_cidrs_by_tgw_vpc (lookup VPC_CIDRs of TGW_attached VPCs)
   tgw_att_prefix = "TGWATT:"
 
   tgw_attachment_subnets = {
@@ -13,7 +19,7 @@ locals {
       && contains(keys(local.tgw_map), var.routing_policies[sn_obj.routing_policy].tgw_key)
   }
 
-  tgw_att_subnets_by_tgw_vpc = {
+  tgw_attachment_subnets_by_tgw_vpc = {
       for tgw_grp_key in distinct([for map_obj in local.tgw_attachment_subnets : map_obj.tgw_key]) : tgw_grp_key => {
           for vpc_grp_key in distinct([for map_obj2 in local.tgw_attachment_subnets : map_obj2.vpc_key if map_obj2.tgw_key == tgw_grp_key]) : vpc_grp_key => [
               for sn_key, att_obj in local.tgw_attachment_subnets : sn_key if att_obj.tgw_key == tgw_grp_key && att_obj.vpc_key == vpc_grp_key
@@ -21,8 +27,8 @@ locals {
       }
   }
 
-  tgw_attach_map = merge([
-      for tgw_key, att_vpcs in local.tgw_att_subnets_by_tgw_vpc : {
+  tgw_attachment_map = merge([
+      for tgw_key, att_vpcs in local.tgw_attachment_subnets_by_tgw_vpc : {
           for vpc_key, subnet_list in att_vpcs : "${local.tgw_att_prefix}${tgw_key}__${vpc_key}" => {
               tgw_key     = tgw_key
               vpc_key     = vpc_key
@@ -32,22 +38,26 @@ locals {
       }
   ]...)
 
-  tgw_att_by_tgw_vpc = {
-    for tgw_grp_key in distinct([for tgwatt_obj in local.tgw_attach_map : tgwatt_obj.tgw_key]) : tgw_grp_key => {
-      for vpc_grp_key in distinct([for tgwatt_obj in local.tgw_attach_map : tgwatt_obj.vpc_key if tgwatt_obj.tgw_key == tgw_grp_key]) : vpc_grp_key => one([
-        for tgwatt_key, tgwatt_obj in local.tgw_attach_map : tgwatt_key if tgwatt_obj.tgw_key == tgw_grp_key && tgwatt_obj.vpc_key == vpc_grp_key
+  tgw_attachments_by_tgw_vpc = {
+    for tgw_grp_key in distinct([for tgwatt_obj in local.tgw_attachment_map : tgwatt_obj.tgw_key]) : tgw_grp_key => {
+      for vpc_grp_key in distinct([for tgwatt_obj in local.tgw_attachment_map : tgwatt_obj.vpc_key if tgwatt_obj.tgw_key == tgw_grp_key]) : vpc_grp_key => one([
+        for tgwatt_key, tgwatt_obj in local.tgw_attachment_map : tgwatt_key if tgwatt_obj.tgw_key == tgw_grp_key && tgwatt_obj.vpc_key == vpc_grp_key
       ])
     }  
   }
 
-  tgw_att_cidr = {
-    for tgwatt_key, tgwatt_obj in local.tgw_att_by_tgw_vpc : tgwatt_key => {
+  tgw_attached_cidrs_by_tgw_vpc = {
+    for tgwatt_key, tgwatt_obj in local.tgw_attachments_by_tgw_vpc : tgwatt_key => {
       for vpcatt_key, vpcatt_obj in tgwatt_obj : vpcatt_key => var.vpc_config[vpcatt_key].vpc_cidr
     }
   }
 }
 
 locals {
+  # maps for various transit gateway related resources:
+  # transit gateway / transit gateway route tables
+  # transit gateway route table association / route table propagation
+
   tgw_map = {
       for tgw_key, tgw_obj in var.tgw_config : tgw_key => tgw_obj
   }
@@ -78,8 +88,8 @@ locals {
         tgw_key                   = tgw_rt_obj.tgw_key
         tgw_rt_key                = tgw_rt_key
         associated_vpc_name       = vpc_assoc
-        associated_vpc_tgw_att_id = local.tgw_att_by_tgw_vpc[tgw_rt_obj.tgw_key][vpc_assoc]
-      } if can(local.tgw_att_by_tgw_vpc[tgw_rt_obj.tgw_key][vpc_assoc])
+        associated_vpc_tgw_att_id = local.tgw_attachments_by_tgw_vpc[tgw_rt_obj.tgw_key][vpc_assoc]
+      } if can(local.tgw_attachments_by_tgw_vpc[tgw_rt_obj.tgw_key][vpc_assoc])
     } 
   ]...)
 
@@ -91,8 +101,8 @@ locals {
         tgw_key                   = tgw_rt_obj.tgw_key
         tgw_rt_key                = tgw_rt_key
         propagated_vpc_name       = vpc_prop
-        propagated_vpc_tgw_att_id = local.tgw_att_by_tgw_vpc[tgw_rt_obj.tgw_key][vpc_prop]
-      } if can(local.tgw_att_by_tgw_vpc[tgw_rt_obj.tgw_key][vpc_prop])
+        propagated_vpc_tgw_att_id = local.tgw_attachments_by_tgw_vpc[tgw_rt_obj.tgw_key][vpc_prop]
+      } if can(local.tgw_attachments_by_tgw_vpc[tgw_rt_obj.tgw_key][vpc_prop])
     } 
   ]...)
 }
@@ -214,11 +224,29 @@ locals {
     for rti_key, rti_obj in local.route_table_intent_map : 
     "${local.nat_gw_route_prefix}${rti_obj.rt_key}" => {
       region              = rti_obj.region
-      rt_key  = rti_obj.rt_key
-      target_key = try(local.natgw_lookup_map_by_vpc_az[rti_obj.vpc_key][rti_obj.az][0], local.natgw_lookup_map_by_vpc[rti_obj.vpc_key][0], null)
-      destination_prefix = "0.0.0.0/0"
+      rt_key              = rti_obj.rt_key
+      target_key          = try(local.natgw_lookup_map_by_vpc_az[rti_obj.vpc_key][rti_obj.az][0], local.natgw_lookup_map_by_vpc[rti_obj.vpc_key][0], null)
+      destination_prefix  = "0.0.0.0/0"
     } if rti_obj.routing_policy.inject_nat && can(local.natgw_lookup_map_by_vpc[rti_obj.vpc_key][0])
   }
+}
+
+locals {
+  tgw_route_prefix = "TGW:"
+
+  tgw_route_map = merge(flatten([
+    for rti_key, rti_obj in local.route_table_intent_map : [
+      for tgw in [for tgw_key, vpc_keys in local.tgw_attachments_by_tgw_vpc : tgw_key if contains(keys(vpc_keys), rti_obj.vpc_key)] : {
+        for vpc in [for vpc_key, vpc_cidr in local.tgw_attached_cidrs_by_tgw_vpc[tgw] : vpc_key if vpc_key != rti_obj.vpc_key] : "${local.tgw_route_prefix}${rti_obj.rt_key}__${vpc}" => {
+          region = rti_obj.region
+          rt_key = rti_obj.rt_key
+          destination_prefix = local.tgw_attached_cidrs_by_tgw_vpc[tgw][vpc]
+          target_key = tgw
+        }
+      }
+    ] if rti_obj.routing_policy.inject_tgw
+  ])...)
+
 }
 
 locals {
@@ -232,4 +260,10 @@ locals {
     }
   }
 }
+
+# for each route_table_object in the route_table_intent_map (if routing_policy.inject_tgw == true)
+#   for each transit gateway this route tables vpc is connected to
+#     for each vpc attachment
+
+# [for k, v in local.tgw_attachments_by_tgw_vpc : k if contains(keys(v), "vpc_key")]
 

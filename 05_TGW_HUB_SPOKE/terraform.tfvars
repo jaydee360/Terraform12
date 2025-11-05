@@ -1,5 +1,5 @@
 tgw_config = {
-    tgw_dev_hub_use_2 = {
+    tgw_hub = {
         account = "aws25_dev"
         region = "us-east-2"
         amazon_side_asn = 64512
@@ -9,8 +9,8 @@ tgw_config = {
         route_tables = {
             spoke_rt = {
                 is_default = false
-                associations = ["vpc_spoke_use_2_000", "vpc_spoke_use_2_100"]
-                propagations = ["vpc_spoke_use_2_000", "vpc_spoke_use_2_100"]
+                associations = ["vpc-core", "vpc-app", "vpc-db", "vpc-analytics", "vpc-edge"]
+                propagations = ["vpc-core", "vpc-app", "vpc-db", "vpc-analytics", "vpc-edge"]
             }
             inspection_rt = {
                 is_default = false
@@ -23,154 +23,265 @@ tgw_config = {
             source = "tgw"
         }
     }
-    # tgw-prod-hub-us-east-2 = {
-        #     account = "aws25_prod"
-        #     region = "us-west-1"
-        #     amazon_side_asn = 64512
-        #     description = "dev tgw twat"
-        #     auto_accept_shared_attachments = "enable"
-        #     tags = {
-        #         type = "public"
-        #         TAG = "This tag is from VPC_CONFIG > VPC_000 > SUBNET > PUBLIC_SUBNET_000"
-        #     }
-    # }
 }
 
 vpc_config = {
-    "vpc_spoke_use_2_000" = {
+    vpc-core = {
         region = "us-east-2"
         vpc_cidr = "10.0.0.0/16"
-        enable_dns_support = true
-        enable_dns_hostnames = true
-        create_igw = false
         subnets = {
-        # public subnets
-            # public_000a = {
-            #     subnet_cidr = "10.0.0.0/24"
-            #     az = "a"
-            #     routing_policy  = "public"
-            #     create_natgw = true
-            # }
-            # public_010b = {
-            #     subnet_cidr = "10.0.1.0/24"
-            #     az = "b"
-            #     routing_policy  = "public"
-            #     create_natgw = false
-            # }
-            # public_020c = {
-            #     subnet_cidr = "10.0.2.0/24"
-            #     az = "c"
-            #     routing_policy  = "public"
-            #     create_natgw = false
-            # }
-        # private nat subnets
-            # private_040a = {
-            #     subnet_cidr = "10.0.4.0/24"
-            #     az = "a"
-            #     routing_policy  = "private_nat"
-            #     create_natgw = false
-            # }
-            # private_050b = {
-            #     subnet_cidr = "10.0.5.0/24"
-            #     az = "b"
-            #     routing_policy  = "private_nat"
-            #     create_natgw = false
-            # }
-            # private_060c = {
-            #     subnet_cidr = "10.0.6.0/24"
-            #     az = "c"
-            #     routing_policy  = "private_nat"
-            #     create_natgw = false
-            # }
-        # tgw attachment subnets
-            tgw_att_0128a = {
-                subnet_cidr = "10.0.128.0/28"
-                az = "a"
-                routing_policy  = "tgw_attach_dev_hub"
+            vpc-core-tgw-subnet-a = {
+                subnet_cidr    = "10.0.0.0/28"
+                az             = "a"
+                routing_policy = "tgw_attach_hub"
             }
-            tgw_att_0128b = {
-                subnet_cidr = "10.0.128.16/28"
-                az = "b"
-                routing_policy  = "tgw_attach_dev_hub"
+            vpc-core-tgw-subnet-b = {
+                subnet_cidr    = "10.0.0.16/28"
+                az             = "b"
+                routing_policy = "tgw_attach_hub"
             }
-            tgw_att_0128c = {
-                subnet_cidr = "10.0.128.32/28"
-                az = "c"
-                routing_policy  = "tgw_attach_dev_hub"
+            vpc-core-tgw-subnet-c = {
+                subnet_cidr    = "10.0.0.32/28"
+                az             = "c"
+                routing_policy = "tgw_attach_hub"
             }
-        }
-        tags = {
-            source = "vpc"
+            vpc-core-app-subnet-a = {
+                subnet_cidr    = "10.0.64.0/24"
+                az             = "a"
+                routing_policy = "app_subnet"
+            }
+            vpc-core-app-subnet-b = {
+                subnet_cidr    = "10.0.65.0/24"
+                az             = "b"
+                routing_policy = "app_subnet"
+            }
+            vpc-core-app-subnet-c = {
+                subnet_cidr    = "10.0.66.0/24"
+                az             = "c"
+                routing_policy = "app_subnet"
+            }
+            vpc-core-data-subnet-a = {
+                subnet_cidr    = "10.0.128.0/24"
+                az             = "a"
+                routing_policy = "data_subnet"
+            }
+            vpc-core-data-subnet-b = {
+                subnet_cidr    = "10.0.129.0/24"
+                az             = "b"
+                routing_policy = "data_subnet"
+            }
+            vpc-core-data-subnet-c = {
+                subnet_cidr    = "10.0.130.0/24"
+                az             = "c"
+                routing_policy = "data_subnet"
+            }
         }
     }
-    "vpc_spoke_use_2_100" = {
+    vpc-app = {
         region = "us-east-2"
         vpc_cidr = "10.1.0.0/16"
-        enable_dns_support = true
-        enable_dns_hostnames = true
-        create_igw = false
         subnets = {
-        # public subnets
-            # public_000a = {
-            #     subnet_cidr = "10.0.0.0/24"
-            #     az = "a"
-            #     routing_policy  = "public"
-            #     create_natgw = true
-            # }
-            # public_010b = {
-            #     subnet_cidr = "10.0.1.0/24"
-            #     az = "b"
-            #     routing_policy  = "public"
-            #     create_natgw = false
-            # }
-            # public_020c = {
-            #     subnet_cidr = "10.0.2.0/24"
-            #     az = "c"
-            #     routing_policy  = "public"
-            #     create_natgw = false
-            # }
-        # private nat subnets
-            # private_040a = {
-            #     subnet_cidr = "10.0.4.0/24"
-            #     az = "a"
-            #     routing_policy  = "private_nat"
-            #     create_natgw = false
-            # }
-            # private_050b = {
-            #     subnet_cidr = "10.0.5.0/24"
-            #     az = "b"
-            #     routing_policy  = "private_nat"
-            #     create_natgw = false
-            # }
-            # private_060c = {
-            #     subnet_cidr = "10.0.6.0/24"
-            #     az = "c"
-            #     routing_policy  = "private_nat"
-            #     create_natgw = false
-            # }
-        # tgw attachment subnets
-            tgw_att_1128a = {
-                subnet_cidr = "10.1.128.0/28"
-                az = "a"
-                routing_policy  = "tgw_attach_dev_hub"
+            vpc-app-tgw-subnet-a = {
+                subnet_cidr    = "10.1.0.0/28"
+                az             = "a"
+                routing_policy = "tgw_attach_hub"
             }
-            tgw_att_1128b = {
-                subnet_cidr = "10.1.128.16/28"
-                az = "b"
-                routing_policy  = "tgw_attach_dev_hub"
+            vpc-app-tgw-subnet-b = {
+                subnet_cidr    = "10.1.0.16/28"
+                az             = "b"
+                routing_policy = "tgw_attach_hub"
             }
-            tgw_att_1128c = {
-                subnet_cidr = "10.1.128.32/28"
-                az = "c"
-                routing_policy  = "tgw_attach_dev_hub"
+            vpc-app-tgw-subnet-c = {
+                subnet_cidr    = "10.1.0.32/28"
+                az             = "c"
+                routing_policy = "tgw_attach_hub"
+            }
+            vpc-app-app-subnet-a = {
+                subnet_cidr    = "10.1.64.0/24"
+                az             = "a"
+                routing_policy = "app_subnet"
+            }
+            vpc-app-app-subnet-b = {
+                subnet_cidr    = "10.1.65.0/24"
+                az             = "b"
+                routing_policy = "app_subnet"
+            }
+            vpc-app-app-subnet-c = {
+                subnet_cidr    = "10.1.66.0/24"
+                az             = "c"
+                routing_policy = "app_subnet"
+            }
+            vpc-app-data-subnet-a = {
+                subnet_cidr    = "10.1.128.0/24"
+                az             = "a"
+                routing_policy = "data_subnet"
+            }
+            vpc-app-data-subnet-b = {
+                subnet_cidr    = "10.1.129.0/24"
+                az             = "b"
+                routing_policy = "data_subnet"
+            }
+            vpc-app-data-subnet-c = {
+                subnet_cidr    = "10.1.130.0/24"
+                az             = "c"
+                routing_policy = "data_subnet"
             }
         }
-        tags = {
-            source = "vpc"
+    }
+    vpc-db = {
+        region = "us-east-2"
+        vpc_cidr = "10.2.0.0/16"
+        subnets = {
+            vpc-db-tgw-subnet-a = {
+                subnet_cidr    = "10.2.0.0/28"
+                az             = "a"
+                routing_policy = "tgw_attach_hub"
+            }
+            vpc-db-tgw-subnet-b = {
+                subnet_cidr    = "10.2.0.16/28"
+                az             = "b"
+                routing_policy = "tgw_attach_hub"
+            }
+            vpc-db-tgw-subnet-c = {
+                subnet_cidr    = "10.2.0.32/28"
+                az             = "c"
+                routing_policy = "tgw_attach_hub"
+            }
+            vpc-db-app-subnet-a = {
+                subnet_cidr    = "10.2.64.0/24"
+                az             = "a"
+                routing_policy = "app_subnet"
+            }
+            vpc-db-app-subnet-b = {
+                subnet_cidr    = "10.2.65.0/24"
+                az             = "b"
+                routing_policy = "app_subnet"
+            }
+            vpc-db-app-subnet-c = {
+                subnet_cidr    = "10.2.66.0/24"
+                az             = "c"
+                routing_policy = "app_subnet"
+            }
+            vpc-db-data-subnet-a = {
+                subnet_cidr    = "10.2.128.0/24"
+                az             = "a"
+                routing_policy = "data_subnet"
+            }
+            vpc-db-data-subnet-b = {
+                subnet_cidr    = "10.2.129.0/24"
+                az             = "b"
+                routing_policy = "data_subnet"
+            }
+            vpc-db-data-subnet-c = {
+                subnet_cidr    = "10.2.130.0/24"
+                az             = "c"
+                routing_policy = "data_subnet"
+            }
+        }
+    }
+    vpc-analytics = {
+        region = "us-east-2"
+        vpc_cidr = "10.3.0.0/16"
+        subnets = {
+            vpc-analytics-tgw-subnet-a = {
+                subnet_cidr    = "10.3.0.0/28"
+                az             = "a"
+                routing_policy = "tgw_attach_hub"
+            }
+            vpc-analytics-tgw-subnet-b = {
+                subnet_cidr    = "10.3.0.16/28"
+                az             = "b"
+                routing_policy = "tgw_attach_hub"
+            }
+            vpc-analytics-tgw-subnet-c = {
+                subnet_cidr    = "10.3.0.32/28"
+                az             = "c"
+                routing_policy = "tgw_attach_hub"
+            }
+            vpc-analytics-app-subnet-a = {
+                subnet_cidr    = "10.3.64.0/24"
+                az             = "a"
+                routing_policy = "app_subnet"
+            }
+            vpc-analytics-app-subnet-b = {
+                subnet_cidr    = "10.3.65.0/24"
+                az             = "b"
+                routing_policy = "app_subnet"
+            }
+            vpc-analytics-app-subnet-c = {
+                subnet_cidr    = "10.3.66.0/24"
+                az             = "c"
+                routing_policy = "app_subnet"
+            }
+            vpc-analytics-data-subnet-a = {
+                subnet_cidr    = "10.3.128.0/24"
+                az             = "a"
+                routing_policy = "data_subnet"
+            }
+            vpc-analytics-data-subnet-b = {
+                subnet_cidr    = "10.3.129.0/24"
+                az             = "b"
+                routing_policy = "data_subnet"
+            }
+            vpc-analytics-data-subnet-c = {
+                subnet_cidr    = "10.3.130.0/24"
+                az             = "c"
+                routing_policy = "data_subnet"
+            }
+        }
+    }
+    vpc-edge = {
+        region = "us-east-2"
+        vpc_cidr = "10.4.0.0/16"
+        subnets = {
+            vpc-edge-tgw-subnet-a = {
+                subnet_cidr    = "10.4.0.0/28"
+                az             = "a"
+                routing_policy = "tgw_attach_hub"
+            }
+            vpc-edge-tgw-subnet-b = {
+                subnet_cidr    = "10.4.0.16/28"
+                az             = "b"
+                routing_policy = "tgw_attach_hub"
+            }
+            vpc-edge-tgw-subnet-c = {
+                subnet_cidr    = "10.4.0.32/28"
+                az             = "c"
+                routing_policy = "tgw_attach_hub"
+            }
+            vpc-edge-app-subnet-a = {
+                subnet_cidr    = "10.4.64.0/24"
+                az             = "a"
+                routing_policy = "app_subnet"
+            }
+            vpc-edge-app-subnet-b = {
+                subnet_cidr    = "10.4.65.0/24"
+                az             = "b"
+                routing_policy = "app_subnet"
+            }
+            vpc-edge-app-subnet-c = {
+                subnet_cidr    = "10.4.66.0/24"
+                az             = "c"
+                routing_policy = "app_subnet"
+            }
+            vpc-edge-data-subnet-a = {
+                subnet_cidr    = "10.4.128.0/24"
+                az             = "a"
+                routing_policy = "data_subnet"
+            }
+            vpc-edge-data-subnet-b = {
+                subnet_cidr    = "10.4.129.0/24"
+                az             = "b"
+                routing_policy = "data_subnet"
+            }
+            vpc-edge-data-subnet-c = {
+                subnet_cidr    = "10.4.130.0/24"
+                az             = "c"
+                routing_policy = "data_subnet"
+            }
         }
     }
 }
-
 
 routing_policies = {
     public = {
@@ -179,7 +290,17 @@ routing_policies = {
     private_nat = {
         inject_nat = true
     }
-    tgw_attach_dev_hub = {
-        tgw_key = "tgw_dev_hub_use_2"
+    private_tgw = {
+        inject_tgw = true
+    }
+    app_subnet = {        
+        inject_tgw = true
+    }
+    data_subnet = {        
+        inject_tgw = true
+    }
+    tgw_attach_hub = {
+        tgw_key = "tgw_hub"
     }
 }
+

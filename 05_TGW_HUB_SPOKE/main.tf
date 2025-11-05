@@ -37,10 +37,15 @@ resource "aws_ec2_transit_gateway_route_table" "main" {
 
   region = each.value.region
   transit_gateway_id = aws_ec2_transit_gateway.main[each.value.tgw_key].id
+  tags = merge(
+    {Name = each.key},
+    var.default_tags,
+    each.value.tags
+  )
 }
 
 resource "aws_ec2_transit_gateway_vpc_attachment" "main" {
-  for_each = local.tgw_attach_map
+  for_each = local.tgw_attachment_map
 
   region              = each.value.vpc_region
   transit_gateway_id  = aws_ec2_transit_gateway.main[each.value.tgw_key].id
@@ -168,6 +173,15 @@ resource "aws_route" "nat_gw" {
   route_table_id         = aws_route_table.main[each.value.rt_key].id
   destination_cidr_block = each.value.destination_prefix
   nat_gateway_id         = aws_nat_gateway.main[each.value.target_key].id
+}
+
+resource "aws_route" "tgw" {
+  for_each               = local.tgw_route_map
+
+  region                 = each.value.region
+  route_table_id         = aws_route_table.main[each.value.rt_key].id
+  destination_cidr_block = each.value.destination_prefix
+  transit_gateway_id     = aws_ec2_transit_gateway.main[each.value.target_key].id
 }
 
 resource "aws_route_table_association" "main" {
