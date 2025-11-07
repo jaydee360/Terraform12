@@ -46,9 +46,46 @@ locals {
     }  
   }
 
+  tgw_attachments_by_vpc = {
+    for vpc_key in [for tgwatt_obj in local.tgw_attachment_map : tgwatt_obj.vpc_key] : vpc_key => one(flatten([
+      for tgw_key, vpc_map in local.tgw_attachments_by_tgw_vpc : [
+        for kk, oo in vpc_map : oo if kk == vpc_key
+      ]
+    ]))
+  }
+
   tgw_attached_cidrs_by_tgw_vpc = {
     for tgwatt_key, tgwatt_obj in local.tgw_attachments_by_tgw_vpc : tgwatt_key => {
       for vpcatt_key, vpcatt_obj in tgwatt_obj : vpcatt_key => var.vpc_config[vpcatt_key].vpc_cidr
+    }
+  }
+}
+
+locals {
+  # experiment with building full reachabiliity graph for tgw connected vpcs
+  attachment_src = local.tgw_attachments_by_vpc["vpc-edge"]
+  attachment_dst = local.tgw_attachments_by_vpc["vpc-db"]
+  src_associated_rt = local.tgw_route_table_associations_by_att_id[local.attachment_src]
+  dst_propagated_rt = local.tgw_route_table_propagations_by_att_id[local.attachment_dst]
+  src_dst_reachability = contains(local.dst_propagated_rt, local.src_associated_rt)
+
+  tgw_route_table_associations_by_att_id = {
+    for k, o in local.tgw_rt_association_map : o.associated_vpc_tgw_att_id => o.tgw_rt_key
+  }
+  tgw_route_table_propagations_by_att_id = {
+    for att_grp_key in distinct([for att_obj in local.tgw_rt_propagation_map : att_obj.propagated_vpc_tgw_att_id]) : att_grp_key => [
+      for att_obj in local.tgw_rt_propagation_map : att_obj.tgw_rt_key if att_obj.propagated_vpc_tgw_att_id == att_grp_key
+    ]
+  }
+
+  reachability_map = {
+    for src_vpc_key, src_attachment in local.tgw_attachments_by_vpc :
+    src_vpc_key => {
+      for dst_vpc_key, dst_attachment in local.tgw_attachments_by_vpc :
+      dst_vpc_key => try(
+        (contains(local.tgw_route_table_propagations_by_att_id[dst_attachment], local.tgw_route_table_associations_by_att_id[src_attachment])),
+        null
+      )
     }
   }
 }
@@ -77,8 +114,31 @@ locals {
           if  tgw_obj.route_tables != null}
   ]...)
 
+  tgw_rt_static_route_map = merge(flatten([for tgw_rt_key, tgw_rt_obj in local.tgw_rt_map : {
+    for route in coalesce(tgw_rt_obj.routes, []) : "${tgw_rt_key}__${route.cidr_block}__${route.target_key}" => {
+      rt_key = tgw_rt_key
+      tgw_key = tgw_rt_obj.tgw_key
+      region = tgw_rt_obj.region
+      destination_prefix = route.cidr_block
+      target_key = (route.target_key == "blackhole" ? "blackhole" : local.tgw_attachments_by_tgw_vpc[tgw_rt_obj.tgw_key][route.target_key])
+    } if route.target_key == "blackhole" || can(local.tgw_attachments_by_tgw_vpc[tgw_rt_obj.tgw_key][route.target_key])
+  }])...)
+
   tgw_rt_assoc_prefix = "__VPCASS:"
   tgw_rt_prop_prefix = "__VPCPROP:"
+
+  # tgw_rt_association_map = merge([
+  #   for tgw_rt_key, tgw_rt_obj in local.tgw_rt_map : {
+  #     for vpc_assoc in coalesce(tgw_rt_obj.associations, []) : 
+  #     "${tgw_rt_key}${local.tgw_rt_assoc_prefix}${vpc_assoc}" => {
+  #       region                    = tgw_rt_obj.region
+  #       tgw_key                   = tgw_rt_obj.tgw_key
+  #       tgw_rt_key                = tgw_rt_key
+  #       associated_vpc_name       = vpc_assoc
+  #       associated_vpc_tgw_att_id = local.tgw_attachments_by_tgw_vpc[tgw_rt_obj.tgw_key][vpc_assoc]
+  #     } if can(local.tgw_attachments_by_tgw_vpc[tgw_rt_obj.tgw_key][vpc_assoc])
+  #   } 
+  # ]...)
 
   tgw_rt_association_map = merge([
     for tgw_rt_key, tgw_rt_obj in local.tgw_rt_map : {
@@ -87,11 +147,26 @@ locals {
         region                    = tgw_rt_obj.region
         tgw_key                   = tgw_rt_obj.tgw_key
         tgw_rt_key                = tgw_rt_key
+        tgw_rt_name               = tgw_rt_obj.rt_key
         associated_vpc_name       = vpc_assoc
-        associated_vpc_tgw_att_id = local.tgw_attachments_by_tgw_vpc[tgw_rt_obj.tgw_key][vpc_assoc]
-      } if can(local.tgw_attachments_by_tgw_vpc[tgw_rt_obj.tgw_key][vpc_assoc])
+        associated_vpc_tgw_att_id = try(local.tgw_attachments_by_tgw_vpc[tgw_rt_obj.tgw_key][vpc_assoc], null)
+      }
     } 
   ]...)
+
+#   tgw_rt_propagation_map = merge([
+#     for tgw_rt_key, tgw_rt_obj in local.tgw_rt_map : {
+#       for vpc_prop in coalesce(tgw_rt_obj.propagations, []) : 
+#       "${tgw_rt_key}${local.tgw_rt_prop_prefix}${vpc_prop}" => {
+#         region                    = tgw_rt_obj.region
+#         tgw_key                   = tgw_rt_obj.tgw_key
+#         tgw_rt_key                = tgw_rt_key
+#         propagated_vpc_name       = vpc_prop
+#         propagated_vpc_tgw_att_id = local.tgw_attachments_by_tgw_vpc[tgw_rt_obj.tgw_key][vpc_prop]
+#       } if can(local.tgw_attachments_by_tgw_vpc[tgw_rt_obj.tgw_key][vpc_prop])
+#     } 
+#   ]...)
+# }
 
   tgw_rt_propagation_map = merge([
     for tgw_rt_key, tgw_rt_obj in local.tgw_rt_map : {
@@ -100,11 +175,13 @@ locals {
         region                    = tgw_rt_obj.region
         tgw_key                   = tgw_rt_obj.tgw_key
         tgw_rt_key                = tgw_rt_key
+        tgw_rt_name               = tgw_rt_obj.rt_key
         propagated_vpc_name       = vpc_prop
-        propagated_vpc_tgw_att_id = local.tgw_attachments_by_tgw_vpc[tgw_rt_obj.tgw_key][vpc_prop]
-      } if can(local.tgw_attachments_by_tgw_vpc[tgw_rt_obj.tgw_key][vpc_prop])
+        propagated_vpc_tgw_att_id = try(local.tgw_attachments_by_tgw_vpc[tgw_rt_obj.tgw_key][vpc_prop], null)
+      }
     } 
   ]...)
+  
 }
 
 locals {
@@ -219,10 +296,10 @@ locals {
 }
 
 locals {
-  nat_gw_route_prefix = "NATGW:"
-  nat_gw_route_map = {
+  natgw_route_prefix = "NATGW:"
+  natgw_route_map = {
     for rti_key, rti_obj in local.route_table_intent_map : 
-    "${local.nat_gw_route_prefix}${rti_obj.rt_key}" => {
+    "${local.natgw_route_prefix}${rti_obj.rt_key}" => {
       region              = rti_obj.region
       rt_key              = rti_obj.rt_key
       target_key          = try(local.natgw_lookup_map_by_vpc_az[rti_obj.vpc_key][rti_obj.az][0], local.natgw_lookup_map_by_vpc[rti_obj.vpc_key][0], null)
@@ -234,7 +311,7 @@ locals {
 locals {
   tgw_route_prefix = "TGW:"
 
-  tgw_route_map = merge(flatten([
+  tgw_dynamic_route_map = merge(flatten([
     for rti_key, rti_obj in local.route_table_intent_map : [
       for tgw in [for tgw_key, vpc_keys in local.tgw_attachments_by_tgw_vpc : tgw_key if contains(keys(vpc_keys), rti_obj.vpc_key)] : {
         for vpc in [for vpc_key, vpc_cidr in local.tgw_attached_cidrs_by_tgw_vpc[tgw] : vpc_key if vpc_key != rti_obj.vpc_key] : "${local.tgw_route_prefix}${rti_obj.rt_key}__${vpc}" => {
@@ -247,6 +324,22 @@ locals {
     ] if rti_obj.routing_policy.inject_tgw
   ])...)
 
+  tgw_static_route_map = merge(flatten([
+    for rti_key, rti_obj in local.route_table_intent_map : {
+      for route in coalesce(rti_obj.routing_policy.routes, []) : "${local.tgw_route_prefix}${rti_obj.rt_key}__${route.cidr_block}" => {
+        region             = rti_obj.region
+        rt_key             = rti_obj.rt_key
+        destination_prefix = route.cidr_block
+        target_key         = route.target_key
+      } if route.target_type == "tgw" && contains(keys(local.tgw_map), route.target_key)
+    }
+  ])...)
+
+
+  tgw_route_map = merge(
+    local.tgw_dynamic_route_map, 
+    local.tgw_static_route_map
+  )
 }
 
 locals {
@@ -261,9 +354,57 @@ locals {
   }
 }
 
-# for each route_table_object in the route_table_intent_map (if routing_policy.inject_tgw == true)
-#   for each transit gateway this route tables vpc is connected to
-#     for each vpc attachment
+locals {
+  debug_tgw_routes = {
+    for vpc_grp in distinct([for kk, oo in local.tgw_route_map : split("__", oo.rt_key)[0]]) : vpc_grp => [
+      for ooo in local.tgw_route_map : "${split("__", ooo.rt_key)[1]} > ${ooo.destination_prefix} > ${ooo.target_key}" 
+      if split("__", ooo.rt_key)[0] == vpc_grp
+    ]
+  }
+  debug_igw_routes = {
+    for vpc_grp in distinct([for kk, oo in local.igw_route_map : split("__", oo.rt_key)[0]]) : vpc_grp => [
+      for ooo in local.igw_route_map : "${split("__", ooo.rt_key)[1]} > ${ooo.destination_prefix} > ${ooo.target_key}" 
+      if split("__", ooo.rt_key)[0] == vpc_grp
+    ]
+  }
+  debug_natgw_routes = {
+    for vpc_grp in distinct([for kk, oo in local.natgw_route_map : split("__", oo.rt_key)[0]]) : vpc_grp => [
+      for ooo in local.natgw_route_map : "${split("__", ooo.rt_key)[1]} > ${ooo.destination_prefix} > ${ooo.target_key}" 
+      if split("__", ooo.rt_key)[0] == vpc_grp
+    ]
+  }
 
-# [for k, v in local.tgw_attachments_by_tgw_vpc : k if contains(keys(v), "vpc_key")]
+  debug_tgw_rt_static_routes = [
+    for k, o in local.tgw_rt_static_route_map : "${o.tgw_key} > ${split("__", k)[1]} > ${o.destination_prefix} > ${split("__", k)[3]}"
+  ]
 
+  debug_all_subnet_routes = flatten([
+    for route_type, route_map in {
+      tgw   = local.tgw_route_map
+      igw   = local.igw_route_map
+      natgw = local.natgw_route_map
+    } : [
+      for ooo in route_map :
+      "${upper(route_type)} > ${split(":",split("__", ooo.rt_key)[0])[2]} > ${split("__", ooo.rt_key)[1]} > ${ooo.destination_prefix} > ${ooo.target_key}"
+    ]
+  ])
+
+  debug_tgw_rt_associations = {
+    for rt_name in distinct([for k, o in local.tgw_rt_association_map : o.tgw_rt_name]) : rt_name => [
+      for kk, oo in local.tgw_rt_association_map : oo.associated_vpc_name 
+      if oo.tgw_rt_name == rt_name
+    ]
+  }
+
+  debug_tgw_rt_associations_simple = {for k, o in local.debug_tgw_rt_associations : join(" | ", sort(o)) => k}
+  
+  debug_tgw_rt_propagations = {
+    for rt_name in distinct([for k, o in local.tgw_rt_propagation_map : o.tgw_rt_name]) : rt_name => [
+      for kk, oo in local.tgw_rt_propagation_map : oo.propagated_vpc_name 
+      if oo.tgw_rt_name == rt_name
+    ]
+  }
+
+  debug_tgw_rt_propagations_simple = {for k, o in local.debug_tgw_rt_propagations : join(" | ", sort(o)) => k}
+
+}

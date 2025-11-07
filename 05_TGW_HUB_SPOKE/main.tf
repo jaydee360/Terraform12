@@ -59,6 +59,25 @@ resource "aws_ec2_transit_gateway_route_table_association" "main" {
   region                          = each.value.region
   transit_gateway_route_table_id  = aws_ec2_transit_gateway_route_table.main[each.value.tgw_rt_key].id
   transit_gateway_attachment_id   = aws_ec2_transit_gateway_vpc_attachment.main[each.value.associated_vpc_tgw_att_id].id
+
+  lifecycle {
+    precondition {
+      condition = (each.value.associated_vpc_tgw_att_id != null)
+      error_message = <<-EOT
+        Invalid TGW Route Table Association
+        
+        VPC: '${each.value.associated_vpc_name}'
+        TGW: '${each.value.tgw_key}'
+        
+        This VPC is not attached to this TGW.
+        
+        Check:
+        1. Does '${each.value.associated_vpc_name}' exist in vpc_config?
+        2. Does it have subnets with routing_policy = 'tgw_attach_*'?
+        3. Does that routing_policy reference tgw_key = '${each.value.tgw_key}'?
+      EOT
+    }
+  }
 }
 
 resource "aws_ec2_transit_gateway_route_table_propagation" "main" {
@@ -67,6 +86,35 @@ resource "aws_ec2_transit_gateway_route_table_propagation" "main" {
   region                          = each.value.region
   transit_gateway_route_table_id  = aws_ec2_transit_gateway_route_table.main[each.value.tgw_rt_key].id
   transit_gateway_attachment_id   = aws_ec2_transit_gateway_vpc_attachment.main[each.value.propagated_vpc_tgw_att_id].id
+
+  lifecycle {
+    precondition {
+      condition = (each.value.propagated_vpc_tgw_att_id != null)
+      error_message = <<-EOT
+        Invalid TGW Route Table Propagation
+        
+        VPC: '${each.value.propagated_vpc_name}'
+        TGW: '${each.value.tgw_key}'
+        
+        This VPC is not attached to this TGW.
+        
+        Check:
+        1. Does '${each.value.propagated_vpc_name}' exist in vpc_config?
+        2. Does it have subnets with routing_policy = 'tgw_attach_*'?
+        3. Does that routing_policy reference tgw_key = '${each.value.tgw_key}'?
+      EOT
+    }
+  }
+}
+
+resource "aws_ec2_transit_gateway_route" "main" {
+  for_each = local.tgw_rt_static_route_map 
+
+  region                         = each.value.region
+  destination_cidr_block         = each.value.destination_prefix
+  blackhole                      = each.value.target_key == "blackhole" ? true : false
+  transit_gateway_attachment_id  = (each.value.target_key != "blackhole" ? aws_ec2_transit_gateway_vpc_attachment.main[each.value.target_key].id : null)
+  transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.main[each.value.rt_key].id
 }
 
 resource "aws_vpc" "main" {
@@ -167,7 +215,7 @@ resource "aws_route" "igw" {
 }
 
 resource "aws_route" "nat_gw" {
-  for_each               = local.nat_gw_route_map
+  for_each               = local.natgw_route_map
 
   region                 = each.value.region
   route_table_id         = aws_route_table.main[each.value.rt_key].id
@@ -182,6 +230,10 @@ resource "aws_route" "tgw" {
   route_table_id         = aws_route_table.main[each.value.rt_key].id
   destination_cidr_block = each.value.destination_prefix
   transit_gateway_id     = aws_ec2_transit_gateway.main[each.value.target_key].id
+
+  depends_on = [
+    aws_ec2_transit_gateway_vpc_attachment.main
+  ]
 }
 
 resource "aws_route_table_association" "main" {
@@ -191,3 +243,5 @@ resource "aws_route_table_association" "main" {
   subnet_id      = aws_subnet.main[each.value.subnet_id].id
   route_table_id = aws_route_table.main[each.value.route_table_id].id
 } 
+
+

@@ -48,7 +48,6 @@ variable "tgw_config" {
       propagations                      = optional(list(string))
       routes                            = optional(list(object({
         cidr_block                      = string
-        target_type                     = string
         target_key                      = string
       })))
       tags                              = optional(map(string))
@@ -109,6 +108,11 @@ variable "routing_policies" {
     inject_nat    = optional(bool, false)
     inject_tgw    = optional(bool, false)
     tgw_key       = optional(string)
+    routes        = optional(list(object({
+      cidr_block  = string
+      target_type = string
+      target_key  = string
+    })))
     tags          = optional(map(string), null)
   }))
   validation {

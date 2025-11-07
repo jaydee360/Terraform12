@@ -1,1 +1,40 @@
-##
+
+merge(flatten([for tgw_rt_key, tgw_rt_obj in local.tgw_rt_map : tgw_rt_obj.routes if tgw_rt_obj.routes != null])...)
+merge(flatten([for tgw_rt_key, tgw_rt_obj in local.tgw_rt_map : coalesce(tgw_rt_obj.routes, [])])...)
+{for tgw_rt_key, tgw_rt_obj in local.tgw_rt_map : tgw_rt_key => [for route in coalesce(tgw_rt_obj.routes, []) : route]}
+[for tgw_rt_key, tgw_rt_obj in local.tgw_rt_map : [for route in coalesce(tgw_rt_obj.routes, []) : route]]
+merge(flatten([for tgw_rt_key, tgw_rt_obj in local.tgw_rt_map : [for route in coalesce(tgw_rt_obj.routes, []) : route]])...)
+[for tgw_rt_key, tgw_rt_obj in local.tgw_rt_map : [for route in coalesce(tgw_rt_obj.routes, []) : {
+  rt_key = tgw_rt_key
+  tgw_key = tgw_rt_obj.tgw_key
+  region = tgw_rt_obj.region
+  cidr_block = route.cidr_block
+  target_key = tgw_rt_obj.tgw_key
+}]]
+merge(flatten([for tgw_rt_key, tgw_rt_obj in local.tgw_rt_map : [for route in coalesce(tgw_rt_obj.routes, []) : {
+  rt_key = tgw_rt_key
+  tgw_key = tgw_rt_obj.tgw_key
+  region = tgw_rt_obj.region
+  cidr_block = route.cidr_block
+  target_key = local.tgw_attachments_by_tgw_vpc[tgw_rt_obj.tgw_key][route.target_key]
+}]])...)
+merge(flatten([for tgw_rt_key, tgw_rt_obj in local.tgw_rt_map : {for route in coalesce(tgw_rt_obj.routes, []) : "${tgw_rt_key}__${route.cidr_block}__${route.target_key}" => {
+  rt_key = tgw_rt_key
+  tgw_key = tgw_rt_obj.tgw_key
+  region = tgw_rt_obj.region
+  cidr_block = route.cidr_block
+  target_key = local.tgw_attachments_by_tgw_vpc[tgw_rt_obj.tgw_key][route.target_key]
+} if can(local.tgw_attachments_by_tgw_vpc[tgw_rt_obj.tgw_key][route.target_key])}])...)
+
+
+local.route_table_map["RT:SN:vpc-core__vpc-core-data-subnet-a"]
+
+local.route_table_map["RT:SN:vpc-core__vpc-core-data-subnet-b"]
+
+local.route_table_map["RT:SN:vpc-core__vpc-core-data-subnet-c"]
+
+local.route_table_intent_map["RI:RT:SN:vpc-core__vpc-core-data-subnet-a"]
+
+local.route_table_intent_map["RI:RT:SN:vpc-core__vpc-core-data-subnet-c"]
+
+local.route_table_intent_map["RI:RT:SN:vpc-core__vpc-core-data-subnet-c"]
