@@ -38,3 +38,35 @@ local.route_table_intent_map["RI:RT:SN:vpc-core__vpc-core-data-subnet-a"]
 local.route_table_intent_map["RI:RT:SN:vpc-core__vpc-core-data-subnet-c"]
 
 local.route_table_intent_map["RI:RT:SN:vpc-core__vpc-core-data-subnet-c"]
+
+toset([
+  {
+    "attachment" = tolist([
+      {
+        "endpoint_id" = "vpce-08d41dd0dfa0f4251"
+        "subnet_id" = "subnet-02898e7b26f1f3ffb"
+      },
+    ])
+    "availability_zone" = "us-east-2b"
+  },
+  {
+    "attachment" = tolist([
+      {
+        "endpoint_id" = "vpce-0917c8d6a4bd5ef28"
+        "subnet_id" = "subnet-036e04ee48aa53e73"
+      },
+    ])
+    "availability_zone" = "us-east-2c"
+  },
+  {
+    "attachment" = tolist([
+      {
+        "endpoint_id" = "vpce-0fe03ad1caed1504c"
+        "subnet_id" = "subnet-098e7ae4ffef5ad20"
+      },
+    ])
+    "availability_zone" = "us-east-2a"
+  },
+])
+
+aws_networkfirewall_firewall.main["test-fw"].firewall_status[0].sync_states

@@ -282,3 +282,46 @@ resource "aws_networkfirewall_firewall_policy" "main" {
     stateless_fragment_default_actions = each.value.stateless_fragment_default_actions
   }
 }
+
+resource "aws_networkfirewall_logging_configuration" "main" {
+  for_each = var.fw_config
+  
+  region = each.value.region
+  firewall_arn = aws_networkfirewall_firewall.main[each.key].arn
+  
+  logging_configuration {
+    log_destination_config {
+      log_destination = {
+        logGroup = aws_cloudwatch_log_group.firewall[each.key].name
+      }
+      log_destination_type = "CloudWatchLogs"
+      log_type            = "FLOW"  # FLOW logs show all traffic
+    }
+    
+    # Optional: Add ALERT logs too
+    log_destination_config {
+      log_destination = {
+        logGroup = aws_cloudwatch_log_group.firewall_alerts[each.key].name
+      }
+      log_destination_type = "CloudWatchLogs"
+      log_type            = "ALERT"  # ALERT logs show rule matches
+    }
+  }
+}
+
+# CloudWatch log groups
+resource "aws_cloudwatch_log_group" "firewall" {
+  for_each = var.fw_config
+  
+  region = each.value.region
+  name              = "/aws/networkfirewall/${each.key}/flow"
+  retention_in_days = 7  
+}
+
+resource "aws_cloudwatch_log_group" "firewall_alerts" {
+  for_each = var.fw_config
+  
+  region = each.value.region
+  name              = "/aws/networkfirewall/${each.key}/alert"
+  retention_in_days = 7
+}

@@ -14,3 +14,4 @@ data "aws_availability_zones" "test" {
   region = "us-east-2"
 }
 
+# data "aws_networkfirewall_firewall" "test"
