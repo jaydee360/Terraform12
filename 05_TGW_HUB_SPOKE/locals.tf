@@ -63,11 +63,11 @@ locals {
 
 locals {
   # experiment with building full reachabiliity graph for tgw connected vpcs
-  attachment_src = local.tgw_attachments_by_vpc["vpc-edge"]
-  attachment_dst = local.tgw_attachments_by_vpc["vpc-db"]
-  src_associated_rt = local.tgw_route_table_associations_by_att_id[local.attachment_src]
-  dst_propagated_rt = local.tgw_route_table_propagations_by_att_id[local.attachment_dst]
-  src_dst_reachability = contains(local.dst_propagated_rt, local.src_associated_rt)
+  # attachment_src = local.tgw_attachments_by_vpc["vpc-edge"]
+  # attachment_dst = local.tgw_attachments_by_vpc["vpc-db"]
+  # src_associated_rt = local.tgw_route_table_associations_by_att_id[local.attachment_src]
+  # dst_propagated_rt = local.tgw_route_table_propagations_by_att_id[local.attachment_dst]
+  # src_dst_reachability = contains(local.dst_propagated_rt, local.src_associated_rt)
 
   tgw_route_table_associations_by_att_id = {
     for k, o in local.tgw_rt_association_map : o.associated_vpc_tgw_att_id => o.tgw_rt_key
@@ -306,6 +306,29 @@ locals {
       destination_prefix  = "0.0.0.0/0"
     } if rti_obj.routing_policy.inject_nat && can(local.natgw_lookup_map_by_vpc[rti_obj.vpc_key][0])
   }
+}
+
+locals {
+  fw_route_prefix = "FW:"
+  fw_route_map = {
+    for rti_key, rti_obj in local.route_table_intent_map : 
+    "${local.fw_route_prefix}${rti_obj.rt_key}" => {
+      region              = rti_obj.region
+      rt_key              = rti_obj.rt_key
+      fw_key              = rti_obj.routing_policy.fw_key
+      target_key          = local.fw_vpce_by_fw_vpc_az[rti_obj.routing_policy.fw_key][rti_obj.vpc_key][rti_obj.az]
+      destination_prefix  = "0.0.0.0/0"
+    } if rti_obj.routing_policy.inject_fw && can(var.fw_config[rti_obj.routing_policy.fw_key]) && can(local.fw_vpce_by_fw_vpc_az[rti_obj.routing_policy.fw_key][rti_obj.vpc_key][rti_obj.az])
+  }
+
+  fw_vpce_by_fw_vpc_az = {
+    for fw_key, fw_obj in aws_networkfirewall_firewall.main : fw_key => {
+      var.fw_config[fw_key].vpc_id = {
+        for sync_state in fw_obj.firewall_status[0].sync_states : sync_state.availability_zone => sync_state.attachment[0].endpoint_id
+      }
+    }
+  }
+
 }
 
 locals {

@@ -1,3 +1,21 @@
+fw_policy_config = {
+  test-policy = {
+    region = "us-east-2"
+    stateless_default_actions = ["aws:pass"]
+    stateless_fragment_default_actions = ["aws:pass"]
+  }
+}
+
+fw_config = {
+  test-fw = {
+    region = "us-east-2"
+    vpc_id = "vpc-inspection"
+    subnet_ids = ["vpc-inspection-fw-subnet-a", "vpc-inspection-fw-subnet-b", "vpc-inspection-fw-subnet-c"]
+    policy_key = "test-policy"
+  }
+}
+
+
 tgw_config = {
     tgw_hub = {
         account = "aws25_dev"
@@ -89,17 +107,17 @@ vpc_config = {
             vpc-inspection-tgw-subnet-a = {
                 subnet_cidr    = "10.1.0.0/28"
                 az             = "a"
-                routing_policy = "tgw_attach_tgw_hub"
+                routing_policy = "tgw_attach_tgw_hub_inspection"
             }
             vpc-inspection-tgw-subnet-b = {
                 subnet_cidr    = "10.1.0.16/28"
                 az             = "b"
-                routing_policy = "tgw_attach_tgw_hub"
+                routing_policy = "tgw_attach_tgw_hub_inspection"
             }
             vpc-inspection-tgw-subnet-c = {
                 subnet_cidr    = "10.1.0.32/28"
                 az             = "c"
-                routing_policy = "tgw_attach_tgw_hub"
+                routing_policy = "tgw_attach_tgw_hub_inspection"
             }
             vpc-inspection-fw-subnet-a = {
                 subnet_cidr    = "10.1.4.0/24"
@@ -305,6 +323,11 @@ routing_policies = {
     tgw_attach_tgw_hub = {
         tgw_key = "tgw_hub"
         inject_nat = true
+    }
+    tgw_attach_tgw_hub_inspection = {
+        tgw_key = "tgw_hub"
+        fw_key = "test-fw"
+        inject_fw = true
     }
 }
 

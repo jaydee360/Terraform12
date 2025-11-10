@@ -236,6 +236,19 @@ resource "aws_route" "tgw" {
   ]
 }
 
+resource "aws_route" "fw" {
+  for_each = local.fw_route_map
+
+  region = each.value.region
+  route_table_id = aws_route_table.main[each.value.rt_key].id
+  destination_cidr_block = each.value.destination_prefix
+  vpc_endpoint_id = each.value.target_key
+
+  depends_on = [
+    aws_networkfirewall_firewall.main
+  ]
+}
+
 resource "aws_route_table_association" "main" {
   for_each       = local.subnet_route_table_associations
 
@@ -244,4 +257,28 @@ resource "aws_route_table_association" "main" {
   route_table_id = aws_route_table.main[each.value.route_table_id].id
 } 
 
+resource "aws_networkfirewall_firewall" "main" {
+  for_each = var.fw_config
 
+  region = each.value.region
+  firewall_policy_arn = aws_networkfirewall_firewall_policy.main[each.value.policy_key].arn
+  name = each.key
+  vpc_id = aws_vpc.main[each.value.vpc_id].id
+  dynamic "subnet_mapping" {
+    for_each = each.value.subnet_ids
+    content {
+      subnet_id = aws_subnet.main["${local.subnet_prefix}${each.value.vpc_id}__${subnet_mapping.value}"].id
+    }
+  }
+}
+
+resource "aws_networkfirewall_firewall_policy" "main" {
+  for_each = var.fw_policy_config
+
+  region = each.value.region
+  name = each.key
+  firewall_policy {
+    stateless_default_actions = each.value.stateless_default_actions
+    stateless_fragment_default_actions = each.value.stateless_fragment_default_actions
+  }
+}

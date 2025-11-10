@@ -82,3 +82,11 @@ output "aws_route_igw_ids" {
 output "aws_route_nat_gw_ids" {
   value = {for k, r in aws_route.nat_gw : k => r.id}  
 }
+
+output "aws_networkfirewall_firewall_policy" {
+  value = {for k, p in aws_networkfirewall_firewall_policy.main : k => p}  
+}
+
+output "aws_networkfirewall_firewall" {
+  value = {for k, fw in aws_networkfirewall_firewall.main : k => fw}  
+}

@@ -36,6 +36,23 @@ variable "az_lookup" {
   }
 }
 
+variable "fw_policy_config" {
+  type = map(object({
+    region = string
+    stateless_default_actions = list(string)
+    stateless_fragment_default_actions = list(string)
+  }))
+}
+
+variable "fw_config" {
+  type = map(object({
+    region = string
+    vpc_id = string
+    subnet_ids = list(string)
+    policy_key = string
+  }))
+}
+
 variable "tgw_config" {
   type = map(object({
     account                             = optional(string)
@@ -107,7 +124,9 @@ variable "routing_policies" {
     inject_igw    = optional(bool, false)
     inject_nat    = optional(bool, false)
     inject_tgw    = optional(bool, false)
+    inject_fw     = optional(bool, false)
     tgw_key       = optional(string)
+    fw_key        = optional(string)
     routes        = optional(list(object({
       cidr_block  = string
       target_type = string
