@@ -90,3 +90,25 @@ output "aws_networkfirewall_firewall_policy" {
 output "aws_networkfirewall_firewall" {
   value = {for k, fw in aws_networkfirewall_firewall.main : k => fw}  
 }
+
+output "aws_network_interface_ids" {
+  value = {for k, eni in aws_network_interface.main : k => eni.id}
+}
+
+output "aws_eip_eni_ids" {
+  value = {for k, eip in aws_eip.eni : k => eip.id}
+  description = "Elastic IP IDs keyed by ENI"
+}
+
+output "aws_instance_ids" {
+  value = {for k, i in aws_instance.main : k => i.id}  
+}
+
+output "aws_network_interface_attachment_ids" {
+  value = {for k, att in aws_network_interface_attachment.main : k => att.id}
+}
+
+output "private_key_openssh" {
+  value     = tls_private_key.default.private_key_openssh
+  sensitive = true
+}

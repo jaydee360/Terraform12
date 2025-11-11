@@ -441,3 +441,364 @@ locals {
   debug_tgw_rt_propagations_simple = {for k, o in local.debug_tgw_rt_propagations : join(" | ", sort(o)) => k}
 
 }
+# ---------------------
+
+# 🔹 merged_ec2_instance_map, 🔹 resolved_ec2_instance_map, 🔹 valid_ec2_instance_map
+# ------------------------------------------------------------------------------------
+# Purpose: Merges EC2 instances from profiles, resolves target subnets, filters valid EC2 instances.
+
+# Used in:
+# Locals: 🔹 valid_eni_map, 🔹 ec2_eni_lookup_map
+# Resources: 🔹 aws_instance.main, 🔹 aws_network_interface_attachment.main
+# Depends on: 🔹 var.ec2_instances, 🔹 var.ec2_profiles, 🔹 subnet_lookup_by_routing_policy_vpc_az, 🔹 subnet_map
+locals {
+  merged_ec2_instance_map = {
+    for inst_key, inst_obj in var.ec2_instances : inst_key => merge(
+      var.ec2_profiles[inst_obj.ec2_profile],
+      inst_obj,
+      {
+        ami       = var.ec2_profiles[inst_obj.ec2_profile].ami_by_region[inst_obj.region]
+        # key_name  = replace(var.ec2_profiles[inst_obj.ec2_profile].key_name, "region", inst_obj.region)
+        network_interfaces = {for nic_key in distinct(concat(
+          keys(try(var.ec2_profiles[inst_obj.ec2_profile].network_interfaces, {})),
+          keys(inst_obj.network_interfaces))) : nic_key => merge(
+            try(var.ec2_profiles[inst_obj.ec2_profile].network_interfaces[nic_key], {}),
+            {
+              for key, value in try(inst_obj.network_interfaces[nic_key], {}) : key => (
+                value != null
+                ? value
+                : try(var.ec2_profiles[inst_obj.ec2_profile].network_interfaces[nic_key][key], null)
+              )
+            },
+            {
+              az = try(var.az_lookup[inst_obj.region][try(inst_obj.network_interfaces[nic_key].az, null)], null)
+            }
+          )
+        }
+      }
+    ) if contains(keys(var.ec2_profiles), inst_obj.ec2_profile)
+  }
+
+  resolved_ec2_instance_map = {
+    for inst_key, inst_obj in local.merged_ec2_instance_map : 
+    inst_key => merge(
+      inst_obj,
+      {network_interfaces = {
+        for nic_key, nic_obj in inst_obj.network_interfaces : nic_key => merge(
+          nic_obj,
+          {
+            subnet_id = try(local.subnet_lookup_by_routing_policy_vpc_az[nic_obj.routing_policy][nic_obj.vpc][nic_obj.az], null)
+          }
+        )
+      }}
+    )
+  }
+
+  valid_ec2_instance_map = {
+    for ec2_key, ec2_obj in local.resolved_ec2_instance_map : ec2_key => ec2_obj if (
+      alltrue([for eni_key, eni_obj in ec2_obj.network_interfaces : can(contains(keys(var.vpc_config), eni_obj.vpc))]) &&
+      alltrue([for eni_key, eni_obj in ec2_obj.network_interfaces : can(contains(keys(local.subnet_map), eni_obj.subnet_id))])
+    )
+  }
+}
+
+# 🔹 subnet_lookup_by_routing_policy_vpc_az
+# -----------------------------------------
+# Purpose: Enables subnet resolution (Routing Policy > VPC > AZ > Subnet) for EC2 placement.
+
+# Used in:
+# Locals: 🔹 resolved_ec2_instance_map
+# Resources: indirectly via 🔹 aws_instance.main
+# Depends on: 🔹 minimal_rti_list (minimised from 🔹 route_table_intent_map)
+locals {
+  minimal_rti_list = [
+    for rti_key, rti_obj in local.route_table_intent_map : {
+      routing_policy_name = rti_obj.routing_policy_name
+      vpc_key = rti_obj.vpc_key
+      az = rti_obj.az
+      subnet_key = rti_obj.subnet_key
+    }
+  ]
+
+  subnet_lookup_by_routing_policy_vpc_az = {
+    for rp_grp in distinct([for rti_element in local.minimal_rti_list : rti_element.routing_policy_name]) :
+    rp_grp => {for vpc_grp in distinct([for rti_element in local.minimal_rti_list : rti_element.vpc_key if rti_element.routing_policy_name == rp_grp]) : 
+      vpc_grp => {for az_grp in distinct([for rti_element in local.minimal_rti_list : rti_element.az if rti_element.routing_policy_name == rp_grp && rti_element.vpc_key == vpc_grp]) : 
+        az_grp => try(one([for rti_element in local.minimal_rti_list : rti_element.subnet_key if rti_element.routing_policy_name == rp_grp && rti_element.vpc_key == vpc_grp && rti_element.az == az_grp]), null)
+      } 
+    }
+  }
+}
+
+
+# 🔹 valid_eni_map
+# ----------------
+# Purpose: Builds enriched ENI objects from valid EC2 instances.
+
+# Used in:
+# Locals: 🔹 valid_eni_eip_map, 🔹 valid_eni_attachments, 🔹 ec2_eni_lookup_map, 🔹 diagnostics
+# Resources: 🔹 aws_network_interface.main
+# Depends on: 🔹 valid_ec2_instance_map, 🔹 valid_security_group_map
+locals {
+  valid_eni_map = merge([ 
+    for ec2_key, ec2_obj in local.valid_ec2_instance_map : {for eni_key, eni_obj in ec2_obj.network_interfaces : "${ec2_key}__${eni_key}" => merge(
+      eni_obj, {
+        # subnet_id       = "${eni_obj.vpc}__${eni_obj.subnet}"
+        region          = ec2_obj.region
+        ec2_key         = ec2_key
+        ec2_nic_key     = eni_key
+        index           = tonumber(substr(eni_key, length(eni_key) - 1, 1))
+        security_groups = [
+                            for sg  in coalesce(eni_obj.security_groups, []) : sg  
+                            if contains(keys(local.valid_security_group_map), sg) && 
+                            local.valid_security_group_map[sg].vpc_id == eni_obj.vpc
+                          ]
+        tags            = ec2_obj.tags
+      }
+    )}
+  ]...)
+
+} 
+
+# 🔹 valid_eni_eip_map
+# --------------------
+# Purpose: Filters ENIs eligible for Elastic IPs.
+
+# Used in:
+# Resources: 🔹 aws_eip.eni
+# Depends on: 🔹 valid_eni_map, 🔹 subnet_has_igw_route
+locals {
+  valid_eni_eip_map = {
+    for eip_map_key, eip_map_obj in local.valid_eni_map : eip_map_key => {
+      region                = eip_map_obj.region
+      assign_eip            = eip_map_obj.assign_eip
+      subnet_id             = eip_map_obj.subnet_id
+      subnet_has_igw_route  = lookup(local.subnet_has_igw_route, eip_map_obj.subnet_id, false)
+      tags                  = eip_map_obj.tags
+    } if eip_map_obj.assign_eip && lookup(local.subnet_has_igw_route, eip_map_obj.subnet_id, false)
+  }
+} 
+
+# 🔹 ec2_eni_lookup_map
+# ---------------------
+# Purpose: Reverse lookup of ENI keys by EC2 instance primary NIC.
+
+# Used in:
+# Resources: 🔹 aws_instance.main
+# Depends on: 🔹 valid_eni_map, 🔹 valid_ec2_instance_map
+locals {
+  primary_nic_name = "nic0"
+
+  ec2_eni_lookup_map = {
+    for ec2_key, ec2_obj in local.valid_ec2_instance_map : ec2_key => {
+      for eni_map_key, eni_map_obj in local.valid_eni_map : eni_map_obj.ec2_nic_key => eni_map_key
+      if eni_map_obj.ec2_key == ec2_key
+    }
+  }
+}
+
+# 🔹 valid_eni_attachments
+# ------------------------
+# Purpose: Maps secondary ENIs to EC2 instances for attachment.
+
+# Used in:
+# Resources: 🔹 aws_network_interface_attachment.main
+# Depends on: 🔹 valid_eni_map
+locals {
+  valid_eni_attachments = {
+    for eni_map_key, eni_map_obj in local.valid_eni_map : eni_map_key => {
+        region                = eni_map_obj.region
+        instance_id           = eni_map_obj.ec2_key
+        network_interface_id  = eni_map_key
+        device_index          = eni_map_obj.index
+      }
+    if eni_map_obj.index > 0
+  } 
+} 
+
+
+# 🔹 prefix_list_map
+# -------------------
+# Purpose: Direct mapping of prefix list config.
+
+# Used in:
+# Resources: 🔹 aws_ec2_managed_prefix_list.main, 🔹 SG rule resolution
+# Depends on: 🔹 var.prefix_list_config
+locals {
+  prefix_list_map = {
+    for pl_key, pl_obj in var.prefix_list_config : pl_key => pl_obj 
+  }
+}
+
+
+# 🔹 valid_security_group_map
+# ---------------------------
+# Purpose: Filters SGs with valid VPC references.
+
+# Used in:
+# Locals: 🔹 normalised_ingress_ref_rules, 🔹 normalised_egress_ref_rules
+# Resources: 🔹 aws_security_group.main
+# Depends on: 🔹 var.security_groups, 🔹 var.vpc_config
+locals {
+  valid_security_group_map = {
+    for sg_key, sg_obj in var.security_groups : sg_key => sg_obj if contains(keys(var.vpc_config), sg_obj.vpc_id)
+  }
+}
+
+
+# 🔹 normalised_ingress_ref_rules, hashed_ingress_rules, ingress_rules_map
+# ------------------------------------------------------------------------
+# Purpose: Normalize, hash, deduplicate and map ingress rules.
+
+# Used in:
+# Locals: 🔹 hashed_ingress_rules, 🔹 ingress_rules_map
+# Resources: 🔹 aws_vpc_security_group_ingress_rule.main
+# Depends on: 🔹 valid_security_group_map, var.security_group_rule_sets, 🔹 local.hash_exclusions
+locals {
+  
+  hash_exclusions = ["description", "rule_set_ref", "tags", "region"]
+
+  # NORMALISATION & ENRICHMENT (REFERENCED RULES - INGRESS)
+  # -------------------------------------------------------
+  normalised_ingress_ref_rules = flatten([
+    for sg_key, sg_obj in local.valid_security_group_map : [for rule_set in sg_obj.ingress_ref : [for rule in var.security_group_rule_sets[rule_set] : merge(
+      rule,
+      ( # if referenced_security_group_id != null, check it exists in the map of valid SGs, and is in the same VPC as the SG
+        rule.referenced_security_group_id != null && 
+        (contains(keys(local.valid_security_group_map), rule.referenced_security_group_id) && 
+        local.valid_security_group_map[rule.referenced_security_group_id].vpc_id == sg_obj.vpc_id)
+      ) ? {
+        referenced_security_group_id  = rule.referenced_security_group_id
+        prefix_list_id                = null
+        cidr_ipv4                     = null
+      } : (rule.prefix_list_id != null && contains(keys(local.prefix_list_map), rule.prefix_list_id)) ? {
+        referenced_security_group_id  = null
+        prefix_list_id                = rule.prefix_list_id 
+        cidr_ipv4                     = null
+      } : {
+        referenced_security_group_id  = null
+        prefix_list_id                = null
+        cidr_ipv4                     = rule.cidr_ipv4
+      },
+      {
+        sg_key  = sg_key,
+        rule_set_ref = rule_set
+        region = sg_obj.region
+      }
+    )] if length(sg_obj.ingress_ref) > 0 && contains(keys(var.security_group_rule_sets), rule_set)]
+  ])
+
+  # HASHING (INGRESS)
+  # -----------------
+  hashed_ingress_rules = flatten([
+    for rule_obj in local.normalised_ingress_ref_rules : 
+    merge(
+      rule_obj, 
+      {
+        rule_hash = md5(jsonencode(
+          {for key, value in rule_obj : key => value if !contains(local.hash_exclusions, key)}
+        ))
+      }
+    )
+  ])
+
+  # AGGREGATION (INGRESS)
+  # ---------------------
+  # Build a map of unique ingress rules keyed by rule_hash
+  # - Ensures deduplication and traceability
+  # This map is used to create the actual 'aws_vpc_security_group_ingress_rule' resource
+  ingress_rules_map = {
+    for rule in distinct(local.hashed_ingress_rules) :
+    rule.rule_hash => rule
+  }
+}
+
+# 🔹 normalised_egress_ref_rules, hashed_egress_rules, egress_rules_map
+# ---------------------------------------------------------------------
+# Purpose: Normalize, hash, deduplicate and map egress rules.
+
+# Used in:
+# Locals: 🔹 hashed_egress_rules, 🔹 egress_rules_map
+# Resources: 🔹 aws_vpc_security_group_egress_rule.main
+# Depends on: 🔹 valid_security_group_map, var.security_group_rule_sets, 🔹 local.hash_exclusions
+
+locals {
+
+  # NORMALISATION & ENRICHMENT (REFERENCED RULES - EGRESS)
+  # ------------------------------------------------------
+  normalised_egress_ref_rules = flatten([
+    for sg_key, sg_obj in local.valid_security_group_map : [for rule_set in sg_obj.egress_ref : [for rule in var.security_group_rule_sets[rule_set] : merge(
+      rule,
+      ( # if referenced_security_group_id != null, check it exists in the map of valid SGs, and is in the same VPC as the SG
+        rule.referenced_security_group_id != null && 
+        (contains(keys(local.valid_security_group_map), rule.referenced_security_group_id) && 
+        local.valid_security_group_map[rule.referenced_security_group_id].vpc_id == sg_obj.vpc_id)
+      ) 
+      ? {
+        referenced_security_group_id  = rule.referenced_security_group_id
+        prefix_list_id                = null
+        cidr_ipv4                     = null
+      } : (rule.prefix_list_id != null && contains(keys(local.prefix_list_map), rule.prefix_list_id)) ? {
+        referenced_security_group_id  = null
+        prefix_list_id                = rule.prefix_list_id
+        cidr_ipv4                     = null
+      } : {
+        referenced_security_group_id  = null
+        prefix_list_id                = null
+        cidr_ipv4                     = rule.cidr_ipv4
+      },
+      {
+        sg_key  = sg_key,
+        rule_set_ref = rule_set
+        region = sg_obj.region
+      }
+    )] if length(sg_obj.egress_ref) > 0 && contains(keys(var.security_group_rule_sets), rule_set)]
+  ])
+
+  # HASHING (EGRESS)
+  # ----------------
+  hashed_egress_rules = flatten([
+    for rule_obj in local.normalised_egress_ref_rules : 
+    merge(
+      rule_obj, 
+      {
+        rule_hash = md5(jsonencode(
+          {for key, value in rule_obj : key => value if !contains(local.hash_exclusions, key)}
+        ))
+      }
+    )
+  ])
+
+  # AGGREGATION (EGRESS)
+  # --------------------
+  egress_rules_map = {
+    for rule in distinct(local.hashed_egress_rules) :
+    rule.rule_hash => rule
+  }
+}
+
+locals {
+# 🔹 Diagnostics locals
+# ---------------------
+# Purpose:  Collect and group all ingress/egress rules by security group for traceability.
+# Used in: Debug output only
+# Locals:
+# 🔹 sg_rules_by_sg
+# Depends on: 🔹 ingress_rules_map, 🔹 egress_rules_map, 🔹 valid_security_group_map
+
+  invalid_security_groups = {
+    for sg_key, sg_obj in var.security_groups : sg_key => sg_obj if !contains(keys(var.vpc_config), sg_obj.vpc_id)
+  }
+
+  sg_rules_by_sg = {
+    for sg_key in keys(local.valid_security_group_map) : 
+    sg_key => {
+      "00_INGRESS" = [
+        for rule in local.ingress_rules_map : "HASH: ${rule.rule_hash} > RULE_SET_REF: ${rule.rule_set_ref} > RULE_SET_DESC: ${rule.description}" if rule.sg_key == sg_key
+      ]
+      "01_EGRESS" = [
+        for rule in local.egress_rules_map : "HASH: ${rule.rule_hash} > RULE_SET_REF: ${rule.rule_set_ref} > RULE_SET_DESC: ${rule.description}" if rule.sg_key == sg_key
+      ]
+    }
+  }
+}

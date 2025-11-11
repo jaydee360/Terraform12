@@ -326,3 +326,180 @@ resource "aws_cloudwatch_log_group" "firewall_alerts" {
   name              = "/aws/networkfirewall/${each.key}/alert"
   retention_in_days = 7
 }
+
+# --------------
+
+
+resource "aws_network_interface" "main" {
+  for_each = local.valid_eni_map
+
+  region                  = each.value.region 
+  subnet_id               = aws_subnet.main[each.value.subnet_id].id
+  description             = "${each.key}__${each.value.subnet_id}"
+  # private_ip_list_enabled = each.value.private_ip_list_enabled
+  # private_ip_list         = each.value.private_ip_list
+  # private_ips_count       = each.value.private_ips_count
+  security_groups           = length(each.value.security_groups) > 0 ? [for sg in each.value.security_groups : aws_security_group.main[sg].id] : [data.aws_security_group.default[each.value.vpc].id]
+  tags = merge(
+    {Name = each.key},
+    each.value.tags,
+    var.default_tags
+  )
+}
+
+resource "aws_eip" "eni" {
+  for_each = local.valid_eni_eip_map
+
+  region            = each.value.region 
+  domain            = "vpc"
+  network_interface = aws_network_interface.main[each.key].id
+  tags = merge(
+    {Name = each.key},
+    each.value.tags,     # NOTE: ENI EIPs are derived from EC2 ENIs. Thus tags are inherited from the EC2 ENI
+    var.default_tags
+  )
+} 
+
+resource "aws_instance" "main" {
+  for_each = local.valid_ec2_instance_map
+
+  region        = each.value.region 
+  ami           = each.value.ami
+  instance_type = each.value.instance_type
+  key_name      = each.value.key_name
+  user_data     = each.value.user_data_script != null ? try(file("${path.module}/${each.value.user_data_script}"), null) : null
+  tags = merge(
+    {Name = each.key},
+    each.value.tags,
+    var.default_tags
+  )
+
+  primary_network_interface  {
+    network_interface_id = aws_network_interface.main[local.ec2_eni_lookup_map[each.key][local.primary_nic_name]].id
+  }
+
+  # lifecycle {
+  #   create_before_destroy = true
+  # }
+}
+
+resource "aws_network_interface_attachment" "main" {
+  for_each = local.valid_eni_attachments
+
+  region        = each.value.region 
+  instance_id = aws_instance.main[each.value.instance_id].id
+  network_interface_id = aws_network_interface.main[each.value.network_interface_id].id
+  device_index = each.value.device_index
+}
+
+resource "aws_ec2_managed_prefix_list" "main" {
+  for_each        = local.prefix_list_map
+
+  region          = each.value.region 
+  name            = each.value.name
+  address_family  = each.value.address_family
+  max_entries     = each.value.max_entries
+  tags = merge(
+    {Name = each.key},
+    each.value.tags,
+    var.default_tags
+  )
+
+  dynamic "entry" {
+    for_each = each.value.entries
+
+    content {
+      cidr        = entry.value.cidr
+      description = try(entry.value.description, null)
+    }   
+  }
+}
+
+
+resource "aws_security_group" "main" {
+  for_each = local.valid_security_group_map
+
+  region        = each.value.region 
+  name    = each.key
+  vpc_id  = aws_vpc.main[each.value.vpc_id].id
+  tags = merge(
+    {Name = each.key},
+    each.value.tags,
+    var.default_tags
+  )
+}
+
+resource "aws_vpc_security_group_ingress_rule" "main" {
+  for_each          = local.ingress_rules_map
+
+  region            = each.value.region 
+  security_group_id = aws_security_group.main[each.value.sg_key].id
+  description       = each.value.description
+  from_port         = each.value.from_port
+  to_port           = each.value.to_port
+  ip_protocol       = each.value.ip_protocol
+  referenced_security_group_id  = try(aws_security_group.main[each.value.referenced_security_group_id].id, null)
+  prefix_list_id                = try(aws_ec2_managed_prefix_list.main[each.value.prefix_list_id].id, null)
+  cidr_ipv4                     = each.value.cidr_ipv4
+  tags = merge(
+    {Name = each.value.description},
+    each.value.tags,
+    var.default_tags
+  )
+  lifecycle {
+    precondition {
+      condition = (
+        // SG reference is either null or valid
+        (each.value.referenced_security_group_id == null || contains(keys(var.security_groups), each.value.referenced_security_group_id))
+        &&
+        // Prefix list reference is either null or valid
+        (each.value.prefix_list_id == null || contains(keys(var.prefix_list_config), each.value.prefix_list_id))
+      )
+      error_message = "Security Group: '${each.value.sg_key}', Ingress Rule: '${each.value.rule_set_ref}', has an invalid reference in either: 'referenced_security_group_id' = '${coalesce(each.value.referenced_security_group_id, "null")}', or 'prefix_list' = '${coalesce(each.value.prefix_list_id, "null")}'"
+    }
+  }
+}
+
+resource "aws_vpc_security_group_egress_rule" "main" {
+  for_each          = local.egress_rules_map
+
+  region            = each.value.region 
+  security_group_id = aws_security_group.main[each.value.sg_key].id
+  description       = each.value.description
+  from_port         = each.value.from_port
+  to_port           = each.value.to_port
+  ip_protocol       = each.value.ip_protocol
+  referenced_security_group_id  = try(aws_security_group.main[each.value.referenced_security_group_id].id, null)
+  prefix_list_id                = try(aws_ec2_managed_prefix_list.main[each.value.prefix_list_id].id, null)
+  cidr_ipv4                     = each.value.cidr_ipv4
+  tags = merge(
+    {Name = each.value.description},
+    each.value.tags,
+    var.default_tags
+  )
+  lifecycle {
+    precondition {
+      condition = (
+        # SG reference is either null or valid
+        (each.value.referenced_security_group_id == null || contains(keys(var.security_groups), each.value.referenced_security_group_id))
+        &&
+        # Prefix list reference is either null or valid
+        (each.value.prefix_list_id == null || contains(keys(var.prefix_list_config), each.value.prefix_list_id))
+      )
+      error_message = "Security Group: '${each.value.sg_key}', Egress Rule Set: '${each.value.rule_set_ref}', has an invalid reference in either: 'referenced_security_group_id' = '${coalesce(each.value.referenced_security_group_id, "null")}', or 'prefix_list' = '${coalesce(each.value.prefix_list_id, "null")}'"
+    }
+  }
+}
+
+resource "tls_private_key" "default" {
+  algorithm = "RSA"
+  rsa_bits  = 4096
+}
+
+resource "aws_key_pair" "default" {
+  for_each = toset(keys(var.az_lookup)) 
+
+  region = each.key
+  public_key = tls_private_key.default.public_key_openssh
+  key_name = "terraform-default"
+}
