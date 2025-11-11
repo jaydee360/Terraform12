@@ -51,6 +51,7 @@ resource "aws_ec2_transit_gateway_vpc_attachment" "main" {
   transit_gateway_id  = aws_ec2_transit_gateway.main[each.value.tgw_key].id
   vpc_id              = aws_vpc.main[each.value.vpc_key].id
   subnet_ids          = [for sn in each.value.subnet_keys : aws_subnet.main[sn].id]
+  appliance_mode_support = each.value.tgw_app_mode
 }
 
 resource "aws_ec2_transit_gateway_route_table_association" "main" {
@@ -263,11 +264,11 @@ resource "aws_networkfirewall_firewall" "main" {
   region = each.value.region
   firewall_policy_arn = aws_networkfirewall_firewall_policy.main[each.value.policy_key].arn
   name = each.key
-  vpc_id = aws_vpc.main[each.value.vpc_id].id
+  vpc_id = aws_vpc.main[each.value.vpc_key].id
   dynamic "subnet_mapping" {
-    for_each = each.value.subnet_ids
+    for_each = each.value.subnet_keys
     content {
-      subnet_id = aws_subnet.main["${local.subnet_prefix}${each.value.vpc_id}__${subnet_mapping.value}"].id
+      subnet_id = aws_subnet.main["${local.subnet_prefix}${each.value.vpc_key}__${subnet_mapping.value}"].id
     }
   }
 }
@@ -320,7 +321,7 @@ resource "aws_cloudwatch_log_group" "firewall" {
 
 resource "aws_cloudwatch_log_group" "firewall_alerts" {
   for_each = var.fw_config
-  
+
   region = each.value.region
   name              = "/aws/networkfirewall/${each.key}/alert"
   retention_in_days = 7

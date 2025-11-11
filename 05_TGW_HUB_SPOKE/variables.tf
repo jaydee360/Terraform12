@@ -47,8 +47,8 @@ variable "fw_policy_config" {
 variable "fw_config" {
   type = map(object({
     region = string
-    vpc_id = string
-    subnet_ids = list(string)
+    vpc_key = string
+    subnet_keys = list(string)
     policy_key = string
   }))
 }
@@ -126,6 +126,7 @@ variable "routing_policies" {
     inject_tgw    = optional(bool, false)
     inject_fw     = optional(bool, false)
     tgw_key       = optional(string)
+    tgw_app_mode  = optional(string, "disable")
     fw_key        = optional(string)
     routes        = optional(list(object({
       cidr_block  = string

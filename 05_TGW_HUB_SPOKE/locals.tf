@@ -13,6 +13,7 @@ locals {
           region  = sn_obj.region
           vpc_key = sn_obj.vpc_key
           routing_policy_name = sn_obj.routing_policy
+          tgw_app_mode = try(var.routing_policies[sn_obj.routing_policy].tgw_app_mode, null)
           tgw_key = try(var.routing_policies[sn_obj.routing_policy].tgw_key, null)
       } if startswith(sn_obj.routing_policy, "tgw_attach_")  
       && try(var.routing_policies[sn_obj.routing_policy].tgw_key, null) != null 
@@ -21,19 +22,21 @@ locals {
 
   tgw_attachment_subnets_by_tgw_vpc = {
       for tgw_grp_key in distinct([for map_obj in local.tgw_attachment_subnets : map_obj.tgw_key]) : tgw_grp_key => {
-          for vpc_grp_key in distinct([for map_obj2 in local.tgw_attachment_subnets : map_obj2.vpc_key if map_obj2.tgw_key == tgw_grp_key]) : vpc_grp_key => [
-              for sn_key, att_obj in local.tgw_attachment_subnets : sn_key if att_obj.tgw_key == tgw_grp_key && att_obj.vpc_key == vpc_grp_key
-          ]
+          for vpc_grp_key in distinct([for map_obj2 in local.tgw_attachment_subnets : map_obj2.vpc_key if map_obj2.tgw_key == tgw_grp_key]) : vpc_grp_key => {
+            subnets = [for sn_key, att_obj in local.tgw_attachment_subnets : sn_key if att_obj.tgw_key == tgw_grp_key && att_obj.vpc_key == vpc_grp_key]
+            tgw_app_mode = one(distinct([for sn_key, att_obj in local.tgw_attachment_subnets : att_obj.tgw_app_mode if att_obj.tgw_key == tgw_grp_key && att_obj.vpc_key == vpc_grp_key]))
+          }
       }
   }
 
   tgw_attachment_map = merge([
       for tgw_key, att_vpcs in local.tgw_attachment_subnets_by_tgw_vpc : {
-          for vpc_key, subnet_list in att_vpcs : "${local.tgw_att_prefix}${tgw_key}__${vpc_key}" => {
+          for vpc_key, obj in att_vpcs : "${local.tgw_att_prefix}${tgw_key}__${vpc_key}" => {
               tgw_key     = tgw_key
+              tgw_app_mode = obj.tgw_app_mode
               vpc_key     = vpc_key
               vpc_region  = var.vpc_config[vpc_key].region
-              subnet_keys = subnet_list
+              subnet_keys = obj.subnets
           }
       }
   ]...)
@@ -316,14 +319,14 @@ locals {
       region              = rti_obj.region
       rt_key              = rti_obj.rt_key
       fw_key              = rti_obj.routing_policy.fw_key
-      target_key          = local.fw_vpce_by_fw_vpc_az[rti_obj.routing_policy.fw_key][rti_obj.vpc_key][rti_obj.az]
+      target_key          = try(local.fw_vpce_by_fw_vpc_az[rti_obj.routing_policy.fw_key][rti_obj.vpc_key][rti_obj.az], null)
       destination_prefix  = "0.0.0.0/0"
-    } if rti_obj.routing_policy.inject_fw && can(var.fw_config[rti_obj.routing_policy.fw_key]) && can(local.fw_vpce_by_fw_vpc_az[rti_obj.routing_policy.fw_key][rti_obj.vpc_key][rti_obj.az])
+    } if rti_obj.routing_policy.inject_fw && can(var.fw_config[rti_obj.routing_policy.fw_key])
   }
 
   fw_vpce_by_fw_vpc_az = {
     for fw_key, fw_obj in aws_networkfirewall_firewall.main : fw_key => {
-      var.fw_config[fw_key].vpc_id = {
+      var.fw_config[fw_key].vpc_key = {
         for sync_state in fw_obj.firewall_status[0].sync_states : sync_state.availability_zone => sync_state.attachment[0].endpoint_id
       }
     }
@@ -393,6 +396,13 @@ locals {
   debug_natgw_routes = {
     for vpc_grp in distinct([for kk, oo in local.natgw_route_map : split("__", oo.rt_key)[0]]) : vpc_grp => [
       for ooo in local.natgw_route_map : "${split("__", ooo.rt_key)[1]} > ${ooo.destination_prefix} > ${ooo.target_key}" 
+      if split("__", ooo.rt_key)[0] == vpc_grp
+    ]
+  }
+
+  debug_fw_routes = {
+    for vpc_grp in distinct([for kk, oo in local.fw_route_map : split("__", oo.rt_key)[0]]) : vpc_grp => [
+      for ooo in local.fw_route_map : "${split("__", ooo.rt_key)[1]} > ${ooo.destination_prefix} > ${ooo.target_key}" 
       if split("__", ooo.rt_key)[0] == vpc_grp
     ]
   }

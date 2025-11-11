@@ -9,8 +9,8 @@ fw_policy_config = {
 fw_config = {
   test-fw = {
     region = "us-east-2"
-    vpc_id = "vpc-inspection"
-    subnet_ids = ["vpc-inspection-fw-subnet-a", "vpc-inspection-fw-subnet-b", "vpc-inspection-fw-subnet-c"]
+    vpc_key = "vpc-inspection"
+    subnet_keys = ["vpc-inspection-fw-subnet-a", "vpc-inspection-fw-subnet-b", "vpc-inspection-fw-subnet-c"]
     policy_key = "test-policy"
   }
 }
@@ -326,6 +326,7 @@ routing_policies = {
     }
     tgw_attach_tgw_hub_inspection = {
         tgw_key = "tgw_hub"
+        tgw_app_mode = "enable"
         fw_key = "test-fw"
         inject_fw = true
     }
