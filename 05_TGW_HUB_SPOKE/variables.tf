@@ -146,15 +146,16 @@ variable "routing_policies" {
 
 variable "ec2_profiles" {
   type = map(object({
-    ami_by_region     = optional(map(string), {})
-    ami               = optional(string)
-    instance_type     = string
-    key_name          = string
-    user_data_script  = optional(string, null)
-    network_interfaces = map(object({
-      routing_policy    = string
-      security_groups   = optional(set(string), null)
-      assign_eip        = optional(bool, null)
+    ami_by_region         = optional(map(string), {})
+    ami                   = optional(string)
+    instance_type         = string
+    key_name              = string
+    user_data_script      = optional(string, null)
+    iam_instance_profile  = optional(string, null)
+    network_interfaces    = map(object({
+      routing_policy        = string
+      security_groups       = optional(set(string), null)
+      assign_eip            = optional(bool, null)
     }))
     tags              = optional(map(string), null)
   }))
@@ -285,4 +286,17 @@ variable "security_group_rule_sets" {
     tags = optional(map(string), null)
   })))
   # validation is done using lifecycle precondition in the resource block
+}
+
+variable "iam_role_config" {
+  type = map(object({
+    name        = string
+    description = string
+    principal   = object({
+      services    = optional(list(string), [])
+      accounts    = optional(list(string), [])
+    })
+    managed_policies      = optional(list(string), [])
+    iam_instance_profile  = optional(bool, false)
+  }))
 }

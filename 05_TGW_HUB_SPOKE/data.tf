@@ -35,3 +35,4 @@ data "aws_ami" "test" {
     values = ["al2023-ami-*-kernel-6.1-x86_64"]
   }
 }
+

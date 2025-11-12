@@ -363,11 +363,12 @@ resource "aws_eip" "eni" {
 resource "aws_instance" "main" {
   for_each = local.valid_ec2_instance_map
 
-  region        = each.value.region 
-  ami           = each.value.ami
-  instance_type = each.value.instance_type
-  key_name      = each.value.key_name
-  user_data     = each.value.user_data_script != null ? try(file("${path.module}/${each.value.user_data_script}"), null) : null
+  region                = each.value.region 
+  ami                   = each.value.ami
+  instance_type         = each.value.instance_type
+  key_name              = each.value.key_name
+  iam_instance_profile  = each.value.iam_instance_profile
+  user_data             = each.value.user_data_script != null ? try(file("${path.module}/${each.value.user_data_script}"), null) : null
   tags = merge(
     {Name = each.key},
     each.value.tags,
@@ -502,4 +503,26 @@ resource "aws_key_pair" "default" {
   region = each.key
   public_key = tls_private_key.default.public_key_openssh
   key_name = "terraform-default"
+}
+
+resource "aws_iam_role" "main" {
+  for_each = local.aws_iam_role_map
+
+  name = each.value.name
+  description = each.value.description
+  assume_role_policy = each.value.assume_role_policy
+}
+
+resource "aws_iam_role_policy_attachment" "main" {
+  for_each = local.aws_iam_role_policy_attachment_map
+
+  role        = aws_iam_role.main[each.value.role].name
+  policy_arn  = each.value.policy_arn
+}
+
+resource "aws_iam_instance_profile" "main" {
+  for_each = local.aws_iam_instance_profile_map
+
+  name = each.value.name
+  role = aws_iam_role.main[each.value.role].name
 }

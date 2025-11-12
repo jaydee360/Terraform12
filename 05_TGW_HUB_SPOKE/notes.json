@@ -1,0 +1,83 @@
+{
+    "Statement": [
+        {
+            "Action": "sts:AssumeRole",
+            "Effect": "Allow",
+            "Principal": {
+                "Service": [
+                    "ec2.amazonaws.com",
+                    "ssm.amazonaws.com"
+                ]
+            }
+        }
+    ],
+    "Version": "2012-10-17"
+}
+
+{
+    "Statement": [
+        {
+            "Action": "sts:AssumeRole",
+            "Effect": "Allow",
+            "Principal": {
+                "Service": [
+                    "ec2.amazonaws.com",
+                    "ssm.amazonaws.com"
+                ]
+            }
+        },
+        {
+            "Action": "sts:AssumeRole",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": [
+                    "123456789012",
+                    "987654321098"
+                ]
+            }
+        }
+    ],
+    "Version": "2012-10-17"
+}
+
+{
+    "Statement": [
+        {
+            "Action": "sts:AssumeRole",
+            "Effect": "Allow",
+            "Principal": {
+                "Service": [
+                    "ec2.amazonaws.com",
+                    "ssm.amazonaws.com"
+                ]
+            }
+        },
+        {
+            "Action": "sts:AssumeRole",
+            "Effect": "Allow",
+            "Principal": {
+                "AWS": [
+                    "123456789012",
+                    "987654321098"
+                ]
+            }
+        }
+    ],
+    "Version": "2012-10-17"
+}
+
+{
+    "Statement": [
+        {
+            "Action": "sts:AssumeRole",
+            "Effect": "Allow",
+            "Principal": {
+                "Service": [
+                    "ec2.amazonaws.com",
+                    "ssm.amazonaws.com"
+                ]
+            }
+        }
+    ],
+    "Version": "2012-10-17"
+}

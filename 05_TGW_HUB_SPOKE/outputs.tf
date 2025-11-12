@@ -112,3 +112,15 @@ output "private_key_openssh" {
   value     = tls_private_key.default.private_key_openssh
   sensitive = true
 }
+
+output "aws_iam_role" {
+  value = {for k, r in aws_iam_role.main: k => r}
+}
+
+output "aws_iam_role_policy_attachment" {
+  value = {for k, rpa in aws_iam_role_policy_attachment.main : k => rpa}
+}
+
+output "aws_iam_instance_profile" {
+  value = {for k, ip in aws_iam_instance_profile.main : k => ip}
+}

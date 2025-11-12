@@ -802,3 +802,48 @@ locals {
     }
   }
 }
+
+locals {
+
+    aws_iam_role_map = {
+    for role_key, role_obj in var.iam_role_config : role_key => {
+      name                = role_obj.name
+      description         = role_obj.description
+      assume_role_policy  = jsonencode({
+        Version = "2012-10-17"
+        Statement = concat(
+          length(role_obj.principal.services) > 0 ?
+          [{
+            Effect    = "Allow"
+            Action    = "sts:AssumeRole"
+            Principal = {Service = role_obj.principal.services}
+          }] : [],
+          length(role_obj.principal.accounts) > 0 ?
+          [{
+            Effect    = "Allow"
+            Action    = "sts:AssumeRole"
+            Principal = {AWS = role_obj.principal.accounts}
+          }] : []
+        )
+      })
+    }
+  }
+
+  aws_iam_role_policy_attachment_map = merge([
+    for role_key, role_obj in var.iam_role_config : {
+      for pol_arn in role_obj.managed_policies : "${role_key}__${pol_arn}" => 
+      {
+        role = role_key
+        policy_arn = pol_arn
+      }
+    }
+  ]...)
+
+  aws_iam_instance_profile_map = {
+    for role_key, role_obj in var.iam_role_config : role_key => {
+      name = "PRF__${role_obj.name}"
+      role = role_key
+    } if role_obj.iam_instance_profile == true
+  }
+
+}
