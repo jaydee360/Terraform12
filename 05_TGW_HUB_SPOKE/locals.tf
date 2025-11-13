@@ -540,6 +540,24 @@ locals {
 # Resources: 🔹 aws_network_interface.main
 # Depends on: 🔹 valid_ec2_instance_map, 🔹 valid_security_group_map
 locals {
+  # valid_eni_map_old = merge([ 
+  #   for ec2_key, ec2_obj in local.valid_ec2_instance_map : {for eni_key, eni_obj in ec2_obj.network_interfaces : "${ec2_key}__${eni_key}" => merge(
+  #     eni_obj, {
+  #       # subnet_id       = "${eni_obj.vpc}__${eni_obj.subnet}"
+  #       region          = ec2_obj.region
+  #       ec2_key         = ec2_key
+  #       ec2_nic_key     = eni_key
+  #       index           = tonumber(substr(eni_key, length(eni_key) - 1, 1))
+  #       security_groups = [
+  #                           for sg  in coalesce(eni_obj.security_groups, []) : sg  
+  #                           if contains(keys(local.valid_security_group_map), sg) && 
+  #                           local.valid_security_group_map[sg].vpc_id == eni_obj.vpc
+  #                         ]
+  #       tags            = ec2_obj.tags
+  #     }
+  #   )}
+  # ]...)
+
   valid_eni_map = merge([ 
     for ec2_key, ec2_obj in local.valid_ec2_instance_map : {for eni_key, eni_obj in ec2_obj.network_interfaces : "${ec2_key}__${eni_key}" => merge(
       eni_obj, {
@@ -549,14 +567,14 @@ locals {
         ec2_nic_key     = eni_key
         index           = tonumber(substr(eni_key, length(eni_key) - 1, 1))
         security_groups = [
-                            for sg  in coalesce(eni_obj.security_groups, []) : sg  
-                            if contains(keys(local.valid_security_group_map), sg) && 
-                            local.valid_security_group_map[sg].vpc_id == eni_obj.vpc
+                            for sg  in coalesce(eni_obj.security_groups, []) : "${eni_obj.vpc}__${sg}"  
+                            if contains(keys(local.valid_security_group_map), "${eni_obj.vpc}__${sg}") 
                           ]
         tags            = ec2_obj.tags
       }
     )}
   ]...)
+
 
 } 
 
@@ -640,11 +658,29 @@ locals {
 # Resources: 🔹 aws_security_group.main
 # Depends on: 🔹 var.security_groups, 🔹 var.vpc_config
 locals {
-  valid_security_group_map = {
+  valid_security_group_map_old = {
     for sg_key, sg_obj in var.security_groups : sg_key => sg_obj if contains(keys(var.vpc_config), sg_obj.vpc_id)
   }
+
+  valid_security_group_map = merge([
+    for sg_key, sg_obj in var.security_groups : {
+      for vpc_key, vpc_obj in var.vpc_config : 
+      "${vpc_key}__${sg_key}" => merge(sg_obj, {vpc_id = vpc_key})
+    }
+  ]...)
+
 }
 
+# for each sg_key, sg_obj in var.security_groups > 
+#   > for each vpc_key in var.vpc_config >
+#     > build a map keyed by vpc_key__sg_key => sg_obj (enriched with vpc_key) 
+
+# [
+#   for sg_key, sg_obj in var.security_groups : {
+#     for vpc_key, vpc_obj in var.vpc_config : 
+#     "${vpc_key}__${sg_key}" => merge(sg_obj, {vpc_id = vpc_key})
+#   }
+# ]
 
 # 🔹 normalised_ingress_ref_rules, hashed_ingress_rules, ingress_rules_map
 # ------------------------------------------------------------------------
@@ -660,15 +696,42 @@ locals {
 
   # NORMALISATION & ENRICHMENT (REFERENCED RULES - INGRESS)
   # -------------------------------------------------------
+  # normalised_ingress_ref_rules_old = flatten([
+  #   for sg_key, sg_obj in local.valid_security_group_map : [for rule_set in sg_obj.ingress_ref : [for rule in var.security_group_rule_sets[rule_set] : merge(
+  #     rule,
+  #     ( # if referenced_security_group_id != null, check it exists in the map of valid SGs, and is in the same VPC as the SG
+  #       rule.referenced_security_group_id != null && 
+  #       (contains(keys(local.valid_security_group_map), rule.referenced_security_group_id) && 
+  #       local.valid_security_group_map[rule.referenced_security_group_id].vpc_id == sg_obj.vpc_id)
+  #     ) ? {
+  #       referenced_security_group_id  = rule.referenced_security_group_id
+  #       prefix_list_id                = null
+  #       cidr_ipv4                     = null
+  #     } : (rule.prefix_list_id != null && contains(keys(local.prefix_list_map), rule.prefix_list_id)) ? {
+  #       referenced_security_group_id  = null
+  #       prefix_list_id                = rule.prefix_list_id 
+  #       cidr_ipv4                     = null
+  #     } : {
+  #       referenced_security_group_id  = null
+  #       prefix_list_id                = null
+  #       cidr_ipv4                     = rule.cidr_ipv4
+  #     },
+  #     {
+  #       sg_key  = sg_key,
+  #       rule_set_ref = rule_set
+  #       region = sg_obj.region
+  #     }
+  #   )] if length(sg_obj.ingress_ref) > 0 && contains(keys(var.security_group_rule_sets), rule_set)]
+  # ])
+
   normalised_ingress_ref_rules = flatten([
     for sg_key, sg_obj in local.valid_security_group_map : [for rule_set in sg_obj.ingress_ref : [for rule in var.security_group_rule_sets[rule_set] : merge(
       rule,
       ( # if referenced_security_group_id != null, check it exists in the map of valid SGs, and is in the same VPC as the SG
         rule.referenced_security_group_id != null && 
-        (contains(keys(local.valid_security_group_map), rule.referenced_security_group_id) && 
-        local.valid_security_group_map[rule.referenced_security_group_id].vpc_id == sg_obj.vpc_id)
+        (contains(keys(local.valid_security_group_map), "${sg_obj.vpc_id}__${rule.referenced_security_group_id}"))
       ) ? {
-        referenced_security_group_id  = rule.referenced_security_group_id
+        referenced_security_group_id  = "${sg_obj.vpc_id}__${rule.referenced_security_group_id}"
         prefix_list_id                = null
         cidr_ipv4                     = null
       } : (rule.prefix_list_id != null && contains(keys(local.prefix_list_map), rule.prefix_list_id)) ? {
@@ -726,16 +789,44 @@ locals {
 
   # NORMALISATION & ENRICHMENT (REFERENCED RULES - EGRESS)
   # ------------------------------------------------------
+  # normalised_egress_ref_rules_old = flatten([
+  #   for sg_key, sg_obj in local.valid_security_group_map : [for rule_set in sg_obj.egress_ref : [for rule in var.security_group_rule_sets[rule_set] : merge(
+  #     rule,
+  #     ( # if referenced_security_group_id != null, check it exists in the map of valid SGs, and is in the same VPC as the SG
+  #       rule.referenced_security_group_id != null && 
+  #       (contains(keys(local.valid_security_group_map), rule.referenced_security_group_id) && 
+  #       local.valid_security_group_map[rule.referenced_security_group_id].vpc_id == sg_obj.vpc_id)
+  #     ) 
+  #     ? {
+  #       referenced_security_group_id  = rule.referenced_security_group_id
+  #       prefix_list_id                = null
+  #       cidr_ipv4                     = null
+  #     } : (rule.prefix_list_id != null && contains(keys(local.prefix_list_map), rule.prefix_list_id)) ? {
+  #       referenced_security_group_id  = null
+  #       prefix_list_id                = rule.prefix_list_id
+  #       cidr_ipv4                     = null
+  #     } : {
+  #       referenced_security_group_id  = null
+  #       prefix_list_id                = null
+  #       cidr_ipv4                     = rule.cidr_ipv4
+  #     },
+  #     {
+  #       sg_key  = sg_key,
+  #       rule_set_ref = rule_set
+  #       region = sg_obj.region
+  #     }
+  #   )] if length(sg_obj.egress_ref) > 0 && contains(keys(var.security_group_rule_sets), rule_set)]
+  # ])
+
   normalised_egress_ref_rules = flatten([
     for sg_key, sg_obj in local.valid_security_group_map : [for rule_set in sg_obj.egress_ref : [for rule in var.security_group_rule_sets[rule_set] : merge(
       rule,
       ( # if referenced_security_group_id != null, check it exists in the map of valid SGs, and is in the same VPC as the SG
         rule.referenced_security_group_id != null && 
-        (contains(keys(local.valid_security_group_map), rule.referenced_security_group_id) && 
-        local.valid_security_group_map[rule.referenced_security_group_id].vpc_id == sg_obj.vpc_id)
+        (contains(keys(local.valid_security_group_map), "${sg_obj.vpc_id}__${rule.referenced_security_group_id}"))
       ) 
       ? {
-        referenced_security_group_id  = rule.referenced_security_group_id
+        referenced_security_group_id  = "${sg_obj.vpc_id}__${rule.referenced_security_group_id}"
         prefix_list_id                = null
         cidr_ipv4                     = null
       } : (rule.prefix_list_id != null && contains(keys(local.prefix_list_map), rule.prefix_list_id)) ? {
@@ -794,10 +885,10 @@ locals {
     for sg_key in keys(local.valid_security_group_map) : 
     sg_key => {
       "00_INGRESS" = [
-        for rule in local.ingress_rules_map : "HASH: ${rule.rule_hash} > RULE_SET_REF: ${rule.rule_set_ref} > RULE_SET_DESC: ${rule.description}" if rule.sg_key == sg_key
+        for rule in local.ingress_rules_map : "HASH: ${rule.rule_hash} > RULE_SET_REF: ${rule.rule_set_ref} > RULE_SET_DESC: ${rule.description} > PORTS: ${rule.from_port}-${rule.to_port} > SOURCE: ${rule.referenced_security_group_id != null ? rule.referenced_security_group_id : rule.prefix_list_id != null ? rule.prefix_list_id : rule.cidr_ipv4}" if rule.sg_key == sg_key
       ]
       "01_EGRESS" = [
-        for rule in local.egress_rules_map : "HASH: ${rule.rule_hash} > RULE_SET_REF: ${rule.rule_set_ref} > RULE_SET_DESC: ${rule.description}" if rule.sg_key == sg_key
+        for rule in local.egress_rules_map : "HASH: ${rule.rule_hash} > RULE_SET_REF: ${rule.rule_set_ref} > RULE_SET_DESC: ${rule.description} > PORTS: ${coalesce(rule.from_port, "NULL")}-${coalesce(rule.to_port, "NULL")} > SOURCE: ${rule.referenced_security_group_id != null ? rule.referenced_security_group_id : rule.prefix_list_id != null ? rule.prefix_list_id : rule.cidr_ipv4}" if rule.sg_key == sg_key
       ]
     }
   }

@@ -455,7 +455,7 @@ ec2_instances = {
             }
         }
     }
-    web_10 = {
+    web_30 = {
         region = "us-east-2"
         ec2_profile = "private_app_server"
         network_interfaces = {
@@ -465,7 +465,7 @@ ec2_instances = {
             }
         }
     }
-    web_11 = {
+    web_31 = {
         region = "us-east-2"
         ec2_profile = "private_app_server"
         network_interfaces = {
@@ -475,7 +475,7 @@ ec2_instances = {
             }
         }
     }
-    web_12 = {
+    web_32 = {
         region = "us-east-2"
         ec2_profile = "private_app_server"
         network_interfaces = {
@@ -543,7 +543,7 @@ security_group_rule_sets = {
             description = "SHARED-SSH-IN"
             from_port = 22
             to_port = 22
-            #referenced_security_group_id = "test_ref_sg_id"
+            referenced_security_group_id = "webserver_frontend"
             prefix_list_id = "JD-HOME-LAB"
             ip_protocol = "tcp"
             tags = {
@@ -554,7 +554,7 @@ security_group_rule_sets = {
             description = "SHARED-RDP-IN"
             from_port = 3389
             to_port = 3389
-            #referenced_security_group_id = "JDTEST"
+            referenced_security_group_id = "webserver_frontend"
             prefix_list_id = "JD-HOME-LAB"
             ip_protocol = "tcp"
             tags = {

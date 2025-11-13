@@ -451,7 +451,7 @@ resource "aws_vpc_security_group_ingress_rule" "main" {
     precondition {
       condition = (
         // SG reference is either null or valid
-        (each.value.referenced_security_group_id == null || contains(keys(var.security_groups), each.value.referenced_security_group_id))
+        (each.value.referenced_security_group_id == null || contains(keys(local.valid_security_group_map), each.value.referenced_security_group_id))
         &&
         // Prefix list reference is either null or valid
         (each.value.prefix_list_id == null || contains(keys(var.prefix_list_config), each.value.prefix_list_id))
@@ -482,7 +482,7 @@ resource "aws_vpc_security_group_egress_rule" "main" {
     precondition {
       condition = (
         # SG reference is either null or valid
-        (each.value.referenced_security_group_id == null || contains(keys(var.security_groups), each.value.referenced_security_group_id))
+        (each.value.referenced_security_group_id == null || contains(keys(local.valid_security_group_map), each.value.referenced_security_group_id))
         &&
         # Prefix list reference is either null or valid
         (each.value.prefix_list_id == null || contains(keys(var.prefix_list_config), each.value.prefix_list_id))
