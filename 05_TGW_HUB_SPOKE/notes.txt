@@ -110,3 +110,107 @@ resource "aws_instance" "main" {
   
   # ... rest of config
 }
+
+
+
+{
+  for k, i in aws_instance.main : k => {
+    id = i.id
+    private_dns = i.private_dns
+    private_ip = i.private_ip
+    availability_zone = i.availability_zone
+    iam_instance_profile = i.iam_instance_profile
+    primary_network_interface_id = i.primary_network_interface_id
+    eni_details = [
+      for kk, nn in aws_network_interface.main : {
+        nic = split("__", nn.description)[1]
+        vpc = split(":", split("__", nn.description)[2])[1]
+        vpc_sn  = split("__", nn.description)[3]
+      } if nn.id == i.primary_network_interface_id
+    ][0]
+  }
+}
+
+0. Check instances show online and running in AWS Systems Manager > Explore nodes
+---------------------------------------------------------------------------------
+RESULT: Success
+
+1. SSH to instance in vpc-core app subnet (using SSM)
+-----------------------------------------------------
+target: web-10 # vpc-core-app-subnet-a
+RESULT: Success
+
+2 Same VPC
+------------
+From web-10 (10.4.4.154 - vpc-core-app-subnet-a) ping web-11, web-12 within same VPC (Cross-AZ)
+  ping 10.4.5.126 # vpc-core-app-subnet-b
+  ping 10.4.6.194 # vpc-core-app-subnet-c
+RESULT: Success
+
+3. Cross-VPC via TGW (spoke-to-spoke)
+From web-10 (vpc-core-app-subnet-a), ping vpc-app instances (web-20, web-21, web-22) - both by ip address and name
+  ping 10.5.4.248 # vpc-app-app-subnet-a
+  ping ip-10-5-4-248.us-east-2.compute.internal
+  ping 10.5.5.20 # vpc-app-app-subnet-b
+  ping ip-10-5-5-20.us-east-2.compute.internal
+  ping 10.5.6.69 # vpc-app-app-subnet-b
+  ping ip-10-5-6-69.us-east-2.compute.internal
+RESULT: Success
+
+Check if traffic routes through inspection VPC
+From web-10 
+  sudo yum traceroute -y
+  traceroute 10.4.5.126
+  traceroute 10.4.6.194
+RESULT: NG (tracert doesnt seem to work across the TGW)
+
+Supplementary note: i used the AWS reachability analyzer to try to confirm the routing is as expected
+it appears to be ok but the results are hard to read (export below)
+  aws ec2 describe-network-insights-analyses --network-insights-analysis-ids nia-0c7931bb5a70e69d9 --region us-east-2 --profile terraform > reachability-analysis.json
+
+Question: is there a better way to check if traffic is being routed as intended?
+
+4. Egress via edge VPC
+----------------------
+from web-10
+  ping 8.8.8.8 
+RESULT: Success
+
+  curl www.google.com
+RESULT: Success
+
+install nslookup (bind-utils)
+  sudo yum install bind-utils -y
+
+  nslookup www.google.com
+RESULT: Success
+
+I also checked the cloud watch log group (/aws/networkfirewall/test-fw/flow). You helped me create those as part of this deployment 
+the only log stream there is "log_stream_created_by_aws_to_validate_log_delivery_subscriptions", nothing else
+
+I checked log settings on the firewall
+
+Log type
+Flow, Alert
+
+Alert log destination
+CloudWatch log group - /aws/networkfirewall/test-fw/alert
+
+Flow log destination
+CloudWatch log group - /aws/networkfirewall/test-fw/flow
+
+TLS log destination
+Not configured
+
+Firewall monitoring dashboard
+Disabled
+
+these settings seem ok, so im wondering if there is something i need to do on the fw policy to make this work
+i dont know much about aws firewall but i only have a test-policy on there at the moment which is minimal
+
+  test-policy = {
+    region = "us-east-2"
+    stateless_default_actions = ["aws:pass"]
+    stateless_fragment_default_actions = ["aws:pass"]
+  }
+

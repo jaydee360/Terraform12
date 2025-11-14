@@ -439,7 +439,6 @@ locals {
   }
 
   debug_tgw_rt_propagations_simple = {for k, o in local.debug_tgw_rt_propagations : join(" | ", sort(o)) => k}
-
 }
 # ---------------------
 
@@ -658,29 +657,13 @@ locals {
 # Resources: 🔹 aws_security_group.main
 # Depends on: 🔹 var.security_groups, 🔹 var.vpc_config
 locals {
-  valid_security_group_map_old = {
-    for sg_key, sg_obj in var.security_groups : sg_key => sg_obj if contains(keys(var.vpc_config), sg_obj.vpc_id)
-  }
-
   valid_security_group_map = merge([
     for sg_key, sg_obj in var.security_groups : {
       for vpc_key, vpc_obj in var.vpc_config : 
       "${vpc_key}__${sg_key}" => merge(sg_obj, {vpc_id = vpc_key})
     }
   ]...)
-
 }
-
-# for each sg_key, sg_obj in var.security_groups > 
-#   > for each vpc_key in var.vpc_config >
-#     > build a map keyed by vpc_key__sg_key => sg_obj (enriched with vpc_key) 
-
-# [
-#   for sg_key, sg_obj in var.security_groups : {
-#     for vpc_key, vpc_obj in var.vpc_config : 
-#     "${vpc_key}__${sg_key}" => merge(sg_obj, {vpc_id = vpc_key})
-#   }
-# ]
 
 # 🔹 normalised_ingress_ref_rules, hashed_ingress_rules, ingress_rules_map
 # ------------------------------------------------------------------------
@@ -691,38 +674,7 @@ locals {
 # Resources: 🔹 aws_vpc_security_group_ingress_rule.main
 # Depends on: 🔹 valid_security_group_map, var.security_group_rule_sets, 🔹 local.hash_exclusions
 locals {
-  
   hash_exclusions = ["description", "rule_set_ref", "tags", "region"]
-
-  # NORMALISATION & ENRICHMENT (REFERENCED RULES - INGRESS)
-  # -------------------------------------------------------
-  # normalised_ingress_ref_rules_old = flatten([
-  #   for sg_key, sg_obj in local.valid_security_group_map : [for rule_set in sg_obj.ingress_ref : [for rule in var.security_group_rule_sets[rule_set] : merge(
-  #     rule,
-  #     ( # if referenced_security_group_id != null, check it exists in the map of valid SGs, and is in the same VPC as the SG
-  #       rule.referenced_security_group_id != null && 
-  #       (contains(keys(local.valid_security_group_map), rule.referenced_security_group_id) && 
-  #       local.valid_security_group_map[rule.referenced_security_group_id].vpc_id == sg_obj.vpc_id)
-  #     ) ? {
-  #       referenced_security_group_id  = rule.referenced_security_group_id
-  #       prefix_list_id                = null
-  #       cidr_ipv4                     = null
-  #     } : (rule.prefix_list_id != null && contains(keys(local.prefix_list_map), rule.prefix_list_id)) ? {
-  #       referenced_security_group_id  = null
-  #       prefix_list_id                = rule.prefix_list_id 
-  #       cidr_ipv4                     = null
-  #     } : {
-  #       referenced_security_group_id  = null
-  #       prefix_list_id                = null
-  #       cidr_ipv4                     = rule.cidr_ipv4
-  #     },
-  #     {
-  #       sg_key  = sg_key,
-  #       rule_set_ref = rule_set
-  #       region = sg_obj.region
-  #     }
-  #   )] if length(sg_obj.ingress_ref) > 0 && contains(keys(var.security_group_rule_sets), rule_set)]
-  # ])
 
   normalised_ingress_ref_rules = flatten([
     for sg_key, sg_obj in local.valid_security_group_map : [for rule_set in sg_obj.ingress_ref : [for rule in var.security_group_rule_sets[rule_set] : merge(
@@ -786,38 +738,8 @@ locals {
 # Depends on: 🔹 valid_security_group_map, var.security_group_rule_sets, 🔹 local.hash_exclusions
 
 locals {
-
   # NORMALISATION & ENRICHMENT (REFERENCED RULES - EGRESS)
   # ------------------------------------------------------
-  # normalised_egress_ref_rules_old = flatten([
-  #   for sg_key, sg_obj in local.valid_security_group_map : [for rule_set in sg_obj.egress_ref : [for rule in var.security_group_rule_sets[rule_set] : merge(
-  #     rule,
-  #     ( # if referenced_security_group_id != null, check it exists in the map of valid SGs, and is in the same VPC as the SG
-  #       rule.referenced_security_group_id != null && 
-  #       (contains(keys(local.valid_security_group_map), rule.referenced_security_group_id) && 
-  #       local.valid_security_group_map[rule.referenced_security_group_id].vpc_id == sg_obj.vpc_id)
-  #     ) 
-  #     ? {
-  #       referenced_security_group_id  = rule.referenced_security_group_id
-  #       prefix_list_id                = null
-  #       cidr_ipv4                     = null
-  #     } : (rule.prefix_list_id != null && contains(keys(local.prefix_list_map), rule.prefix_list_id)) ? {
-  #       referenced_security_group_id  = null
-  #       prefix_list_id                = rule.prefix_list_id
-  #       cidr_ipv4                     = null
-  #     } : {
-  #       referenced_security_group_id  = null
-  #       prefix_list_id                = null
-  #       cidr_ipv4                     = rule.cidr_ipv4
-  #     },
-  #     {
-  #       sg_key  = sg_key,
-  #       rule_set_ref = rule_set
-  #       region = sg_obj.region
-  #     }
-  #   )] if length(sg_obj.egress_ref) > 0 && contains(keys(var.security_group_rule_sets), rule_set)]
-  # ])
-
   normalised_egress_ref_rules = flatten([
     for sg_key, sg_obj in local.valid_security_group_map : [for rule_set in sg_obj.egress_ref : [for rule in var.security_group_rule_sets[rule_set] : merge(
       rule,
@@ -876,7 +798,6 @@ locals {
 # Locals:
 # 🔹 sg_rules_by_sg
 # Depends on: 🔹 ingress_rules_map, 🔹 egress_rules_map, 🔹 valid_security_group_map
-
   invalid_security_groups = {
     for sg_key, sg_obj in var.security_groups : sg_key => sg_obj if !contains(keys(var.vpc_config), sg_obj.vpc_id)
   }
@@ -894,8 +815,11 @@ locals {
   }
 }
 
-locals {
+# --------------------------------------------------
+# IAM Role, Role Policy Attachment, Instance Profile 
+# --------------------------------------------------
 
+locals {
     aws_iam_role_map = {
     for role_key, role_obj in var.iam_role_config : role_key => {
       name                = role_obj.name
@@ -935,6 +859,48 @@ locals {
       name = "PRF__${role_obj.name}"
       role = role_key
     } if role_obj.iam_instance_profile == true
+  }
+}
+
+locals {
+  aws_cloudwatch_log_group_map = {
+    for log_grp_obj in var.aws_cloudwatch_log_group_config : "${log_grp_obj.region}__${log_grp_obj.service}__${log_grp_obj.namespace}__${log_grp_obj.type}" => merge(log_grp_obj, {
+      name = "/aws/${log_grp_obj.service}/${log_grp_obj.namespace}/${log_grp_obj.type}"
+    })
+  }
+}
+
+locals {
+  aws_networkfirewall_logging_configuration_map_old =  {
+    for fw_key, fw_obj in var.fw_config : fw_key => {
+      region = fw_obj.region
+      logging_config = [
+        for log_cfg in fw_obj.logging_config : merge(
+          log_cfg,
+          log_cfg.log_destination_type == "CloudWatchLogs" ? 
+            {log_destination = {logGroup = "${fw_obj.region}__${log_cfg.log_group_ref}__${fw_key}__${log_cfg.log_type}"}}
+          : log_cfg.log_destination_type == "S3" ? 
+            {log_destination = {bucketName = "bucketName_Placeholder"}}
+          : {log_destination = {deliveryStream = "deliveryStream_Placeholder"}}
+        )
+      ]
+    }
+  }
+
+  aws_networkfirewall_logging_configuration_map = {
+    for fw_key, fw_obj in var.fw_config : fw_key => {
+      region = fw_obj.region
+      logging_config = [
+        for log_cfg in fw_obj.logging_config : merge(
+          log_cfg,
+          log_cfg.log_destination_type == "CloudWatchLogs" ? 
+            {log_destination = {logGroup = aws_cloudwatch_log_group.main["${fw_obj.region}__${log_cfg.log_group_ref}__${fw_key}__${lower(log_cfg.log_type)}"].name}}
+          : log_cfg.log_destination_type == "S3" ? 
+            {log_destination = {bucketName = "bucketName_Placeholder"}}
+          : {log_destination = {deliveryStream = "deliveryStream_Placeholder"}}
+        )
+      ]
+    }
   }
 
 }

@@ -36,11 +36,31 @@ variable "az_lookup" {
   }
 }
 
+# --------------------------------------------------
+# CloudWatch Log groups
+# --------------------------------------------------
+
+variable "aws_cloudwatch_log_group_config" {
+  type = list(object({
+    region = string
+    service = string
+    namespace = optional(string, "shared")
+    type = string
+    retention_in_days = number
+  }))
+} 
+
+# --------------------------------------------------
+# Firewall / Firewall Policy
+# --------------------------------------------------
+
 variable "fw_policy_config" {
   type = map(object({
     region = string
     stateless_default_actions = list(string)
     stateless_fragment_default_actions = list(string)
+    stateful_default_actions = optional(list(string), null)
+    rule_order = optional(string, null)
   }))
 }
 
@@ -50,8 +70,17 @@ variable "fw_config" {
     vpc_key = string
     subnet_keys = list(string)
     policy_key = string
+    logging_config = optional(list(object({
+      log_type = string
+      log_destination_type = string
+      log_group_ref = string
+    })), [])
   }))
 }
+
+# --------------------------------------------------
+# Transit Gateway
+# --------------------------------------------------
 
 variable "tgw_config" {
   type = map(object({
@@ -101,6 +130,10 @@ variable "tgw_config" {
   # }
 }
 
+# --------------------------------------------------
+# VPCs, Subnets and Related Infra
+# --------------------------------------------------
+
 variable "vpc_config" {
   type = map(object({
     region               = string
@@ -118,6 +151,10 @@ variable "vpc_config" {
     }))
   }))
 }
+
+# --------------------------------------------------
+# Routing Policies
+# --------------------------------------------------
 
 variable "routing_policies" {
   type = map(object({
@@ -143,6 +180,10 @@ variable "routing_policies" {
     error_message = "Invalid tgw_key in 'tgw_attach' policy. All 'tgw_attach' policies must reference a valid tgw_key"
   }
 }
+
+# --------------------------------------------------
+# EC2 Profiles and Instances
+# --------------------------------------------------
 
 variable "ec2_profiles" {
   type = map(object({
@@ -231,6 +272,10 @@ variable "ec2_instances" {
   }
 }
 
+# --------------------------------------------------
+# Prefix Lists
+# --------------------------------------------------
+
 variable "prefix_list_config" {
   type = map(object({
     name = string
@@ -244,6 +289,10 @@ variable "prefix_list_config" {
     tags = optional(map(string), null)
   }))
 }
+
+# --------------------------------------------------
+# Security Groups, SG Rules
+# --------------------------------------------------
 
 variable "security_groups" {
   type = map(object({
@@ -287,6 +336,10 @@ variable "security_group_rule_sets" {
   })))
   # validation is done using lifecycle precondition in the resource block
 }
+
+# --------------------------------------------------
+# IAM Role, Role Policy Attachment, Instance Profile 
+# --------------------------------------------------
 
 variable "iam_role_config" {
   type = map(object({

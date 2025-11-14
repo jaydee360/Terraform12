@@ -16,6 +16,12 @@
   #   default_tags = var.default_tags
 # }
 
+# --------------------------------------------------
+# Transite Gateway, TGW VPC attachments
+# TGW Route Tables, Route Table Association / Propagation
+# TGW Route Table Routes
+# --------------------------------------------------
+
 resource "aws_ec2_transit_gateway" "main" {
   for_each = local.tgw_map
 
@@ -32,6 +38,16 @@ resource "aws_ec2_transit_gateway" "main" {
   )
 }
 
+resource "aws_ec2_transit_gateway_vpc_attachment" "main" {
+  for_each = local.tgw_attachment_map
+
+  region              = each.value.vpc_region
+  transit_gateway_id  = aws_ec2_transit_gateway.main[each.value.tgw_key].id
+  vpc_id              = aws_vpc.main[each.value.vpc_key].id
+  subnet_ids          = [for sn in each.value.subnet_keys : aws_subnet.main[sn].id]
+  appliance_mode_support = each.value.tgw_app_mode
+}
+
 resource "aws_ec2_transit_gateway_route_table" "main" {
   for_each = local.tgw_rt_map
 
@@ -42,16 +58,6 @@ resource "aws_ec2_transit_gateway_route_table" "main" {
     var.default_tags,
     each.value.tags
   )
-}
-
-resource "aws_ec2_transit_gateway_vpc_attachment" "main" {
-  for_each = local.tgw_attachment_map
-
-  region              = each.value.vpc_region
-  transit_gateway_id  = aws_ec2_transit_gateway.main[each.value.tgw_key].id
-  vpc_id              = aws_vpc.main[each.value.vpc_key].id
-  subnet_ids          = [for sn in each.value.subnet_keys : aws_subnet.main[sn].id]
-  appliance_mode_support = each.value.tgw_app_mode
 }
 
 resource "aws_ec2_transit_gateway_route_table_association" "main" {
@@ -117,6 +123,10 @@ resource "aws_ec2_transit_gateway_route" "main" {
   transit_gateway_attachment_id  = (each.value.target_key != "blackhole" ? aws_ec2_transit_gateway_vpc_attachment.main[each.value.target_key].id : null)
   transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.main[each.value.rt_key].id
 }
+
+# --------------------------------------------------
+# Network Infrastrucutre, VPCs, Subnets, IGW, NAT, ect..
+# --------------------------------------------------
 
 resource "aws_vpc" "main" {
   for_each = var.vpc_config
@@ -190,6 +200,10 @@ resource "aws_nat_gateway" "main" {
   )  
 }
 
+# --------------------------------------------------
+# Route Tables, Routes
+# --------------------------------------------------
+
 resource "aws_route_table" "main" {
   for_each = local.route_table_map
 
@@ -258,6 +272,10 @@ resource "aws_route_table_association" "main" {
   route_table_id = aws_route_table.main[each.value.route_table_id].id
 } 
 
+# --------------------------------------------------
+# AWS Network Firewall, FW Policy, FW Logging Config 
+# --------------------------------------------------
+
 resource "aws_networkfirewall_firewall" "main" {
   for_each = var.fw_config
 
@@ -281,54 +299,48 @@ resource "aws_networkfirewall_firewall_policy" "main" {
   firewall_policy {
     stateless_default_actions = each.value.stateless_default_actions
     stateless_fragment_default_actions = each.value.stateless_fragment_default_actions
+    stateful_default_actions = each.value.stateful_default_actions
+    
+    stateful_engine_options {
+      rule_order = each.value.rule_order
+    }
   }
 }
 
 resource "aws_networkfirewall_logging_configuration" "main" {
-  for_each = var.fw_config
+  for_each = local.aws_networkfirewall_logging_configuration_map
   
   region = each.value.region
   firewall_arn = aws_networkfirewall_firewall.main[each.key].arn
   
   logging_configuration {
-    log_destination_config {
-      log_destination = {
-        logGroup = aws_cloudwatch_log_group.firewall[each.key].name
+    dynamic "log_destination_config" {
+      for_each = each.value.logging_config
+
+      content {
+        log_destination_type  = log_destination_config.value.log_destination_type
+        log_type              = log_destination_config.value.log_type
+        log_destination       = log_destination_config.value.log_destination
       }
-      log_destination_type = "CloudWatchLogs"
-      log_type            = "FLOW"  # FLOW logs show all traffic
-    }
-    
-    # Optional: Add ALERT logs too
-    log_destination_config {
-      log_destination = {
-        logGroup = aws_cloudwatch_log_group.firewall_alerts[each.key].name
-      }
-      log_destination_type = "CloudWatchLogs"
-      log_type            = "ALERT"  # ALERT logs show rule matches
     }
   }
 }
 
-# CloudWatch log groups
-resource "aws_cloudwatch_log_group" "firewall" {
-  for_each = var.fw_config
+# --------------------------------------------------
+# CloudWatch Log Groups
+# --------------------------------------------------
+
+resource "aws_cloudwatch_log_group" "main" {
+  for_each = local.aws_cloudwatch_log_group_map
   
-  region = each.value.region
-  name              = "/aws/networkfirewall/${each.key}/flow"
-  retention_in_days = 7  
+  region    = each.value.region
+  name      = each.value.name
+  retention_in_days = each.value.retention_in_days
 }
 
-resource "aws_cloudwatch_log_group" "firewall_alerts" {
-  for_each = var.fw_config
-
-  region = each.value.region
-  name              = "/aws/networkfirewall/${each.key}/alert"
-  retention_in_days = 7
-}
-
-# --------------
-
+# --------------------------------------------------
+# EC2 Instances, ENIs, EIPs etc
+# --------------------------------------------------
 
 resource "aws_network_interface" "main" {
   for_each = local.valid_eni_map
@@ -393,6 +405,10 @@ resource "aws_network_interface_attachment" "main" {
   device_index = each.value.device_index
 }
 
+# --------------------------------------------------
+# Prefix Lists
+# --------------------------------------------------
+
 resource "aws_ec2_managed_prefix_list" "main" {
   for_each        = local.prefix_list_map
 
@@ -416,6 +432,9 @@ resource "aws_ec2_managed_prefix_list" "main" {
   }
 }
 
+# --------------------------------------------------
+# Security Groups, SG Rules
+# --------------------------------------------------
 
 resource "aws_security_group" "main" {
   for_each = local.valid_security_group_map
@@ -492,6 +511,10 @@ resource "aws_vpc_security_group_egress_rule" "main" {
   }
 }
 
+# --------------------------------------------------
+# Private Keys, AWS Key Pairs
+# --------------------------------------------------
+
 resource "tls_private_key" "default" {
   algorithm = "RSA"
   rsa_bits  = 4096
@@ -504,6 +527,10 @@ resource "aws_key_pair" "default" {
   public_key = tls_private_key.default.public_key_openssh
   key_name = "terraform-default"
 }
+
+# --------------------------------------------------
+# IAM Role, Role Policy Attachment, Instance Profile 
+# --------------------------------------------------
 
 resource "aws_iam_role" "main" {
   for_each = local.aws_iam_role_map

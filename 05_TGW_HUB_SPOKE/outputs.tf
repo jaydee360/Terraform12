@@ -124,3 +124,7 @@ output "aws_iam_role_policy_attachment" {
 output "aws_iam_instance_profile" {
   value = {for k, ip in aws_iam_instance_profile.main : k => ip}
 }
+
+output "aws_cloudwatch_log_group" {
+  value = {for k, lg in aws_cloudwatch_log_group.main : k => lg}
+}
