@@ -331,10 +331,18 @@ resource "aws_networkfirewall_logging_configuration" "main" {
 # --------------------------------------------------
 
 resource "aws_cloudwatch_log_group" "main" {
-  for_each = local.aws_cloudwatch_log_group_map
+  for_each = local.cloudwatch_log_group_map
   
   region    = each.value.region
   name      = each.value.name
+  retention_in_days = each.value.retention_in_days
+}
+
+resource "aws_cloudwatch_log_group" "flow_logs" {
+  for_each = local.cloudwatch_log_groups_map__flow_log__all
+  
+  region    = each.value.region
+  name      = each.value.log_group_name
   retention_in_days = each.value.retention_in_days
 }
 
@@ -370,6 +378,7 @@ resource "aws_eip" "eni" {
     each.value.tags,     # NOTE: ENI EIPs are derived from EC2 ENIs. Thus tags are inherited from the EC2 ENI
     var.default_tags
   )
+  depends_on = [aws_instance.main]
 } 
 
 resource "aws_instance" "main" {
@@ -553,3 +562,36 @@ resource "aws_iam_instance_profile" "main" {
   name = each.value.name
   role = aws_iam_role.main[each.value.role].name
 }
+
+resource "aws_iam_policy" "main" {
+  for_each = local.iam_policy_map
+
+  name = each.value.name
+  description = each.value.description
+  policy = each.value.policy
+}
+
+resource "aws_iam_role_policy" "main" {
+  for_each = local.iam_role_policy_inline
+
+  name = each.value.name
+  role = aws_iam_role.main[each.value.role].id
+  policy = each.value.policy
+}
+
+# --------------------------------------------------
+# Flow Logs
+# --------------------------------------------------
+
+resource "aws_flow_log" "main" {
+  for_each = local.all_flow_logs_resolved
+
+  region                = each.value.region
+  traffic_type          = each.value.traffic_type
+  log_destination_type  = each.value.log_destination_type
+  log_destination       = aws_cloudwatch_log_group.flow_logs[each.value.log_destination_key].arn
+  vpc_id                = each.value.att_type == "vpc" ? aws_vpc.main[each.value.vpc_key].id : null
+  subnet_id             = each.value.att_type == "subnet" ? aws_subnet.main[each.value.subnet_key].id : null
+  iam_role_arn          = each.value.iam_role_arn
+}
+

@@ -43,12 +43,29 @@ variable "az_lookup" {
 variable "aws_cloudwatch_log_group_config" {
   type = list(object({
     region = string
-    service = string
-    namespace = optional(string, "shared")
-    type = string
+    log_prefix = optional(string, "aws")
+    log_namespace_1 = string
+    log_namespace_2 = string
+    log_namespace_3 = string
     retention_in_days = number
   }))
 } 
+
+# --------------------------------------------------
+# Flow Logs
+# --------------------------------------------------
+
+variable "flow_logs_config" {
+  type = map(object({
+    traffic_type          = string
+    iam_role_key          = optional(string, null)
+    log_destination_type  = optional(string, "cloud-watch-logs")
+    log_namespace_1       = optional(string, "flowlogs")
+    log_namespace_2       = string
+    log_namespace_3       = optional(string, "shared")
+    retention_in_days     = number
+  }))
+}
 
 # --------------------------------------------------
 # Firewall / Firewall Policy
@@ -73,7 +90,7 @@ variable "fw_config" {
     logging_config = optional(list(object({
       log_type = string
       log_destination_type = string
-      log_group_ref = string
+      log_namespace_1 = string
     })), [])
   }))
 }
@@ -142,11 +159,13 @@ variable "vpc_config" {
     enable_dns_hostnames = optional(bool, true)
     tags                 = optional(map(string), {})
     create_igw           = optional(bool, false)
+    flow_logs_config     = optional(string, null)
     subnets = map(object({
       subnet_cidr     = string
       az              = string
       create_natgw    = optional(bool, false)
       routing_policy  = optional(string, null)
+      flow_logs_config = optional(string, null)
       tags            = optional(map(string), {})
     }))
   }))
@@ -349,7 +368,39 @@ variable "iam_role_config" {
       services    = optional(list(string), [])
       accounts    = optional(list(string), [])
     })
-    managed_policies      = optional(list(string), [])
+    aws_managed_policies      = optional(list(string), [])
+    custom_managed_policies   = optional(list(string), [])
+    inline_policies           = optional(map(object({
+      statement   = optional(list(object({
+        Sid         = optional(string)
+        Effect      = string
+        Action      = list(string)
+        Resource    = list(string) 
+      })))
+    })), {})
     iam_instance_profile  = optional(bool, false)
   }))
 }
+
+# variable "iam_policy_config" {
+#   type = map(object({
+#     name        = string
+#     description = string
+#     statement   = optional(list(object({
+#       Sid         = optional(string)
+#       Effect      = string
+#       Action      = list(string)
+#       Resource    = list(string) 
+#     })))
+#     json_policy = optional(string)
+#   }))
+# }
+
+variable "iam_policy_config" {
+  type = map(object({
+    name        = string
+    description = string
+    policy = string
+  }))
+}
+

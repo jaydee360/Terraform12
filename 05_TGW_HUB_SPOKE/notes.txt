@@ -214,3 +214,237 @@ i dont know much about aws firewall but i only have a test-policy on there at th
     stateless_fragment_default_actions = ["aws:pass"]
   }
 
+iam_policy_config = {
+    write-logs-policy = {
+        name        = "write-logs-policy"
+        description = "write-logs-policy"
+        statement   = [
+            {
+                Sid = "allow cloudwatch logs to be written for vpc flow logs"
+                Effect = "Allow"
+                Action = [
+                    "logs:CreateLogGroup",
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents",
+                    "logs:DescribeLogGroups",
+                    "logs:DescribeLogStreams",
+                ]
+                Resource = ["*"]
+            }
+        ]
+    }
+    complex-policy = {
+        name        = "complex-policy"
+        description = "complex-policy"
+        json_policy = <<EOT
+            {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Effect": "Deny",
+                        "Action": ["s3:DeleteBucket"],
+                        "Resource": ["*"],
+                        "Condition": {
+                            "Bool": {
+                                "aws:MultiFactorAuthPresent": "true"
+                            }
+                        }
+                    }
+                ]
+            }
+        EOT
+    }
+}
+
+variable "iam_policy_config_v3" {
+  type = map(object({
+    name = string
+    description = string
+    statement = list(object({
+      Effect      = optional(string)
+      Action      = optional(list(string))
+      Resource    = optional(list(string))
+      json_object  = optional(string)
+    }))
+  }))
+}
+
+iam_policy_config_v3 = {
+    jdtest = {
+        name        = "jdtest"
+        description = "jdtest"
+        statement   = [
+            {
+                Effect = "Allow"
+                Action = [
+                    "logs:CreateLogGroup",
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents",
+                    "logs:DescribeLogGroups",
+                    "logs:DescribeLogStreams",
+                ]
+                Resource = ["*"]
+            },
+            {
+                Effect = "Deny"
+                Action = [
+                    "s3:DeleteBucket"
+                ]
+                Resource = ["*"]
+            },
+            {
+                json_object = <<EOT
+                {
+                    "Effect": "Deny",
+                    "Action": ["s3:DeleteBucket"],
+                    "Resource": ["*"],
+                    "Condition": {
+                        "Bool": {
+                            "aws:MultiFactorAuthPresent": "true"
+                        }
+                    }
+                } 
+                EOT
+            }
+        ]
+    }
+}
+
+# 1) For each policy, and each statement object, convert HCL objects to JSON. Preserve raw JSON objects 
+  statement_json_strings = {
+    for pol_key, pol_obj in var.iam_policy_config_v3 : pol_key => [
+      for obj in pol_obj.statement :
+      obj.json_object == null
+        ? jsonencode({
+            Effect   = obj.Effect
+            Action   = obj.Action
+            Resource = obj.Resource
+          })
+        : obj.json_object
+    ]
+  }
+
+  # 2) Decode all statement object strings back to HCL (consistent types)
+  statement_objects = {
+    for pol_key, strings in local.statement_json_strings : pol_key => [
+      for string in strings : jsondecode(string)
+    ]
+  }
+
+  # 3) build new jsonencoded policy which includes lookup of statement strings
+  iam_pol_map = {for pol_key, pol_obj in var.iam_policy_config_v3 : pol_key => {
+    name        = pol_obj.name
+    description = pol_obj.description
+    policy      = jsonencode({
+      Version     = "2012-10-17"
+      Statement = local.statement_objects[pol_key]
+    })
+  }}
+
+
+  # aws_iam_policy_map = {
+  #   for pol_key, pol_obj in var.iam_policy_config : pol_key => {
+  #     name        = pol_obj.name
+  #     description = pol_obj.description
+  #     policy      = jsonencode({
+  #       Version     = "2012-10-17"
+  #       Statement   = [for obj in pol_obj.statement : merge(
+  #         {
+  #           Effect      = obj.effect
+  #           Action      = obj.action
+  #           Resource    = obj.resource
+  #         },
+  #         obj.sid != null ? {Sid = obj.sid} : {},
+  #         obj.condition != null ? {Condition = obj.condition} : {} 
+  #       )]
+  #     })
+  #   }
+  # }
+
+  # aws_iam_policy_map = {
+  #   for pol_key, pol_obj in var.iam_policy_config : pol_key => {
+  #     name        = pol_obj.name
+  #     description = pol_obj.description
+  #     policy      = jsonencode({
+  #       Version     = "2012-10-17"
+  #       Statement   = [for obj in pol_obj.statement : {
+  #         for k, v in obj : k => v if v != null
+  #       }]
+  #     })
+  #   }
+  # }
+
+  # aws_iam_policy_map = {
+  #   for pol_key, pol_obj in var.iam_policy_config : pol_key => 
+  #     pol_obj.json_policy != null ? {
+  #       name        = pol_obj.name
+  #       description = pol_obj.description
+  #       policy      = pol_obj.json_policy
+  #     } : {
+  #       policy      = jsonencode({
+  #         Version     = "2012-10-17"
+  #         Statement   = [for obj in pol_obj.statement : {
+  #           for k, v in obj : k => v if v != null
+  #         }]
+  #       })
+  #     }
+  #   }
+
+  # aws_iam_policy_map = {for pol_key, pol_obj in var.iam_policy_config : pol_key => 
+  #   pol_obj.json_policy != null ? {
+  #     name        = pol_obj.name
+  #     description = pol_obj.description
+  #     policy      = pol_obj.json_policy
+  #   } : {
+  #     name        = pol_obj.name
+  #     description = pol_obj.description
+  #     policy      = jsonencode({
+  #       Version     = "2012-10-17"
+  #       Statement   = [for obj in pol_obj.statement : {
+  #           for k, v in obj : k => v if v != null
+  #       }]
+  #     })
+  #   }
+  # }
+  
+  # aws_iam_policy_map = {
+  #     for pol_key, pol_obj in var.iam_policy_config_v3 : pol_key => {
+  #     name        = pol_obj.name
+  #     description = pol_obj.description
+  #     policy      = {
+  #       Version     = "2012-10-17"
+  #       Statement   = [for obj in pol_obj.statement : 
+  #         obj.json_object != null ? {
+  #           object = "JSON"
+  #         } : {
+  #           object = "HCL"
+  #         }
+  #       ]
+  #     }
+  #   }
+  # }
+
+  # {for pol_key, pol_obj in var.iam_policy_config_v3 : "statement" => [for obj in pol_obj.statement : obj.json_object == null ? jsonencode(obj) : obj.json_object]}
+
+  # flatten([for pol_key, pol_obj in var.iam_policy_config_v3 : [for obj in pol_obj.statement : obj.json_object == null ? jsonencode(obj) : obj.json_object]])
+
+  #         {
+  #           Effect      = obj.effect
+  #           Action      = obj.action
+  #           Resource    = obj.resource
+  #         }
+
+  #     name        = pol_obj.name
+  #     description = pol_obj.description
+  #     policy      = {
+  #       Version     = "2012-10-17"
+  #       Statement   = [for obj in pol_obj.statement : 
+  #         obj.json_object != null ? {
+  #           object = "JSON"
+  #         } : {
+  #           object = "HCL"
+  #         }
+  #       ]
+  #     }
+  #   }
+  # ]

@@ -820,7 +820,12 @@ locals {
 # --------------------------------------------------
 
 locals {
-    aws_iam_role_map = {
+
+  iam_policy_map = {
+    for pol_key, pol_obj in var.iam_policy_config : pol_key => pol_obj
+  }
+
+  aws_iam_role_map = {
     for role_key, role_obj in var.iam_role_config : role_key => {
       name                = role_obj.name
       description         = role_obj.description
@@ -845,11 +850,35 @@ locals {
   }
 
   aws_iam_role_policy_attachment_map = merge([
-    for role_key, role_obj in var.iam_role_config : {
-      for pol_arn in role_obj.managed_policies : "${role_key}__${pol_arn}" => 
+    for role_key, role_obj in var.iam_role_config : merge(
       {
+        for aws_pol_arn in role_obj.aws_managed_policies : "AWS:${role_key}__${split("/", aws_pol_arn)[1]}" => {
+          role        = role_key
+          policy_arn  = aws_pol_arn
+        }
+      }, 
+      {
+        for cust_pol_key in role_obj.custom_managed_policies : "CUST:${role_key}__${cust_pol_key}" => {
+          role        = role_key
+          policy_arn  = aws_iam_policy.main[cust_pol_key].arn
+        } if can(local.iam_policy_map[cust_pol_key]) 
+      }
+    )
+  ]...)
+
+  iam_role_policy_inline = merge([
+    for role_key, role_obj in var.iam_role_config : {
+      for inline_pol_key, inline_pol_obj in role_obj.inline_policies : "${role_key}__${inline_pol_key}" => {
+        name = inline_pol_key
         role = role_key
-        policy_arn = pol_arn
+        policy = jsonencode({
+          Version = "2012-10-17"
+          Statement = [
+            for obj in inline_pol_obj.statement : {
+              for k, v in obj : k => v if v != null
+            }
+          ]
+        })
       }
     }
   ]...)
@@ -862,31 +891,99 @@ locals {
   }
 }
 
+# --------------------------------------------------
+# CloudWatch Log Groups 
+# --------------------------------------------------
+
 locals {
-  aws_cloudwatch_log_group_map = {
-    for log_grp_obj in var.aws_cloudwatch_log_group_config : "${log_grp_obj.region}__${log_grp_obj.service}__${log_grp_obj.namespace}__${log_grp_obj.type}" => merge(log_grp_obj, {
-      name = "/aws/${log_grp_obj.service}/${log_grp_obj.namespace}/${log_grp_obj.type}"
+  cloudwatch_log_group_map = {
+    for log_grp_obj in var.aws_cloudwatch_log_group_config : "${log_grp_obj.region}__${log_grp_obj.log_namespace_1}__${log_grp_obj.log_namespace_2}__${log_grp_obj.log_namespace_3}" => merge(log_grp_obj, {
+      name = "/aws/${log_grp_obj.log_namespace_1}/${log_grp_obj.log_namespace_2}/${log_grp_obj.log_namespace_3}"
     })
   }
 }
 
+# --------------------------------------------------
+# Flow Logs & Log Destinations
+# --------------------------------------------------
+
 locals {
-  aws_networkfirewall_logging_configuration_map_old =  {
-    for fw_key, fw_obj in var.fw_config : fw_key => {
-      region = fw_obj.region
-      logging_config = [
-        for log_cfg in fw_obj.logging_config : merge(
-          log_cfg,
-          log_cfg.log_destination_type == "CloudWatchLogs" ? 
-            {log_destination = {logGroup = "${fw_obj.region}__${log_cfg.log_group_ref}__${fw_key}__${log_cfg.log_type}"}}
-          : log_cfg.log_destination_type == "S3" ? 
-            {log_destination = {bucketName = "bucketName_Placeholder"}}
-          : {log_destination = {deliveryStream = "deliveryStream_Placeholder"}}
-        )
-      ]
-    }
+
+  vpc_flow_logs_merged = {
+    for vpc_key, vpc_obj in var.vpc_config : "${vpc_key}__${vpc_obj.flow_logs_config}" => merge(
+      var.flow_logs_config[vpc_obj.flow_logs_config],
+      {
+        att_type    = "vpc"
+        vpc_key     = vpc_key
+        region  = vpc_obj.region
+      }
+    ) if vpc_obj.flow_logs_config != null && can(var.flow_logs_config[vpc_obj.flow_logs_config])
   }
 
+  vpc_flow_logs_resolved = {
+    for fl_key, fl_obj in local.vpc_flow_logs_merged : fl_key => merge(
+      fl_obj,
+      fl_obj.log_destination_type == "cloud-watch-logs" ? {
+        iam_role_arn        = aws_iam_role.main[fl_obj.iam_role_key].arn
+        log_destination_key = "${fl_obj.region}__${fl_obj.log_namespace_1}__${fl_obj.log_namespace_2}__${fl_obj.log_namespace_3}"
+        log_group_name      = "/aws/${fl_obj.log_namespace_1}/${fl_obj.log_namespace_2}/${fl_obj.log_namespace_3}"
+      } : fl_obj.log_destination_type == "s3" ? {
+        iam_role_arn        = null
+        log_destination_key = "bucket_key_placeholder"
+      } : {
+        iam_role_arn        = null
+        log_destination_key = "kinesis_key_placeholder"
+      }
+    )
+  }
+
+  subnet_flow_logs_merged = {
+    for sn_key, sn_obj in local.subnet_map : "${sn_key}__${sn_obj.flow_logs_config}" => merge(
+      var.flow_logs_config[sn_obj.flow_logs_config],
+      {
+        att_type       = "subnet"
+        subnet_key     = sn_key
+        region  = sn_obj.region
+      }
+    ) if sn_obj.flow_logs_config != null && can(var.flow_logs_config[sn_obj.flow_logs_config])
+  }
+
+  subnet_flow_logs_resolved = {
+    for fl_key, fl_obj in local.subnet_flow_logs_merged : fl_key => merge(
+      fl_obj,
+      fl_obj.log_destination_type == "cloud-watch-logs" ? {
+        iam_role_arn        = aws_iam_role.main[fl_obj.iam_role_key].arn
+        log_destination_key = "${fl_obj.region}__${fl_obj.log_namespace_1}__${fl_obj.log_namespace_2}__${fl_obj.log_namespace_3}"
+        log_group_name      = "/aws/${fl_obj.log_namespace_1}/${fl_obj.log_namespace_2}/${fl_obj.log_namespace_3}"
+      } : fl_obj.log_destination_type == "s3" ? {
+        iam_role_arn        = null
+        log_destination_key = "bucket_key_placeholder"
+      } : {
+        iam_role_arn        = null
+        log_destination_key = "kinesis_key_placeholder"
+      }
+    )
+  }
+
+  all_flow_logs_resolved = merge(
+    local.vpc_flow_logs_resolved, local.subnet_flow_logs_resolved
+  )
+
+  cloudwatch_log_groups_map__flow_log__all = { 
+    for fl_dst_key in distinct([for fl_obj in local.all_flow_logs_resolved : fl_obj.log_destination_key if fl_obj.log_destination_type == "cloud-watch-logs"]) : fl_dst_key => [for fl_cfg_obj in local.all_flow_logs_resolved : {
+      region = fl_cfg_obj.region
+      log_group_name = fl_cfg_obj.log_group_name
+      retention_in_days = fl_cfg_obj.retention_in_days
+    } if fl_cfg_obj.log_destination_key == fl_dst_key][0]
+  }
+
+}
+
+# --------------------------------------------------
+# AWS Network Firewall Logging Configuration
+# --------------------------------------------------
+
+locals {
   aws_networkfirewall_logging_configuration_map = {
     for fw_key, fw_obj in var.fw_config : fw_key => {
       region = fw_obj.region
@@ -894,7 +991,7 @@ locals {
         for log_cfg in fw_obj.logging_config : merge(
           log_cfg,
           log_cfg.log_destination_type == "CloudWatchLogs" ? 
-            {log_destination = {logGroup = aws_cloudwatch_log_group.main["${fw_obj.region}__${log_cfg.log_group_ref}__${fw_key}__${lower(log_cfg.log_type)}"].name}}
+            {log_destination = {logGroup = aws_cloudwatch_log_group.main["${fw_obj.region}__${log_cfg.log_namespace_1}__${fw_key}__${lower(log_cfg.log_type)}"].name}}
           : log_cfg.log_destination_type == "S3" ? 
             {log_destination = {bucketName = "bucketName_Placeholder"}}
           : {log_destination = {deliveryStream = "deliveryStream_Placeholder"}}
@@ -902,5 +999,6 @@ locals {
       ]
     }
   }
-
 }
+
+

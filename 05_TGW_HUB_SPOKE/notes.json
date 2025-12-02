@@ -1,66 +1,40 @@
 {
     "Statement": [
         {
-            "Action": "sts:AssumeRole",
+            "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents",
+                "logs:DescribeLogGroups",
+                "logs:DescribeLogStreams"
+            ],
             "Effect": "Allow",
-            "Principal": {
-                "Service": [
-                    "ec2.amazonaws.com",
-                    "ssm.amazonaws.com"
-                ]
-            }
-        }
-    ],
-    "Version": "2012-10-17"
-}
-
-{
-    "Statement": [
-        {
-            "Action": "sts:AssumeRole",
-            "Effect": "Allow",
-            "Principal": {
-                "Service": [
-                    "ec2.amazonaws.com",
-                    "ssm.amazonaws.com"
-                ]
-            }
+            "Resource": [
+                "*"
+            ]
         },
         {
-            "Action": "sts:AssumeRole",
-            "Effect": "Allow",
-            "Principal": {
-                "AWS": [
-                    "123456789012",
-                    "987654321098"
-                ]
-            }
-        }
-    ],
-    "Version": "2012-10-17"
-}
-
-{
-    "Statement": [
-        {
-            "Action": "sts:AssumeRole",
-            "Effect": "Allow",
-            "Principal": {
-                "Service": [
-                    "ec2.amazonaws.com",
-                    "ssm.amazonaws.com"
-                ]
-            }
+            "Action": [
+                "s3:DeleteBucket"
+            ],
+            "Effect": "Deny",
+            "Resource": [
+                "*"
+            ]
         },
         {
-            "Action": "sts:AssumeRole",
-            "Effect": "Allow",
-            "Principal": {
-                "AWS": [
-                    "123456789012",
-                    "987654321098"
-                ]
-            }
+            "Action": [
+                "s3:DeleteBucket"
+            ],
+            "Condition": {
+                "Bool": {
+                    "aws:MultiFactorAuthPresent": "true"
+                }
+            },
+            "Effect": "Deny",
+            "Resource": [
+                "*"
+            ]
         }
     ],
     "Version": "2012-10-17"
@@ -69,14 +43,17 @@
 {
     "Statement": [
         {
-            "Action": "sts:AssumeRole",
+            "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents",
+                "logs:DescribeLogGroups",
+                "logs:DescribeLogStreams"
+            ],
             "Effect": "Allow",
-            "Principal": {
-                "Service": [
-                    "ec2.amazonaws.com",
-                    "ssm.amazonaws.com"
-                ]
-            }
+            "Resource": [
+                "*"
+            ]
         }
     ],
     "Version": "2012-10-17"

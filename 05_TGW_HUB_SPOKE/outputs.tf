@@ -45,13 +45,6 @@ output "aws_subnet_ids_by_routing_policy" {
   description = "Subnet IDs grouped by _routing_policy"
 }
 
-# {
-#   for grp_key in distinct([for sn_k, sn_o in local.subnet_map : sn_o.routing_policy]) : 
-#   grp_key => {
-#       for sn_k, sn_o in local.subnet_map : sn_k => sn_o.subnet if sn_o.routing_policy == grp_key
-#   }
-# }
-
 output "aws_internet_gateway_ids" {
   value = {for k, igw in aws_internet_gateway.main : k => igw.id }
 }
@@ -114,7 +107,10 @@ output "private_key_openssh" {
 }
 
 output "aws_iam_role" {
-  value = {for k, r in aws_iam_role.main: k => r}
+  value = {for k, r in aws_iam_role.main: k => {
+    id    = r.id
+    name  = r.name
+  }}
 }
 
 output "aws_iam_role_policy_attachment" {
@@ -122,9 +118,46 @@ output "aws_iam_role_policy_attachment" {
 }
 
 output "aws_iam_instance_profile" {
-  value = {for k, ip in aws_iam_instance_profile.main : k => ip}
+  value = {for k, ip in aws_iam_instance_profile.main : k => {
+    id    = ip.id
+    name  = ip.name
+    role  = ip.role
+  }}
 }
 
-output "aws_cloudwatch_log_group" {
-  value = {for k, lg in aws_cloudwatch_log_group.main : k => lg}
+output "aws_cloudwatch_log_groups" {
+  value = {
+    MAIN = {for k, lg in aws_cloudwatch_log_group.main : k => {
+      id        = lg.id
+      arn       = lg.arn
+      name      = lg.name
+      retention = lg.retention_in_days
+    }}
+    FLOW_LOGS = {for k, lg in aws_cloudwatch_log_group.flow_logs : k => {
+      id        = lg.id
+      arn       = lg.arn
+      name      = lg.name
+      retention = lg.retention_in_days
+    }}
+  }
+}
+
+
+output "aws_iam_policy" {
+  value = {for k, p in aws_iam_policy.main : k => {
+    id = p.id
+    name = p.name
+  }}
+}
+
+output "aws_iam_role_policy" {
+  value = {for k, ilp in aws_iam_role_policy.main: k => {
+    id    = ilp.id
+    name  = ilp.name
+    role  = ilp.role
+  }}
+}
+
+output "aws_flow_log" {
+  value = {for k, fl in aws_flow_log.main : k => fl}
 }
