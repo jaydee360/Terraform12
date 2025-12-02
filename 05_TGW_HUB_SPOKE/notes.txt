@@ -1,0 +1,450 @@
+
+merge(flatten([for tgw_rt_key, tgw_rt_obj in local.tgw_rt_map : tgw_rt_obj.routes if tgw_rt_obj.routes != null])...)
+merge(flatten([for tgw_rt_key, tgw_rt_obj in local.tgw_rt_map : coalesce(tgw_rt_obj.routes, [])])...)
+{for tgw_rt_key, tgw_rt_obj in local.tgw_rt_map : tgw_rt_key => [for route in coalesce(tgw_rt_obj.routes, []) : route]}
+[for tgw_rt_key, tgw_rt_obj in local.tgw_rt_map : [for route in coalesce(tgw_rt_obj.routes, []) : route]]
+merge(flatten([for tgw_rt_key, tgw_rt_obj in local.tgw_rt_map : [for route in coalesce(tgw_rt_obj.routes, []) : route]])...)
+[for tgw_rt_key, tgw_rt_obj in local.tgw_rt_map : [for route in coalesce(tgw_rt_obj.routes, []) : {
+  rt_key = tgw_rt_key
+  tgw_key = tgw_rt_obj.tgw_key
+  region = tgw_rt_obj.region
+  cidr_block = route.cidr_block
+  target_key = tgw_rt_obj.tgw_key
+}]]
+merge(flatten([for tgw_rt_key, tgw_rt_obj in local.tgw_rt_map : [for route in coalesce(tgw_rt_obj.routes, []) : {
+  rt_key = tgw_rt_key
+  tgw_key = tgw_rt_obj.tgw_key
+  region = tgw_rt_obj.region
+  cidr_block = route.cidr_block
+  target_key = local.tgw_attachments_by_tgw_vpc[tgw_rt_obj.tgw_key][route.target_key]
+}]])...)
+merge(flatten([for tgw_rt_key, tgw_rt_obj in local.tgw_rt_map : {for route in coalesce(tgw_rt_obj.routes, []) : "${tgw_rt_key}__${route.cidr_block}__${route.target_key}" => {
+  rt_key = tgw_rt_key
+  tgw_key = tgw_rt_obj.tgw_key
+  region = tgw_rt_obj.region
+  cidr_block = route.cidr_block
+  target_key = local.tgw_attachments_by_tgw_vpc[tgw_rt_obj.tgw_key][route.target_key]
+} if can(local.tgw_attachments_by_tgw_vpc[tgw_rt_obj.tgw_key][route.target_key])}])...)
+
+
+local.route_table_map["RT:SN:vpc-core__vpc-core-data-subnet-a"]
+
+local.route_table_map["RT:SN:vpc-core__vpc-core-data-subnet-b"]
+
+local.route_table_map["RT:SN:vpc-core__vpc-core-data-subnet-c"]
+
+local.route_table_intent_map["RI:RT:SN:vpc-core__vpc-core-data-subnet-a"]
+
+local.route_table_intent_map["RI:RT:SN:vpc-core__vpc-core-data-subnet-c"]
+
+local.route_table_intent_map["RI:RT:SN:vpc-core__vpc-core-data-subnet-c"]
+
+toset([
+  {
+    "attachment" = tolist([
+      {
+        "endpoint_id" = "vpce-08d41dd0dfa0f4251"
+        "subnet_id" = "subnet-02898e7b26f1f3ffb"
+      },
+    ])
+    "availability_zone" = "us-east-2b"
+  },
+  {
+    "attachment" = tolist([
+      {
+        "endpoint_id" = "vpce-0917c8d6a4bd5ef28"
+        "subnet_id" = "subnet-036e04ee48aa53e73"
+      },
+    ])
+    "availability_zone" = "us-east-2c"
+  },
+  {
+    "attachment" = tolist([
+      {
+        "endpoint_id" = "vpce-0fe03ad1caed1504c"
+        "subnet_id" = "subnet-098e7ae4ffef5ad20"
+      },
+    ])
+    "availability_zone" = "us-east-2a"
+  },
+])
+
+aws_networkfirewall_firewall.main["test-fw"].firewall_status[0].sync_states
+
+
+# IAM role for EC2 with SSM permissions
+resource "aws_iam_role" "ec2_ssm" {
+  name = "ec2-ssm-role"
+  
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Service = "ec2.amazonaws.com"
+      }
+      Action = "sts:AssumeRole"
+    }]
+  })
+}
+
+# Attach AWS managed policy for SSM
+resource "aws_iam_role_policy_attachment" "ec2_ssm" {
+  role       = aws_iam_role.ec2_ssm.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+# Instance profile
+resource "aws_iam_instance_profile" "ec2_ssm" {
+  name = "ec2-ssm-profile"
+  role = aws_iam_role.ec2_ssm.name
+}
+
+resource "aws_instance" "main" {
+  for_each = local.valid_ec2_instance_map
+  
+  ami           = each.value.ami
+  instance_type = each.value.instance_type
+  
+  iam_instance_profile = aws_iam_instance_profile.ec2_ssm.name  # ← Add this
+  
+  # ... rest of config
+}
+
+
+
+{
+  for k, i in aws_instance.main : k => {
+    id = i.id
+    private_dns = i.private_dns
+    private_ip = i.private_ip
+    availability_zone = i.availability_zone
+    iam_instance_profile = i.iam_instance_profile
+    primary_network_interface_id = i.primary_network_interface_id
+    eni_details = [
+      for kk, nn in aws_network_interface.main : {
+        nic = split("__", nn.description)[1]
+        vpc = split(":", split("__", nn.description)[2])[1]
+        vpc_sn  = split("__", nn.description)[3]
+      } if nn.id == i.primary_network_interface_id
+    ][0]
+  }
+}
+
+0. Check instances show online and running in AWS Systems Manager > Explore nodes
+---------------------------------------------------------------------------------
+RESULT: Success
+
+1. SSH to instance in vpc-core app subnet (using SSM)
+-----------------------------------------------------
+target: web-10 # vpc-core-app-subnet-a
+RESULT: Success
+
+2 Same VPC
+------------
+From web-10 (10.4.4.154 - vpc-core-app-subnet-a) ping web-11, web-12 within same VPC (Cross-AZ)
+  ping 10.4.5.126 # vpc-core-app-subnet-b
+  ping 10.4.6.194 # vpc-core-app-subnet-c
+RESULT: Success
+
+3. Cross-VPC via TGW (spoke-to-spoke)
+From web-10 (vpc-core-app-subnet-a), ping vpc-app instances (web-20, web-21, web-22) - both by ip address and name
+  ping 10.5.4.248 # vpc-app-app-subnet-a
+  ping ip-10-5-4-248.us-east-2.compute.internal
+  ping 10.5.5.20 # vpc-app-app-subnet-b
+  ping ip-10-5-5-20.us-east-2.compute.internal
+  ping 10.5.6.69 # vpc-app-app-subnet-b
+  ping ip-10-5-6-69.us-east-2.compute.internal
+RESULT: Success
+
+Check if traffic routes through inspection VPC
+From web-10 
+  sudo yum traceroute -y
+  traceroute 10.4.5.126
+  traceroute 10.4.6.194
+RESULT: NG (tracert doesnt seem to work across the TGW)
+
+Supplementary note: i used the AWS reachability analyzer to try to confirm the routing is as expected
+it appears to be ok but the results are hard to read (export below)
+  aws ec2 describe-network-insights-analyses --network-insights-analysis-ids nia-0c7931bb5a70e69d9 --region us-east-2 --profile terraform > reachability-analysis.json
+
+Question: is there a better way to check if traffic is being routed as intended?
+
+4. Egress via edge VPC
+----------------------
+from web-10
+  ping 8.8.8.8 
+RESULT: Success
+
+  curl www.google.com
+RESULT: Success
+
+install nslookup (bind-utils)
+  sudo yum install bind-utils -y
+
+  nslookup www.google.com
+RESULT: Success
+
+I also checked the cloud watch log group (/aws/networkfirewall/test-fw/flow). You helped me create those as part of this deployment 
+the only log stream there is "log_stream_created_by_aws_to_validate_log_delivery_subscriptions", nothing else
+
+I checked log settings on the firewall
+
+Log type
+Flow, Alert
+
+Alert log destination
+CloudWatch log group - /aws/networkfirewall/test-fw/alert
+
+Flow log destination
+CloudWatch log group - /aws/networkfirewall/test-fw/flow
+
+TLS log destination
+Not configured
+
+Firewall monitoring dashboard
+Disabled
+
+these settings seem ok, so im wondering if there is something i need to do on the fw policy to make this work
+i dont know much about aws firewall but i only have a test-policy on there at the moment which is minimal
+
+  test-policy = {
+    region = "us-east-2"
+    stateless_default_actions = ["aws:pass"]
+    stateless_fragment_default_actions = ["aws:pass"]
+  }
+
+iam_policy_config = {
+    write-logs-policy = {
+        name        = "write-logs-policy"
+        description = "write-logs-policy"
+        statement   = [
+            {
+                Sid = "allow cloudwatch logs to be written for vpc flow logs"
+                Effect = "Allow"
+                Action = [
+                    "logs:CreateLogGroup",
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents",
+                    "logs:DescribeLogGroups",
+                    "logs:DescribeLogStreams",
+                ]
+                Resource = ["*"]
+            }
+        ]
+    }
+    complex-policy = {
+        name        = "complex-policy"
+        description = "complex-policy"
+        json_policy = <<EOT
+            {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Effect": "Deny",
+                        "Action": ["s3:DeleteBucket"],
+                        "Resource": ["*"],
+                        "Condition": {
+                            "Bool": {
+                                "aws:MultiFactorAuthPresent": "true"
+                            }
+                        }
+                    }
+                ]
+            }
+        EOT
+    }
+}
+
+variable "iam_policy_config_v3" {
+  type = map(object({
+    name = string
+    description = string
+    statement = list(object({
+      Effect      = optional(string)
+      Action      = optional(list(string))
+      Resource    = optional(list(string))
+      json_object  = optional(string)
+    }))
+  }))
+}
+
+iam_policy_config_v3 = {
+    jdtest = {
+        name        = "jdtest"
+        description = "jdtest"
+        statement   = [
+            {
+                Effect = "Allow"
+                Action = [
+                    "logs:CreateLogGroup",
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents",
+                    "logs:DescribeLogGroups",
+                    "logs:DescribeLogStreams",
+                ]
+                Resource = ["*"]
+            },
+            {
+                Effect = "Deny"
+                Action = [
+                    "s3:DeleteBucket"
+                ]
+                Resource = ["*"]
+            },
+            {
+                json_object = <<EOT
+                {
+                    "Effect": "Deny",
+                    "Action": ["s3:DeleteBucket"],
+                    "Resource": ["*"],
+                    "Condition": {
+                        "Bool": {
+                            "aws:MultiFactorAuthPresent": "true"
+                        }
+                    }
+                } 
+                EOT
+            }
+        ]
+    }
+}
+
+# 1) For each policy, and each statement object, convert HCL objects to JSON. Preserve raw JSON objects 
+  statement_json_strings = {
+    for pol_key, pol_obj in var.iam_policy_config_v3 : pol_key => [
+      for obj in pol_obj.statement :
+      obj.json_object == null
+        ? jsonencode({
+            Effect   = obj.Effect
+            Action   = obj.Action
+            Resource = obj.Resource
+          })
+        : obj.json_object
+    ]
+  }
+
+  # 2) Decode all statement object strings back to HCL (consistent types)
+  statement_objects = {
+    for pol_key, strings in local.statement_json_strings : pol_key => [
+      for string in strings : jsondecode(string)
+    ]
+  }
+
+  # 3) build new jsonencoded policy which includes lookup of statement strings
+  iam_pol_map = {for pol_key, pol_obj in var.iam_policy_config_v3 : pol_key => {
+    name        = pol_obj.name
+    description = pol_obj.description
+    policy      = jsonencode({
+      Version     = "2012-10-17"
+      Statement = local.statement_objects[pol_key]
+    })
+  }}
+
+
+  # aws_iam_policy_map = {
+  #   for pol_key, pol_obj in var.iam_policy_config : pol_key => {
+  #     name        = pol_obj.name
+  #     description = pol_obj.description
+  #     policy      = jsonencode({
+  #       Version     = "2012-10-17"
+  #       Statement   = [for obj in pol_obj.statement : merge(
+  #         {
+  #           Effect      = obj.effect
+  #           Action      = obj.action
+  #           Resource    = obj.resource
+  #         },
+  #         obj.sid != null ? {Sid = obj.sid} : {},
+  #         obj.condition != null ? {Condition = obj.condition} : {} 
+  #       )]
+  #     })
+  #   }
+  # }
+
+  # aws_iam_policy_map = {
+  #   for pol_key, pol_obj in var.iam_policy_config : pol_key => {
+  #     name        = pol_obj.name
+  #     description = pol_obj.description
+  #     policy      = jsonencode({
+  #       Version     = "2012-10-17"
+  #       Statement   = [for obj in pol_obj.statement : {
+  #         for k, v in obj : k => v if v != null
+  #       }]
+  #     })
+  #   }
+  # }
+
+  # aws_iam_policy_map = {
+  #   for pol_key, pol_obj in var.iam_policy_config : pol_key => 
+  #     pol_obj.json_policy != null ? {
+  #       name        = pol_obj.name
+  #       description = pol_obj.description
+  #       policy      = pol_obj.json_policy
+  #     } : {
+  #       policy      = jsonencode({
+  #         Version     = "2012-10-17"
+  #         Statement   = [for obj in pol_obj.statement : {
+  #           for k, v in obj : k => v if v != null
+  #         }]
+  #       })
+  #     }
+  #   }
+
+  # aws_iam_policy_map = {for pol_key, pol_obj in var.iam_policy_config : pol_key => 
+  #   pol_obj.json_policy != null ? {
+  #     name        = pol_obj.name
+  #     description = pol_obj.description
+  #     policy      = pol_obj.json_policy
+  #   } : {
+  #     name        = pol_obj.name
+  #     description = pol_obj.description
+  #     policy      = jsonencode({
+  #       Version     = "2012-10-17"
+  #       Statement   = [for obj in pol_obj.statement : {
+  #           for k, v in obj : k => v if v != null
+  #       }]
+  #     })
+  #   }
+  # }
+  
+  # aws_iam_policy_map = {
+  #     for pol_key, pol_obj in var.iam_policy_config_v3 : pol_key => {
+  #     name        = pol_obj.name
+  #     description = pol_obj.description
+  #     policy      = {
+  #       Version     = "2012-10-17"
+  #       Statement   = [for obj in pol_obj.statement : 
+  #         obj.json_object != null ? {
+  #           object = "JSON"
+  #         } : {
+  #           object = "HCL"
+  #         }
+  #       ]
+  #     }
+  #   }
+  # }
+
+  # {for pol_key, pol_obj in var.iam_policy_config_v3 : "statement" => [for obj in pol_obj.statement : obj.json_object == null ? jsonencode(obj) : obj.json_object]}
+
+  # flatten([for pol_key, pol_obj in var.iam_policy_config_v3 : [for obj in pol_obj.statement : obj.json_object == null ? jsonencode(obj) : obj.json_object]])
+
+  #         {
+  #           Effect      = obj.effect
+  #           Action      = obj.action
+  #           Resource    = obj.resource
+  #         }
+
+  #     name        = pol_obj.name
+  #     description = pol_obj.description
+  #     policy      = {
+  #       Version     = "2012-10-17"
+  #       Statement   = [for obj in pol_obj.statement : 
+  #         obj.json_object != null ? {
+  #           object = "JSON"
+  #         } : {
+  #           object = "HCL"
+  #         }
+  #       ]
+  #     }
+  #   }
+  # ]

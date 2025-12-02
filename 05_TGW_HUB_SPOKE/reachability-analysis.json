@@ -1,0 +1,1185 @@
+{
+    "NetworkInsightsAnalyses": [
+        {
+            "NetworkInsightsAnalysisId": "nia-0c7931bb5a70e69d9",
+            "NetworkInsightsAnalysisArn": "arn:aws:ec2:us-east-2:131948736146:network-insights-analysis/nia-0c7931bb5a70e69d9",
+            "NetworkInsightsPathId": "nip-08f0ac24d04490dce",
+            "StartDate": "2025-11-13T12:50:45.492000+00:00",
+            "Status": "succeeded",
+            "NetworkPathFound": true,
+            "ForwardPathComponents": [
+                {
+                    "SequenceNumber": 1,
+                    "Component": {
+                        "Id": "i-073dab69e9fa2f855",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:instance/i-073dab69e9fa2f855",
+                        "Name": "web_10"
+                    },
+                    "OutboundHeader": {
+                        "DestinationAddresses": [
+                            "10.5.4.248/32"
+                        ],
+                        "DestinationPortRanges": [
+                            {
+                                "From": 443,
+                                "To": 443
+                            }
+                        ],
+                        "Protocol": "6",
+                        "SourceAddresses": [
+                            "10.4.4.154/32"
+                        ],
+                        "SourcePortRanges": [
+                            {
+                                "From": 0,
+                                "To": 65535
+                            }
+                        ]
+                    }
+                },
+                {
+                    "SequenceNumber": 2,
+                    "AttachedTo": {
+                        "Id": "i-073dab69e9fa2f855",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:instance/i-073dab69e9fa2f855",
+                        "Name": "web_10"
+                    },
+                    "Component": {
+                        "Id": "eni-06f7b3319b796be3c",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:network-interface/eni-06f7b3319b796be3c",
+                        "Name": "web_10__nic0"
+                    },
+                    "Subnet": {
+                        "Id": "subnet-0b5d6ed9879935a6b",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:subnet/subnet-0b5d6ed9879935a6b",
+                        "Name": "SN:vpc-core__vpc-core-app-subnet-a"
+                    },
+                    "Vpc": {
+                        "Id": "vpc-0ea68b304407c49d2",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:vpc/vpc-0ea68b304407c49d2",
+                        "Name": "vpc-core"
+                    }
+                },
+                {
+                    "SequenceNumber": 3,
+                    "Component": {
+                        "Id": "sg-0c2029b551e9b4df0",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:security-group/sg-0c2029b551e9b4df0",
+                        "Name": "vpc-core__webserver_frontend"
+                    },
+                    "SecurityGroupRule": {
+                        "Cidr": "0.0.0.0/0",
+                        "Direction": "egress",
+                        "Protocol": "all"
+                    }
+                },
+                {
+                    "SequenceNumber": 4,
+                    "AclRule": {
+                        "Cidr": "0.0.0.0/0",
+                        "Egress": true,
+                        "Protocol": "all",
+                        "RuleAction": "allow",
+                        "RuleNumber": 100
+                    },
+                    "Component": {
+                        "Id": "acl-0353730728793503d",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:network-acl/acl-0353730728793503d"
+                    }
+                },
+                {
+                    "SequenceNumber": 5,
+                    "Component": {
+                        "Id": "rtb-00c00cbe8c5e98845",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:route-table/rtb-00c00cbe8c5e98845",
+                        "Name": "RT:SN:vpc-core__vpc-core-app-subnet-a"
+                    },
+                    "RouteTableRoute": {
+                        "DestinationCidr": "0.0.0.0/0",
+                        "Origin": "createroute",
+                        "TransitGatewayId": "tgw-074469ec8879746c7",
+                        "State": "active"
+                    }
+                },
+                {
+                    "SequenceNumber": 6,
+                    "AclRule": {
+                        "Cidr": "0.0.0.0/0",
+                        "Egress": false,
+                        "Protocol": "all",
+                        "RuleAction": "allow",
+                        "RuleNumber": 100
+                    },
+                    "Component": {
+                        "Id": "acl-0353730728793503d",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:network-acl/acl-0353730728793503d"
+                    }
+                },
+                {
+                    "SequenceNumber": 7,
+                    "AttachedTo": {
+                        "Id": "tgw-attach-065ecccc5fa7bf6ea",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:transit-gateway-attachment/tgw-attach-065ecccc5fa7bf6ea"
+                    },
+                    "Component": {
+                        "Id": "eni-003ae404ddbc67db1",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:network-interface/eni-003ae404ddbc67db1"
+                    },
+                    "Subnet": {
+                        "Id": "subnet-09484d8f0c0ff60e3",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:subnet/subnet-09484d8f0c0ff60e3",
+                        "Name": "SN:vpc-core__vpc-core-tgw-subnet-a"
+                    },
+                    "Vpc": {
+                        "Id": "vpc-0ea68b304407c49d2",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:vpc/vpc-0ea68b304407c49d2",
+                        "Name": "vpc-core"
+                    }
+                },
+                {
+                    "SequenceNumber": 8,
+                    "AttachedTo": {
+                        "Id": "tgw-074469ec8879746c7",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:transit-gateway/tgw-074469ec8879746c7",
+                        "Name": "tgw_hub"
+                    },
+                    "Component": {
+                        "Id": "tgw-attach-065ecccc5fa7bf6ea",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:transit-gateway-attachment/tgw-attach-065ecccc5fa7bf6ea"
+                    },
+                    "TransitGateway": {
+                        "Id": "tgw-074469ec8879746c7",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:transit-gateway/tgw-074469ec8879746c7",
+                        "Name": "tgw_hub"
+                    }
+                },
+                {
+                    "SequenceNumber": 9,
+                    "Component": {
+                        "Id": "tgw-rtb-087d01329c974ce65",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:transit-gateway-route-table/tgw-rtb-087d01329c974ce65",
+                        "Name": "TGWRT:tgw_hub__spoke_rt"
+                    },
+                    "TransitGateway": {
+                        "Id": "tgw-074469ec8879746c7",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:transit-gateway/tgw-074469ec8879746c7",
+                        "Name": "tgw_hub"
+                    },
+                    "TransitGatewayRouteTableRoute": {
+                        "DestinationCidr": "0.0.0.0/0",
+                        "State": "active",
+                        "RouteOrigin": "static",
+                        "AttachmentId": "tgw-attach-08afb0febca2b1972",
+                        "ResourceId": "vpc-0692a5d13de4f4ab3",
+                        "ResourceType": "vpc"
+                    }
+                },
+                {
+                    "SequenceNumber": 10,
+                    "AttachedTo": {
+                        "Id": "tgw-074469ec8879746c7",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:transit-gateway/tgw-074469ec8879746c7",
+                        "Name": "tgw_hub"
+                    },
+                    "Component": {
+                        "Id": "tgw-attach-08afb0febca2b1972",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:transit-gateway-attachment/tgw-attach-08afb0febca2b1972"
+                    },
+                    "TransitGateway": {
+                        "Id": "tgw-074469ec8879746c7",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:transit-gateway/tgw-074469ec8879746c7",
+                        "Name": "tgw_hub"
+                    }
+                },
+                {
+                    "SequenceNumber": 11,
+                    "AttachedTo": {
+                        "Id": "tgw-attach-08afb0febca2b1972",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:transit-gateway-attachment/tgw-attach-08afb0febca2b1972"
+                    },
+                    "Component": {
+                        "Id": "eni-084dee8abff8d6980",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:network-interface/eni-084dee8abff8d6980"
+                    },
+                    "Subnet": {
+                        "Id": "subnet-0d3a25fdf02d98eb1",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:subnet/subnet-0d3a25fdf02d98eb1",
+                        "Name": "SN:vpc-inspection__vpc-inspection-tgw-subnet-b"
+                    },
+                    "Vpc": {
+                        "Id": "vpc-0692a5d13de4f4ab3",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:vpc/vpc-0692a5d13de4f4ab3",
+                        "Name": "vpc-inspection"
+                    },
+                    "AdditionalDetails": [
+                        {
+                            "AdditionalDetailType": "AVAILABILITY_ZONE_CROSSED"
+                        }
+                    ]
+                },
+                {
+                    "SequenceNumber": 12,
+                    "AclRule": {
+                        "Cidr": "0.0.0.0/0",
+                        "Egress": true,
+                        "Protocol": "all",
+                        "RuleAction": "allow",
+                        "RuleNumber": 100
+                    },
+                    "Component": {
+                        "Id": "acl-0f3fedf94ad81fe26",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:network-acl/acl-0f3fedf94ad81fe26"
+                    }
+                },
+                {
+                    "SequenceNumber": 13,
+                    "Component": {
+                        "Id": "rtb-079fe91e35e544355",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:route-table/rtb-079fe91e35e544355",
+                        "Name": "RT:SN:vpc-inspection__vpc-inspection-tgw-subnet-b"
+                    },
+                    "RouteTableRoute": {
+                        "DestinationCidr": "0.0.0.0/0",
+                        "GatewayId": "vpce-0fff27bc8bd67cdc2",
+                        "Origin": "createroute",
+                        "State": "active"
+                    }
+                },
+                {
+                    "SequenceNumber": 14,
+                    "AclRule": {
+                        "Cidr": "0.0.0.0/0",
+                        "Egress": false,
+                        "Protocol": "all",
+                        "RuleAction": "allow",
+                        "RuleNumber": 100
+                    },
+                    "Component": {
+                        "Id": "acl-0f3fedf94ad81fe26",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:network-acl/acl-0f3fedf94ad81fe26"
+                    }
+                },
+                {
+                    "SequenceNumber": 15,
+                    "AttachedTo": {
+                        "Id": "vpce-0fff27bc8bd67cdc2",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:vpc-endpoint/vpce-0fff27bc8bd67cdc2",
+                        "Name": "test-fw (us-east-2b)"
+                    },
+                    "Component": {
+                        "Id": "eni-001196a6c906d64e2",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:network-interface/eni-001196a6c906d64e2"
+                    },
+                    "Subnet": {
+                        "Id": "subnet-0d5af17c165cafd81",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:subnet/subnet-0d5af17c165cafd81",
+                        "Name": "SN:vpc-inspection__vpc-inspection-fw-subnet-b"
+                    },
+                    "Vpc": {
+                        "Id": "vpc-0692a5d13de4f4ab3",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:vpc/vpc-0692a5d13de4f4ab3",
+                        "Name": "vpc-inspection"
+                    }
+                },
+                {
+                    "SequenceNumber": 16,
+                    "Component": {
+                        "Id": "vpce-0fff27bc8bd67cdc2",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:vpc-endpoint/vpce-0fff27bc8bd67cdc2",
+                        "Name": "test-fw (us-east-2b)"
+                    },
+                    "Vpc": {
+                        "Id": "vpc-0692a5d13de4f4ab3",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:vpc/vpc-0692a5d13de4f4ab3",
+                        "Name": "vpc-inspection"
+                    },
+                    "ServiceName": "com.amazonaws.vpce.us-east-2.vpce-svc-0312cff7ae2beaeab"
+                },
+                {
+                    "SequenceNumber": 17,
+                    "Component": {
+                        "Id": "test-fw",
+                        "Arn": "arn:aws:network-firewall:us-east-2:131948736146:firewall/test-fw",
+                        "Name": "test-fw"
+                    },
+                    "FirewallStatelessRule": {
+                        "RuleGroupArn": "arn:aws:network-firewall:us-east-2:131948736146:firewall-policy/test-policy",
+                        "RuleAction": "pass",
+                        "Priority": -1
+                    }
+                },
+                {
+                    "SequenceNumber": 18,
+                    "Component": {
+                        "Id": "vpce-0fff27bc8bd67cdc2",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:vpc-endpoint/vpce-0fff27bc8bd67cdc2",
+                        "Name": "test-fw (us-east-2b)"
+                    },
+                    "Vpc": {
+                        "Id": "vpc-0692a5d13de4f4ab3",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:vpc/vpc-0692a5d13de4f4ab3",
+                        "Name": "vpc-inspection"
+                    },
+                    "ServiceName": "com.amazonaws.vpce.us-east-2.vpce-svc-0312cff7ae2beaeab"
+                },
+                {
+                    "SequenceNumber": 19,
+                    "AttachedTo": {
+                        "Id": "vpce-0fff27bc8bd67cdc2",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:vpc-endpoint/vpce-0fff27bc8bd67cdc2",
+                        "Name": "test-fw (us-east-2b)"
+                    },
+                    "Component": {
+                        "Id": "eni-001196a6c906d64e2",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:network-interface/eni-001196a6c906d64e2"
+                    },
+                    "Subnet": {
+                        "Id": "subnet-0d5af17c165cafd81",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:subnet/subnet-0d5af17c165cafd81",
+                        "Name": "SN:vpc-inspection__vpc-inspection-fw-subnet-b"
+                    },
+                    "Vpc": {
+                        "Id": "vpc-0692a5d13de4f4ab3",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:vpc/vpc-0692a5d13de4f4ab3",
+                        "Name": "vpc-inspection"
+                    }
+                },
+                {
+                    "SequenceNumber": 20,
+                    "AclRule": {
+                        "Cidr": "0.0.0.0/0",
+                        "Egress": true,
+                        "Protocol": "all",
+                        "RuleAction": "allow",
+                        "RuleNumber": 100
+                    },
+                    "Component": {
+                        "Id": "acl-0f3fedf94ad81fe26",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:network-acl/acl-0f3fedf94ad81fe26"
+                    }
+                },
+                {
+                    "SequenceNumber": 21,
+                    "Component": {
+                        "Id": "rtb-0c2ae61b6014cabdd",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:route-table/rtb-0c2ae61b6014cabdd",
+                        "Name": "RT:SN:vpc-inspection__vpc-inspection-fw-subnet-b"
+                    },
+                    "RouteTableRoute": {
+                        "DestinationCidr": "0.0.0.0/0",
+                        "Origin": "createroute",
+                        "TransitGatewayId": "tgw-074469ec8879746c7",
+                        "State": "active"
+                    }
+                },
+                {
+                    "SequenceNumber": 22,
+                    "AclRule": {
+                        "Cidr": "0.0.0.0/0",
+                        "Egress": false,
+                        "Protocol": "all",
+                        "RuleAction": "allow",
+                        "RuleNumber": 100
+                    },
+                    "Component": {
+                        "Id": "acl-0f3fedf94ad81fe26",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:network-acl/acl-0f3fedf94ad81fe26"
+                    }
+                },
+                {
+                    "SequenceNumber": 23,
+                    "AttachedTo": {
+                        "Id": "tgw-attach-08afb0febca2b1972",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:transit-gateway-attachment/tgw-attach-08afb0febca2b1972"
+                    },
+                    "Component": {
+                        "Id": "eni-084dee8abff8d6980",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:network-interface/eni-084dee8abff8d6980"
+                    },
+                    "Subnet": {
+                        "Id": "subnet-0d3a25fdf02d98eb1",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:subnet/subnet-0d3a25fdf02d98eb1",
+                        "Name": "SN:vpc-inspection__vpc-inspection-tgw-subnet-b"
+                    },
+                    "Vpc": {
+                        "Id": "vpc-0692a5d13de4f4ab3",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:vpc/vpc-0692a5d13de4f4ab3",
+                        "Name": "vpc-inspection"
+                    }
+                },
+                {
+                    "SequenceNumber": 24,
+                    "AttachedTo": {
+                        "Id": "tgw-074469ec8879746c7",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:transit-gateway/tgw-074469ec8879746c7",
+                        "Name": "tgw_hub"
+                    },
+                    "Component": {
+                        "Id": "tgw-attach-08afb0febca2b1972",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:transit-gateway-attachment/tgw-attach-08afb0febca2b1972"
+                    },
+                    "TransitGateway": {
+                        "Id": "tgw-074469ec8879746c7",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:transit-gateway/tgw-074469ec8879746c7",
+                        "Name": "tgw_hub"
+                    }
+                },
+                {
+                    "SequenceNumber": 25,
+                    "Component": {
+                        "Id": "tgw-rtb-02cdc11900f9f73e6",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:transit-gateway-route-table/tgw-rtb-02cdc11900f9f73e6",
+                        "Name": "TGWRT:tgw_hub__inspection_rt"
+                    },
+                    "TransitGateway": {
+                        "Id": "tgw-074469ec8879746c7",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:transit-gateway/tgw-074469ec8879746c7",
+                        "Name": "tgw_hub"
+                    },
+                    "TransitGatewayRouteTableRoute": {
+                        "DestinationCidr": "10.5.0.0/16",
+                        "State": "active",
+                        "RouteOrigin": "propagated",
+                        "AttachmentId": "tgw-attach-019985d46dba02fea",
+                        "ResourceId": "vpc-0ed04c73a594d0fb4",
+                        "ResourceType": "vpc"
+                    }
+                },
+                {
+                    "SequenceNumber": 26,
+                    "AttachedTo": {
+                        "Id": "tgw-074469ec8879746c7",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:transit-gateway/tgw-074469ec8879746c7",
+                        "Name": "tgw_hub"
+                    },
+                    "Component": {
+                        "Id": "tgw-attach-019985d46dba02fea",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:transit-gateway-attachment/tgw-attach-019985d46dba02fea"
+                    },
+                    "TransitGateway": {
+                        "Id": "tgw-074469ec8879746c7",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:transit-gateway/tgw-074469ec8879746c7",
+                        "Name": "tgw_hub"
+                    }
+                },
+                {
+                    "SequenceNumber": 27,
+                    "AttachedTo": {
+                        "Id": "tgw-attach-019985d46dba02fea",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:transit-gateway-attachment/tgw-attach-019985d46dba02fea"
+                    },
+                    "Component": {
+                        "Id": "eni-0d7dd789fc8fb61ca",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:network-interface/eni-0d7dd789fc8fb61ca"
+                    },
+                    "Subnet": {
+                        "Id": "subnet-06c537a9beb13de31",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:subnet/subnet-06c537a9beb13de31",
+                        "Name": "SN:vpc-app__vpc-app-tgw-subnet-b"
+                    },
+                    "Vpc": {
+                        "Id": "vpc-0ed04c73a594d0fb4",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:vpc/vpc-0ed04c73a594d0fb4",
+                        "Name": "vpc-app"
+                    }
+                },
+                {
+                    "SequenceNumber": 28,
+                    "AclRule": {
+                        "Cidr": "0.0.0.0/0",
+                        "Egress": true,
+                        "Protocol": "all",
+                        "RuleAction": "allow",
+                        "RuleNumber": 100
+                    },
+                    "Component": {
+                        "Id": "acl-0a2d02c5e2e8cea9a",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:network-acl/acl-0a2d02c5e2e8cea9a"
+                    }
+                },
+                {
+                    "SequenceNumber": 29,
+                    "Component": {
+                        "Id": "rtb-07763ec3df2a587bb",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:route-table/rtb-07763ec3df2a587bb",
+                        "Name": "RT:SN:vpc-app__vpc-app-tgw-subnet-b"
+                    },
+                    "RouteTableRoute": {
+                        "DestinationCidr": "10.5.0.0/16",
+                        "GatewayId": "local",
+                        "Origin": "createroutetable",
+                        "State": "active"
+                    }
+                },
+                {
+                    "SequenceNumber": 30,
+                    "AclRule": {
+                        "Cidr": "0.0.0.0/0",
+                        "Egress": false,
+                        "Protocol": "all",
+                        "RuleAction": "allow",
+                        "RuleNumber": 100
+                    },
+                    "Component": {
+                        "Id": "acl-0a2d02c5e2e8cea9a",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:network-acl/acl-0a2d02c5e2e8cea9a"
+                    }
+                },
+                {
+                    "SequenceNumber": 31,
+                    "Component": {
+                        "Id": "sg-0c678db3130061aa3",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:security-group/sg-0c678db3130061aa3",
+                        "Name": "vpc-app__webserver_frontend"
+                    },
+                    "SecurityGroupRule": {
+                        "Cidr": "0.0.0.0/0",
+                        "Direction": "ingress",
+                        "PortRange": {
+                            "From": 443,
+                            "To": 443
+                        },
+                        "Protocol": "tcp"
+                    }
+                },
+                {
+                    "SequenceNumber": 32,
+                    "AttachedTo": {
+                        "Id": "i-0e255dc6f9b07147e",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:instance/i-0e255dc6f9b07147e",
+                        "Name": "web_20"
+                    },
+                    "Component": {
+                        "Id": "eni-09accef832c42c115",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:network-interface/eni-09accef832c42c115",
+                        "Name": "web_20__nic0"
+                    },
+                    "Subnet": {
+                        "Id": "subnet-046052624a6ff8383",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:subnet/subnet-046052624a6ff8383",
+                        "Name": "SN:vpc-app__vpc-app-app-subnet-a"
+                    },
+                    "Vpc": {
+                        "Id": "vpc-0ed04c73a594d0fb4",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:vpc/vpc-0ed04c73a594d0fb4",
+                        "Name": "vpc-app"
+                    },
+                    "AdditionalDetails": [
+                        {
+                            "AdditionalDetailType": "AVAILABILITY_ZONE_CROSSED"
+                        }
+                    ]
+                },
+                {
+                    "SequenceNumber": 33,
+                    "Component": {
+                        "Id": "i-0e255dc6f9b07147e",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:instance/i-0e255dc6f9b07147e",
+                        "Name": "web_20"
+                    },
+                    "InboundHeader": {
+                        "DestinationAddresses": [
+                            "10.5.4.248/32"
+                        ],
+                        "DestinationPortRanges": [
+                            {
+                                "From": 443,
+                                "To": 443
+                            }
+                        ],
+                        "Protocol": "6",
+                        "SourceAddresses": [
+                            "10.4.4.154/32"
+                        ],
+                        "SourcePortRanges": [
+                            {
+                                "From": 0,
+                                "To": 65535
+                            }
+                        ]
+                    }
+                }
+            ],
+            "ReturnPathComponents": [
+                {
+                    "SequenceNumber": 1,
+                    "Component": {
+                        "Id": "i-0e255dc6f9b07147e",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:instance/i-0e255dc6f9b07147e",
+                        "Name": "web_20"
+                    },
+                    "OutboundHeader": {
+                        "DestinationAddresses": [
+                            "10.4.4.154/32"
+                        ],
+                        "DestinationPortRanges": [
+                            {
+                                "From": 0,
+                                "To": 65535
+                            }
+                        ],
+                        "Protocol": "6",
+                        "SourceAddresses": [
+                            "10.5.4.248/32"
+                        ],
+                        "SourcePortRanges": [
+                            {
+                                "From": 443,
+                                "To": 443
+                            }
+                        ]
+                    }
+                },
+                {
+                    "SequenceNumber": 2,
+                    "AttachedTo": {
+                        "Id": "i-0e255dc6f9b07147e",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:instance/i-0e255dc6f9b07147e",
+                        "Name": "web_20"
+                    },
+                    "Component": {
+                        "Id": "eni-09accef832c42c115",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:network-interface/eni-09accef832c42c115",
+                        "Name": "web_20__nic0"
+                    },
+                    "Subnet": {
+                        "Id": "subnet-046052624a6ff8383",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:subnet/subnet-046052624a6ff8383",
+                        "Name": "SN:vpc-app__vpc-app-app-subnet-a"
+                    },
+                    "Vpc": {
+                        "Id": "vpc-0ed04c73a594d0fb4",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:vpc/vpc-0ed04c73a594d0fb4",
+                        "Name": "vpc-app"
+                    }
+                },
+                {
+                    "SequenceNumber": 3,
+                    "Component": {
+                        "Id": "sg-0c678db3130061aa3",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:security-group/sg-0c678db3130061aa3",
+                        "Name": "vpc-app__webserver_frontend"
+                    }
+                },
+                {
+                    "SequenceNumber": 4,
+                    "AclRule": {
+                        "Cidr": "0.0.0.0/0",
+                        "Egress": true,
+                        "Protocol": "all",
+                        "RuleAction": "allow",
+                        "RuleNumber": 100
+                    },
+                    "Component": {
+                        "Id": "acl-0a2d02c5e2e8cea9a",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:network-acl/acl-0a2d02c5e2e8cea9a"
+                    }
+                },
+                {
+                    "SequenceNumber": 5,
+                    "Component": {
+                        "Id": "rtb-0bdcca6cb8df263c7",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:route-table/rtb-0bdcca6cb8df263c7",
+                        "Name": "RT:SN:vpc-app__vpc-app-app-subnet-a"
+                    },
+                    "RouteTableRoute": {
+                        "DestinationCidr": "0.0.0.0/0",
+                        "Origin": "createroute",
+                        "TransitGatewayId": "tgw-074469ec8879746c7",
+                        "State": "active"
+                    }
+                },
+                {
+                    "SequenceNumber": 6,
+                    "AclRule": {
+                        "Cidr": "0.0.0.0/0",
+                        "Egress": false,
+                        "Protocol": "all",
+                        "RuleAction": "allow",
+                        "RuleNumber": 100
+                    },
+                    "Component": {
+                        "Id": "acl-0a2d02c5e2e8cea9a",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:network-acl/acl-0a2d02c5e2e8cea9a"
+                    }
+                },
+                {
+                    "SequenceNumber": 7,
+                    "AttachedTo": {
+                        "Id": "tgw-attach-019985d46dba02fea",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:transit-gateway-attachment/tgw-attach-019985d46dba02fea"
+                    },
+                    "Component": {
+                        "Id": "eni-0560328ce4773fa5f",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:network-interface/eni-0560328ce4773fa5f"
+                    },
+                    "Subnet": {
+                        "Id": "subnet-0ab8ffb86cdcf34a2",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:subnet/subnet-0ab8ffb86cdcf34a2",
+                        "Name": "SN:vpc-app__vpc-app-tgw-subnet-a"
+                    },
+                    "Vpc": {
+                        "Id": "vpc-0ed04c73a594d0fb4",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:vpc/vpc-0ed04c73a594d0fb4",
+                        "Name": "vpc-app"
+                    }
+                },
+                {
+                    "SequenceNumber": 8,
+                    "AttachedTo": {
+                        "Id": "tgw-074469ec8879746c7",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:transit-gateway/tgw-074469ec8879746c7",
+                        "Name": "tgw_hub"
+                    },
+                    "Component": {
+                        "Id": "tgw-attach-019985d46dba02fea",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:transit-gateway-attachment/tgw-attach-019985d46dba02fea"
+                    },
+                    "TransitGateway": {
+                        "Id": "tgw-074469ec8879746c7",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:transit-gateway/tgw-074469ec8879746c7",
+                        "Name": "tgw_hub"
+                    }
+                },
+                {
+                    "SequenceNumber": 9,
+                    "Component": {
+                        "Id": "tgw-rtb-087d01329c974ce65",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:transit-gateway-route-table/tgw-rtb-087d01329c974ce65",
+                        "Name": "TGWRT:tgw_hub__spoke_rt"
+                    },
+                    "TransitGateway": {
+                        "Id": "tgw-074469ec8879746c7",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:transit-gateway/tgw-074469ec8879746c7",
+                        "Name": "tgw_hub"
+                    },
+                    "TransitGatewayRouteTableRoute": {
+                        "DestinationCidr": "0.0.0.0/0",
+                        "State": "active",
+                        "RouteOrigin": "static",
+                        "AttachmentId": "tgw-attach-08afb0febca2b1972",
+                        "ResourceId": "vpc-0692a5d13de4f4ab3",
+                        "ResourceType": "vpc"
+                    }
+                },
+                {
+                    "SequenceNumber": 10,
+                    "AttachedTo": {
+                        "Id": "tgw-074469ec8879746c7",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:transit-gateway/tgw-074469ec8879746c7",
+                        "Name": "tgw_hub"
+                    },
+                    "Component": {
+                        "Id": "tgw-attach-08afb0febca2b1972",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:transit-gateway-attachment/tgw-attach-08afb0febca2b1972"
+                    },
+                    "TransitGateway": {
+                        "Id": "tgw-074469ec8879746c7",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:transit-gateway/tgw-074469ec8879746c7",
+                        "Name": "tgw_hub"
+                    }
+                },
+                {
+                    "SequenceNumber": 11,
+                    "AttachedTo": {
+                        "Id": "tgw-attach-08afb0febca2b1972",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:transit-gateway-attachment/tgw-attach-08afb0febca2b1972"
+                    },
+                    "Component": {
+                        "Id": "eni-084dee8abff8d6980",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:network-interface/eni-084dee8abff8d6980"
+                    },
+                    "Subnet": {
+                        "Id": "subnet-0d3a25fdf02d98eb1",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:subnet/subnet-0d3a25fdf02d98eb1",
+                        "Name": "SN:vpc-inspection__vpc-inspection-tgw-subnet-b"
+                    },
+                    "Vpc": {
+                        "Id": "vpc-0692a5d13de4f4ab3",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:vpc/vpc-0692a5d13de4f4ab3",
+                        "Name": "vpc-inspection"
+                    },
+                    "AdditionalDetails": [
+                        {
+                            "AdditionalDetailType": "AVAILABILITY_ZONE_CROSSED"
+                        }
+                    ]
+                },
+                {
+                    "SequenceNumber": 12,
+                    "AclRule": {
+                        "Cidr": "0.0.0.0/0",
+                        "Egress": true,
+                        "Protocol": "all",
+                        "RuleAction": "allow",
+                        "RuleNumber": 100
+                    },
+                    "Component": {
+                        "Id": "acl-0f3fedf94ad81fe26",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:network-acl/acl-0f3fedf94ad81fe26"
+                    }
+                },
+                {
+                    "SequenceNumber": 13,
+                    "Component": {
+                        "Id": "rtb-079fe91e35e544355",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:route-table/rtb-079fe91e35e544355",
+                        "Name": "RT:SN:vpc-inspection__vpc-inspection-tgw-subnet-b"
+                    },
+                    "RouteTableRoute": {
+                        "DestinationCidr": "0.0.0.0/0",
+                        "GatewayId": "vpce-0fff27bc8bd67cdc2",
+                        "Origin": "createroute",
+                        "State": "active"
+                    }
+                },
+                {
+                    "SequenceNumber": 14,
+                    "AclRule": {
+                        "Cidr": "0.0.0.0/0",
+                        "Egress": false,
+                        "Protocol": "all",
+                        "RuleAction": "allow",
+                        "RuleNumber": 100
+                    },
+                    "Component": {
+                        "Id": "acl-0f3fedf94ad81fe26",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:network-acl/acl-0f3fedf94ad81fe26"
+                    }
+                },
+                {
+                    "SequenceNumber": 15,
+                    "AttachedTo": {
+                        "Id": "vpce-0fff27bc8bd67cdc2",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:vpc-endpoint/vpce-0fff27bc8bd67cdc2",
+                        "Name": "test-fw (us-east-2b)"
+                    },
+                    "Component": {
+                        "Id": "eni-001196a6c906d64e2",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:network-interface/eni-001196a6c906d64e2"
+                    },
+                    "Subnet": {
+                        "Id": "subnet-0d5af17c165cafd81",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:subnet/subnet-0d5af17c165cafd81",
+                        "Name": "SN:vpc-inspection__vpc-inspection-fw-subnet-b"
+                    },
+                    "Vpc": {
+                        "Id": "vpc-0692a5d13de4f4ab3",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:vpc/vpc-0692a5d13de4f4ab3",
+                        "Name": "vpc-inspection"
+                    }
+                },
+                {
+                    "SequenceNumber": 16,
+                    "Component": {
+                        "Id": "vpce-0fff27bc8bd67cdc2",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:vpc-endpoint/vpce-0fff27bc8bd67cdc2",
+                        "Name": "test-fw (us-east-2b)"
+                    },
+                    "Vpc": {
+                        "Id": "vpc-0692a5d13de4f4ab3",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:vpc/vpc-0692a5d13de4f4ab3",
+                        "Name": "vpc-inspection"
+                    },
+                    "ServiceName": "com.amazonaws.vpce.us-east-2.vpce-svc-0312cff7ae2beaeab"
+                },
+                {
+                    "SequenceNumber": 17,
+                    "Component": {
+                        "Id": "test-fw",
+                        "Arn": "arn:aws:network-firewall:us-east-2:131948736146:firewall/test-fw",
+                        "Name": "test-fw"
+                    },
+                    "FirewallStatelessRule": {
+                        "RuleGroupArn": "arn:aws:network-firewall:us-east-2:131948736146:firewall-policy/test-policy",
+                        "RuleAction": "pass",
+                        "Priority": -1
+                    }
+                },
+                {
+                    "SequenceNumber": 18,
+                    "Component": {
+                        "Id": "vpce-0fff27bc8bd67cdc2",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:vpc-endpoint/vpce-0fff27bc8bd67cdc2",
+                        "Name": "test-fw (us-east-2b)"
+                    },
+                    "Vpc": {
+                        "Id": "vpc-0692a5d13de4f4ab3",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:vpc/vpc-0692a5d13de4f4ab3",
+                        "Name": "vpc-inspection"
+                    },
+                    "ServiceName": "com.amazonaws.vpce.us-east-2.vpce-svc-0312cff7ae2beaeab"
+                },
+                {
+                    "SequenceNumber": 19,
+                    "AttachedTo": {
+                        "Id": "vpce-0fff27bc8bd67cdc2",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:vpc-endpoint/vpce-0fff27bc8bd67cdc2",
+                        "Name": "test-fw (us-east-2b)"
+                    },
+                    "Component": {
+                        "Id": "eni-001196a6c906d64e2",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:network-interface/eni-001196a6c906d64e2"
+                    },
+                    "Subnet": {
+                        "Id": "subnet-0d5af17c165cafd81",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:subnet/subnet-0d5af17c165cafd81",
+                        "Name": "SN:vpc-inspection__vpc-inspection-fw-subnet-b"
+                    },
+                    "Vpc": {
+                        "Id": "vpc-0692a5d13de4f4ab3",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:vpc/vpc-0692a5d13de4f4ab3",
+                        "Name": "vpc-inspection"
+                    }
+                },
+                {
+                    "SequenceNumber": 20,
+                    "AclRule": {
+                        "Cidr": "0.0.0.0/0",
+                        "Egress": true,
+                        "Protocol": "all",
+                        "RuleAction": "allow",
+                        "RuleNumber": 100
+                    },
+                    "Component": {
+                        "Id": "acl-0f3fedf94ad81fe26",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:network-acl/acl-0f3fedf94ad81fe26"
+                    }
+                },
+                {
+                    "SequenceNumber": 21,
+                    "Component": {
+                        "Id": "rtb-0c2ae61b6014cabdd",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:route-table/rtb-0c2ae61b6014cabdd",
+                        "Name": "RT:SN:vpc-inspection__vpc-inspection-fw-subnet-b"
+                    },
+                    "RouteTableRoute": {
+                        "DestinationCidr": "0.0.0.0/0",
+                        "Origin": "createroute",
+                        "TransitGatewayId": "tgw-074469ec8879746c7",
+                        "State": "active"
+                    }
+                },
+                {
+                    "SequenceNumber": 22,
+                    "AclRule": {
+                        "Cidr": "0.0.0.0/0",
+                        "Egress": false,
+                        "Protocol": "all",
+                        "RuleAction": "allow",
+                        "RuleNumber": 100
+                    },
+                    "Component": {
+                        "Id": "acl-0f3fedf94ad81fe26",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:network-acl/acl-0f3fedf94ad81fe26"
+                    }
+                },
+                {
+                    "SequenceNumber": 23,
+                    "AttachedTo": {
+                        "Id": "tgw-attach-08afb0febca2b1972",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:transit-gateway-attachment/tgw-attach-08afb0febca2b1972"
+                    },
+                    "Component": {
+                        "Id": "eni-084dee8abff8d6980",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:network-interface/eni-084dee8abff8d6980"
+                    },
+                    "Subnet": {
+                        "Id": "subnet-0d3a25fdf02d98eb1",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:subnet/subnet-0d3a25fdf02d98eb1",
+                        "Name": "SN:vpc-inspection__vpc-inspection-tgw-subnet-b"
+                    },
+                    "Vpc": {
+                        "Id": "vpc-0692a5d13de4f4ab3",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:vpc/vpc-0692a5d13de4f4ab3",
+                        "Name": "vpc-inspection"
+                    }
+                },
+                {
+                    "SequenceNumber": 24,
+                    "AttachedTo": {
+                        "Id": "tgw-074469ec8879746c7",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:transit-gateway/tgw-074469ec8879746c7",
+                        "Name": "tgw_hub"
+                    },
+                    "Component": {
+                        "Id": "tgw-attach-08afb0febca2b1972",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:transit-gateway-attachment/tgw-attach-08afb0febca2b1972"
+                    },
+                    "TransitGateway": {
+                        "Id": "tgw-074469ec8879746c7",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:transit-gateway/tgw-074469ec8879746c7",
+                        "Name": "tgw_hub"
+                    }
+                },
+                {
+                    "SequenceNumber": 25,
+                    "Component": {
+                        "Id": "tgw-rtb-02cdc11900f9f73e6",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:transit-gateway-route-table/tgw-rtb-02cdc11900f9f73e6",
+                        "Name": "TGWRT:tgw_hub__inspection_rt"
+                    },
+                    "TransitGateway": {
+                        "Id": "tgw-074469ec8879746c7",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:transit-gateway/tgw-074469ec8879746c7",
+                        "Name": "tgw_hub"
+                    },
+                    "TransitGatewayRouteTableRoute": {
+                        "DestinationCidr": "10.4.0.0/16",
+                        "State": "active",
+                        "RouteOrigin": "propagated",
+                        "AttachmentId": "tgw-attach-065ecccc5fa7bf6ea",
+                        "ResourceId": "vpc-0ea68b304407c49d2",
+                        "ResourceType": "vpc"
+                    }
+                },
+                {
+                    "SequenceNumber": 26,
+                    "AttachedTo": {
+                        "Id": "tgw-074469ec8879746c7",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:transit-gateway/tgw-074469ec8879746c7",
+                        "Name": "tgw_hub"
+                    },
+                    "Component": {
+                        "Id": "tgw-attach-065ecccc5fa7bf6ea",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:transit-gateway-attachment/tgw-attach-065ecccc5fa7bf6ea"
+                    },
+                    "TransitGateway": {
+                        "Id": "tgw-074469ec8879746c7",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:transit-gateway/tgw-074469ec8879746c7",
+                        "Name": "tgw_hub"
+                    }
+                },
+                {
+                    "SequenceNumber": 27,
+                    "AttachedTo": {
+                        "Id": "tgw-attach-065ecccc5fa7bf6ea",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:transit-gateway-attachment/tgw-attach-065ecccc5fa7bf6ea"
+                    },
+                    "Component": {
+                        "Id": "eni-0225e9823525f054a",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:network-interface/eni-0225e9823525f054a"
+                    },
+                    "Subnet": {
+                        "Id": "subnet-036b13314a2916c95",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:subnet/subnet-036b13314a2916c95",
+                        "Name": "SN:vpc-core__vpc-core-tgw-subnet-b"
+                    },
+                    "Vpc": {
+                        "Id": "vpc-0ea68b304407c49d2",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:vpc/vpc-0ea68b304407c49d2",
+                        "Name": "vpc-core"
+                    }
+                },
+                {
+                    "SequenceNumber": 28,
+                    "AclRule": {
+                        "Cidr": "0.0.0.0/0",
+                        "Egress": true,
+                        "Protocol": "all",
+                        "RuleAction": "allow",
+                        "RuleNumber": 100
+                    },
+                    "Component": {
+                        "Id": "acl-0353730728793503d",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:network-acl/acl-0353730728793503d"
+                    }
+                },
+                {
+                    "SequenceNumber": 29,
+                    "Component": {
+                        "Id": "rtb-02d5e372f8648806e",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:route-table/rtb-02d5e372f8648806e",
+                        "Name": "RT:SN:vpc-core__vpc-core-tgw-subnet-b"
+                    },
+                    "RouteTableRoute": {
+                        "DestinationCidr": "10.4.0.0/16",
+                        "GatewayId": "local",
+                        "Origin": "createroutetable",
+                        "State": "active"
+                    }
+                },
+                {
+                    "SequenceNumber": 30,
+                    "AclRule": {
+                        "Cidr": "0.0.0.0/0",
+                        "Egress": false,
+                        "Protocol": "all",
+                        "RuleAction": "allow",
+                        "RuleNumber": 100
+                    },
+                    "Component": {
+                        "Id": "acl-0353730728793503d",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:network-acl/acl-0353730728793503d"
+                    }
+                },
+                {
+                    "SequenceNumber": 31,
+                    "Component": {
+                        "Id": "sg-0c2029b551e9b4df0",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:security-group/sg-0c2029b551e9b4df0",
+                        "Name": "vpc-core__webserver_frontend"
+                    }
+                },
+                {
+                    "SequenceNumber": 32,
+                    "AttachedTo": {
+                        "Id": "i-073dab69e9fa2f855",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:instance/i-073dab69e9fa2f855",
+                        "Name": "web_10"
+                    },
+                    "Component": {
+                        "Id": "eni-06f7b3319b796be3c",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:network-interface/eni-06f7b3319b796be3c",
+                        "Name": "web_10__nic0"
+                    },
+                    "Subnet": {
+                        "Id": "subnet-0b5d6ed9879935a6b",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:subnet/subnet-0b5d6ed9879935a6b",
+                        "Name": "SN:vpc-core__vpc-core-app-subnet-a"
+                    },
+                    "Vpc": {
+                        "Id": "vpc-0ea68b304407c49d2",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:vpc/vpc-0ea68b304407c49d2",
+                        "Name": "vpc-core"
+                    },
+                    "AdditionalDetails": [
+                        {
+                            "AdditionalDetailType": "AVAILABILITY_ZONE_CROSSED"
+                        }
+                    ]
+                },
+                {
+                    "SequenceNumber": 33,
+                    "Component": {
+                        "Id": "i-073dab69e9fa2f855",
+                        "Arn": "arn:aws:ec2:us-east-2:131948736146:instance/i-073dab69e9fa2f855",
+                        "Name": "web_10"
+                    },
+                    "InboundHeader": {
+                        "DestinationAddresses": [
+                            "10.4.4.154/32"
+                        ],
+                        "DestinationPortRanges": [
+                            {
+                                "From": 0,
+                                "To": 65535
+                            }
+                        ],
+                        "Protocol": "6",
+                        "SourceAddresses": [
+                            "10.5.4.248/32"
+                        ],
+                        "SourcePortRanges": [
+                            {
+                                "From": 443,
+                                "To": 443
+                            }
+                        ]
+                    }
+                }
+            ],
+            "Tags": []
+        }
+    ]
+}
