@@ -589,9 +589,9 @@ resource "aws_flow_log" "main" {
   region                = each.value.region
   traffic_type          = each.value.traffic_type
   log_destination_type  = each.value.log_destination_type
-  log_destination       = aws_cloudwatch_log_group.flow_logs[each.value.log_destination_key].arn
+  iam_role_arn          = each.value.log_destination_type == "cloud-watch-logs" ? aws_iam_role.main[each.value.iam_role_key].arn : null
+  log_destination       = each.value.log_destination_type == "cloud-watch-logs" ? aws_cloudwatch_log_group.flow_logs[each.value.log_destination_key].arn : each.value.log_destination_type == "s3" ? "bucket_key_lookup_placeholder" : "kinesis_key_lookup_placeholder"
   vpc_id                = each.value.att_type == "vpc" ? aws_vpc.main[each.value.vpc_key].id : null
   subnet_id             = each.value.att_type == "subnet" ? aws_subnet.main[each.value.subnet_key].id : null
-  iam_role_arn          = each.value.iam_role_arn
 }
 

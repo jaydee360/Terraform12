@@ -924,7 +924,7 @@ locals {
     for fl_key, fl_obj in local.vpc_flow_logs_merged : fl_key => merge(
       fl_obj,
       fl_obj.log_destination_type == "cloud-watch-logs" ? {
-        iam_role_arn        = aws_iam_role.main[fl_obj.iam_role_key].arn
+        iam_role_key        = fl_obj.iam_role_key
         log_destination_key = "${fl_obj.region}__${fl_obj.log_namespace_1}__${fl_obj.log_namespace_2}__${fl_obj.log_namespace_3}"
         log_group_name      = "/aws/${fl_obj.log_namespace_1}/${fl_obj.log_namespace_2}/${fl_obj.log_namespace_3}"
       } : fl_obj.log_destination_type == "s3" ? {
@@ -952,7 +952,7 @@ locals {
     for fl_key, fl_obj in local.subnet_flow_logs_merged : fl_key => merge(
       fl_obj,
       fl_obj.log_destination_type == "cloud-watch-logs" ? {
-        iam_role_arn        = aws_iam_role.main[fl_obj.iam_role_key].arn
+        iam_role_key        = fl_obj.iam_role_key
         log_destination_key = "${fl_obj.region}__${fl_obj.log_namespace_1}__${fl_obj.log_namespace_2}__${fl_obj.log_namespace_3}"
         log_group_name      = "/aws/${fl_obj.log_namespace_1}/${fl_obj.log_namespace_2}/${fl_obj.log_namespace_3}"
       } : fl_obj.log_destination_type == "s3" ? {
