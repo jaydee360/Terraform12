@@ -13,6 +13,45 @@ resource "aws_vpc" "main" {
   )
 }
 
+resource "aws_vpc_peering_connection" "requester" {
+  for_each    = local.vpc_peering_map
+
+  vpc_id      = aws_vpc.main[each.value.requester].id
+  peer_vpc_id = aws_vpc.main[each.value.accepter].id
+  auto_accept = each.value.requester_auto
+}
+
+resource "aws_vpc_peering_connection_accepter" "accepter" {
+  for_each                  = local.vpc_peering_map
+
+  vpc_peering_connection_id = aws_vpc_peering_connection.requester[each.key].id
+  auto_accept               = each.value.accepter_auto
+}
+
+resource "aws_vpc_peering_connection_options" "requester" {
+  for_each                  = local.vpc_peering_map
+
+  vpc_peering_connection_id = aws_vpc_peering_connection.requester[each.key].id
+
+  requester {
+    allow_remote_vpc_dns_resolution = each.value.requester_allow_dns
+  }
+
+  depends_on = [aws_vpc_peering_connection_accepter.accepter]
+}
+
+resource "aws_vpc_peering_connection_options" "accepter" {
+  for_each                  = local.vpc_peering_map
+  
+  vpc_peering_connection_id = aws_vpc_peering_connection.requester[each.key].id
+  
+  accepter {
+    allow_remote_vpc_dns_resolution = each.value.accepter_allow_dns
+  }
+  
+  depends_on = [aws_vpc_peering_connection_accepter.accepter]
+}
+
 resource "aws_subnet" "main" {
   # Creates one subnet per entry in subnet_map, using its CIDR block, resolved AZ, and parent VPC ID.
   # Tags are composed from subnet name, subnet-specific tags, and global defaults.
@@ -121,6 +160,14 @@ resource "aws_route" "nat_gw" {
   route_table_id         = aws_route_table.main[each.value.rt_key].id
   destination_cidr_block = each.value.destination_prefix
   nat_gateway_id         = aws_nat_gateway.main[each.value.target_key].id
+}
+
+resource "aws_route" "peerings" {
+  for_each = local.peering_route_map
+
+  route_table_id = aws_route_table.main[each.value.rt_key].id
+  destination_cidr_block = each.value.cidr_block
+  vpc_peering_connection_id = aws_vpc_peering_connection.requester[each.value.target_key].id
 }
 
 resource "aws_route_table_association" "main" {
@@ -276,14 +323,15 @@ resource "aws_vpc_security_group_egress_rule" "main" {
   lifecycle {
     precondition {
       condition = (
-        // SG reference is either null or valid
+        # SG reference is either null or valid
         (each.value.referenced_security_group_id == null || contains(keys(var.security_groups), each.value.referenced_security_group_id))
         &&
-        // Prefix list reference is either null or valid
+        # Prefix list reference is either null or valid
         (each.value.prefix_list_id == null || contains(keys(var.prefix_list_config), each.value.prefix_list_id))
       )
       error_message = "Security Group: '${each.value.sg_key}', Egress Rule Set: '${each.value.rule_set_ref}', has an invalid reference in either: 'referenced_security_group_id' = '${coalesce(each.value.referenced_security_group_id, "null")}', or 'prefix_list' = '${coalesce(each.value.prefix_list_id, "null")}'"
     }
   }
 }
+
 
