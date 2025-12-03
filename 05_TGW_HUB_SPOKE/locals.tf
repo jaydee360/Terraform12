@@ -908,75 +908,53 @@ locals {
 # --------------------------------------------------
 
 locals {
-
-  vpc_flow_logs_merged = {
-    for vpc_key, vpc_obj in var.vpc_config : "${vpc_key}__${vpc_obj.flow_logs_config}" => merge(
-      var.flow_logs_config[vpc_obj.flow_logs_config],
-      {
-        att_type    = "vpc"
-        vpc_key     = vpc_key
-        region  = vpc_obj.region
-      }
-    ) if vpc_obj.flow_logs_config != null && can(var.flow_logs_config[vpc_obj.flow_logs_config])
-  }
-
-  vpc_flow_logs_resolved = {
-    for fl_key, fl_obj in local.vpc_flow_logs_merged : fl_key => merge(
-      fl_obj,
-      fl_obj.log_destination_type == "cloud-watch-logs" ? {
-        iam_role_key        = fl_obj.iam_role_key
-        log_destination_key = "${fl_obj.region}__${fl_obj.log_namespace_1}__${fl_obj.log_namespace_2}__${fl_obj.log_namespace_3}"
-        log_group_name      = "/aws/${fl_obj.log_namespace_1}/${fl_obj.log_namespace_2}/${fl_obj.log_namespace_3}"
-      } : fl_obj.log_destination_type == "s3" ? {
-        iam_role_arn        = null
-        log_destination_key = "bucket_key_placeholder"
-      } : {
-        iam_role_arn        = null
-        log_destination_key = "kinesis_key_placeholder"
-      }
-    )
-  }
-
-  subnet_flow_logs_merged = {
-    for sn_key, sn_obj in local.subnet_map : "${sn_key}__${sn_obj.flow_logs_config}" => merge(
-      var.flow_logs_config[sn_obj.flow_logs_config],
-      {
-        att_type       = "subnet"
-        subnet_key     = sn_key
-        region  = sn_obj.region
-      }
-    ) if sn_obj.flow_logs_config != null && can(var.flow_logs_config[sn_obj.flow_logs_config])
-  }
-
-  subnet_flow_logs_resolved = {
-    for fl_key, fl_obj in local.subnet_flow_logs_merged : fl_key => merge(
-      fl_obj,
-      fl_obj.log_destination_type == "cloud-watch-logs" ? {
-        iam_role_key        = fl_obj.iam_role_key
-        log_destination_key = "${fl_obj.region}__${fl_obj.log_namespace_1}__${fl_obj.log_namespace_2}__${fl_obj.log_namespace_3}"
-        log_group_name      = "/aws/${fl_obj.log_namespace_1}/${fl_obj.log_namespace_2}/${fl_obj.log_namespace_3}"
-      } : fl_obj.log_destination_type == "s3" ? {
-        iam_role_arn        = null
-        log_destination_key = "bucket_key_placeholder"
-      } : {
-        iam_role_arn        = null
-        log_destination_key = "kinesis_key_placeholder"
-      }
-    )
-  }
-
-  all_flow_logs_resolved = merge(
-    local.vpc_flow_logs_resolved, local.subnet_flow_logs_resolved
+  flow_logs_merged = merge(
+    {
+      for vpc_key, vpc_obj in var.vpc_config : "${vpc_key}__${vpc_obj.flow_logs_config}" => merge(
+        var.flow_logs_config[vpc_obj.flow_logs_config],
+        {
+          att_type    = "vpc"
+          vpc_key     = vpc_key
+          region  = vpc_obj.region
+        }
+      ) if vpc_obj.flow_logs_config != null && can(var.flow_logs_config[vpc_obj.flow_logs_config])
+    },
+    {
+      for sn_key, sn_obj in local.subnet_map : "${sn_key}__${sn_obj.flow_logs_config}" => merge(
+        var.flow_logs_config[sn_obj.flow_logs_config],
+        {
+          att_type       = "subnet"
+          subnet_key     = sn_key
+          region  = sn_obj.region
+        }
+      ) if sn_obj.flow_logs_config != null && can(var.flow_logs_config[sn_obj.flow_logs_config])
+    }
   )
 
-  cloudwatch_log_groups_map__flow_log__all = { 
-    for fl_dst_key in distinct([for fl_obj in local.all_flow_logs_resolved : fl_obj.log_destination_key if fl_obj.log_destination_type == "cloud-watch-logs"]) : fl_dst_key => [for fl_cfg_obj in local.all_flow_logs_resolved : {
+  flow_logs_resolved = {
+    for fl_key, fl_obj in local.flow_logs_merged : fl_key => merge(
+      fl_obj,
+      fl_obj.log_destination_type == "cloud-watch-logs" ? {
+        iam_role_key        = fl_obj.iam_role_key
+        log_destination_key = "${fl_obj.region}__${fl_obj.log_namespace_1}__${fl_obj.log_namespace_2}__${fl_obj.log_namespace_3}"
+        log_group_name      = "/aws/${fl_obj.log_namespace_1}/${fl_obj.log_namespace_2}/${fl_obj.log_namespace_3}"
+      } : fl_obj.log_destination_type == "s3" ? {
+        iam_role_arn        = null
+        log_destination_key = "bucket_key_placeholder"
+      } : {
+        iam_role_arn        = null
+        log_destination_key = "kinesis_key_placeholder"
+      }
+    )
+  }
+
+  cloudwatch_log_groups_map__flow_logs = { 
+    for fl_dst_key in distinct([for fl_obj in local.flow_logs_resolved : fl_obj.log_destination_key if fl_obj.log_destination_type == "cloud-watch-logs"]) : fl_dst_key => [for fl_cfg_obj in local.flow_logs_resolved : {
       region = fl_cfg_obj.region
       log_group_name = fl_cfg_obj.log_group_name
       retention_in_days = fl_cfg_obj.retention_in_days
     } if fl_cfg_obj.log_destination_key == fl_dst_key][0]
   }
-
 }
 
 # --------------------------------------------------
