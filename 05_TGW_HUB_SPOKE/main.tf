@@ -339,7 +339,7 @@ resource "aws_cloudwatch_log_group" "main" {
 }
 
 resource "aws_cloudwatch_log_group" "flow_logs" {
-  for_each = local.cloudwatch_log_groups_map__flow_log__all
+  for_each = local.cloudwatch_log_groups_map__flow_logs
   
   region    = each.value.region
   name      = each.value.log_group_name
@@ -584,7 +584,7 @@ resource "aws_iam_role_policy" "main" {
 # --------------------------------------------------
 
 resource "aws_flow_log" "main" {
-  for_each = local.all_flow_logs_resolved
+  for_each = local.flow_logs_resolved
 
   region                = each.value.region
   traffic_type          = each.value.traffic_type
